@@ -15,6 +15,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
     private readonly IDistributedLockService _lockService;
     private readonly ITicketSecurityService _ticketSecurityService;
     private readonly ILogger<ProcessPaymentCommandHandler> _logger;
+    private readonly ITimePolicy _time;
 
     public ProcessPaymentCommandHandler(
         IApplicationDbContext context, 
@@ -22,7 +23,8 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         ISeatNotificationService notificationService, 
         IDistributedLockService lockService,
         ITicketSecurityService ticketSecurityService,
-        ILogger<ProcessPaymentCommandHandler> logger)
+        ILogger<ProcessPaymentCommandHandler> logger,
+        ITimePolicy? time = null)
     {
         _context = context;
         _notificationOutbox = notificationOutbox;
@@ -30,6 +32,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         _lockService = lockService;
         _ticketSecurityService = ticketSecurityService;
         _logger = logger;
+        _time = time ?? new UtcTimePolicy();
     }
 
     public async Task<bool> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
@@ -116,7 +119,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 }
 
                 // 2. Generate cryptographically signed QR code token
-                var expiresAt = ticket.Event?.EndDate.AddHours(6) ?? DateTime.UtcNow.AddDays(30);
+                var expiresAt = ticket.Event?.EndDate.AddHours(6) ?? _time.UtcNow.AddDays(30);
                 string qrToken = _ticketSecurityService.GenerateSignedQrToken(
                     ticket.Id, 
                     ticket.EventId, 

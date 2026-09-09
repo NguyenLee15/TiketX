@@ -44,7 +44,7 @@ function App() {
         setAuth({
           id: data.userId,
           name: data.name ?? '',
-          email: data.email ?? '',
+           email: data.email ?? useAuthStore.getState().user?.email ?? '',
           role: data.role ?? 'Customer',
         }, data.token ?? null);
       })

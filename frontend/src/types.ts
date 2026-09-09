@@ -42,6 +42,7 @@ export interface Event {
   status: EventStatus;
   refundCutoffHours?: number;
   isDeleted?: boolean;
+  hasTicketHistory?: boolean;
   ticketTypes?: TicketType[];
 }
 

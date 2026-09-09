@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { SeatStatus, SeatStatusChangedPayload } from '../types';
 import { API_BASE_URL } from '../services/api';
+import { useAuthStore } from '../stores/useAuthStore';
 
 export const useSeatSignalR = (
   eventId: string | undefined, 
@@ -13,7 +14,10 @@ export const useSeatSignalR = (
     if (!eventId) return;
 
     const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/hubs/seat`)
+      .withUrl(`${API_BASE_URL}/hubs/seat`, {
+        withCredentials: true,
+        accessTokenFactory: () => useAuthStore.getState().token ?? '',
+      })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .build();
 
@@ -26,7 +30,7 @@ export const useSeatSignalR = (
         .then(() => {
           connection.invoke('JoinEventGroup', eventId);
 
-          connection.on('SeatStatusChanged', (payload: SeatStatusChangedPayload) => {
+          const handleSeatStatusChanged = (payload: SeatStatusChangedPayload) => {
             const seatId = payload.seatId || payload.SeatId || payload.id;
             let status: SeatStatus = 0;
             const rawStatus = (payload.status ?? payload.Status ?? '').toString().toLowerCase();
@@ -47,12 +51,14 @@ export const useSeatSignalR = (
                 isLockedByCurrentUser: payload.isLockedByCurrentUser ?? payload.isLockedByMe,
               });
             }
-          });
+          };
+          connection.on('SeatStatusChanged', handleSeatStatusChanged);
         })
         .catch(e => console.warn('SignalR Connection failed: ', e));
 
       return () => {
         if (connection.state === signalR.HubConnectionState.Connected) {
+          connection.off('SeatStatusChanged');
           connection.invoke('LeaveEventGroup', eventId).finally(() => {
             connection.stop();
           });

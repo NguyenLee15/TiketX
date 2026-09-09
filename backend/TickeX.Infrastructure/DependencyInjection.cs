@@ -17,18 +17,24 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             var connStr = configuration.GetConnectionString("DefaultConnection");
-            if (connStr != null && (connStr.Contains(".db", StringComparison.OrdinalIgnoreCase) || connStr.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase)))
+            if (connStr != null && connStr.Contains("Server=", StringComparison.OrdinalIgnoreCase))
+            {
+                options.UseSqlServer(connStr, b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
+            }
+            else if (connStr != null && (connStr.Contains(".db", StringComparison.OrdinalIgnoreCase) || connStr.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase)))
             {
                 options.UseSqlite(connStr, b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
             }
             else
             {
-                options.UseSqlite("Data Source=tickex_local.db", b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
+                throw new InvalidOperationException("ConnectionStrings:DefaultConnection must be configured with a supported SQL Server or SQLite connection string.");
             }
         });
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        services.AddSingleton<ITimePolicy, VietnamTimePolicy>();
         services.AddScoped<IDashboardReadModel, DashboardReadModelAdapter>();
+        services.AddScoped<ICustomerTicketReadModel, CustomerTicketReadModelAdapter>();
         services.AddScoped<IRefundRequestPort, RefundRequestPort>();
         services.AddScoped<INotificationOutboxPort, NotificationOutboxPort>();
         services.AddOptions<ReservationOptions>()
@@ -48,22 +54,17 @@ public static class DependencyInjection
         services.AddTransient<IEmailService, EmailService>();
         services.AddScoped<ISeatNotificationService, SeatNotificationService>();
 
-        // Redis Connection with resilient fallback
-        var redisConfiguration = configuration.GetConnectionString("Redis") ?? "localhost:6379,abortConnect=false";
+        // Redis is a required infrastructure dependency. Do not silently create an
+        // unconfigured connection: reservation locks must fail closed.
+        var redisConfiguration = configuration.GetConnectionString("Redis");
+        if (string.IsNullOrWhiteSpace(redisConfiguration))
+            throw new InvalidOperationException("ConnectionStrings:Redis is required for reservation locking.");
         services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
         {
-            try
-            {
-                var options = StackExchange.Redis.ConfigurationOptions.Parse(redisConfiguration);
-                options.AbortOnConnectFail = false;
-                options.ConnectTimeout = 1000;
-                return StackExchange.Redis.ConnectionMultiplexer.Connect(options);
-            }
-            catch
-            {
-                var options = new StackExchange.Redis.ConfigurationOptions { AbortOnConnectFail = false };
-                return StackExchange.Redis.ConnectionMultiplexer.Connect(options);
-            }
+            var options = StackExchange.Redis.ConfigurationOptions.Parse(redisConfiguration);
+            options.AbortOnConnectFail = false;
+            options.ConnectTimeout = 1000;
+            return StackExchange.Redis.ConnectionMultiplexer.Connect(options);
         });
             
         services.AddScoped<TickeX.Application.Interfaces.IDistributedLockService, TickeX.Infrastructure.Services.RedisDistributedLockService>();

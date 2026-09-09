@@ -349,6 +349,9 @@ export default function AdminEventsPage() {
                               <img 
                                 src={event.imageUrl} 
                                 alt={event.title} 
+                                width="48"
+                                height="48"
+                                loading="lazy"
                                 className="w-12 h-12 rounded-xl object-cover shrink-0 border border-border-subtle group-hover:border-brand-primary/40 transition-colors shadow-sm"
                               />
                               <div className="min-w-0">
@@ -447,6 +450,9 @@ export default function AdminEventsPage() {
                       <img 
                         src={event.imageUrl} 
                         alt={event.title} 
+                        width="48"
+                        height="48"
+                        loading="lazy"
                         className="w-12 h-12 rounded-xl object-cover shrink-0 border border-border-subtle"
                       />
                       <div className="min-w-0">

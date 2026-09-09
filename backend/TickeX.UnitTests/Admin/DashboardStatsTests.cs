@@ -5,6 +5,7 @@ using TickeX.Application.Admin.Queries;
 using TickeX.Domain.Entities;
 using TickeX.Domain.Enums;
 using TickeX.Infrastructure.Persistence;
+using TickeX.Infrastructure.Services;
 using Xunit;
 
 namespace TickeX.UnitTests.Admin;
@@ -69,10 +70,10 @@ public class DashboardStatsTests : IDisposable
 
         await _context.SaveChangesAsync();
 
-        var handler = new GetDashboardStatsQueryHandler(_context);
+        var readModel = new DashboardReadModelAdapter(_context, new VietnamTimePolicy());
 
         // Act
-        var result = await handler.Handle(new GetDashboardStatsQuery(), CancellationToken.None);
+        var result = await readModel.GetAsync(CancellationToken.None);
 
         // Assert
         result.TotalUsers.Should().Be(1);
@@ -93,7 +94,7 @@ public class DashboardStatsTests : IDisposable
 
         // Daily Stats: exactly 7 days
         result.DailyStats.Should().HaveCount(7);
-        var todayStr = DateTime.UtcNow.Date.ToString("yyyy-MM-dd");
+        var todayStr = new VietnamTimePolicy().ToLocal(DateTime.UtcNow).Date.ToString("yyyy-MM-dd");
         var todayStat = result.DailyStats.FirstOrDefault(s => s.Date == todayStr);
         todayStat.Should().NotBeNull();
         todayStat!.Revenue.Should().Be(300000m);

@@ -325,6 +325,25 @@ export default function AdminDashboardPage() {
             })}
           </div>}
         </div>
+        {dailyStats.length > 0 && (
+          <div className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:p-4 focus-within:bg-surface-1 focus-within:border focus-within:border-border-subtle focus-within:rounded-xl">
+            <table>
+              <caption>Chi tiết doanh thu 7 ngày gần nhất</caption>
+              <thead>
+                <tr><th scope="col">Ngày</th><th scope="col">Doanh thu</th><th scope="col">Vé bán</th></tr>
+              </thead>
+              <tbody>
+                {dailyStats.map(item => (
+                  <tr key={`accessible-${item.date}`}>
+                    <td>{item.date}</td>
+                    <td>{currencyFormatter.format(item.revenue)}</td>
+                    <td>{numberFormatter.format(item.ticketsSold)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Analytics & Tables Grid */}

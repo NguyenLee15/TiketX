@@ -11,7 +11,7 @@ import { EventInfoCard } from './EventDetail/EventInfoCard';
 import { SeatMap } from './EventDetail/SeatMap';
 import { SkeletonSeatMap } from '../components/Skeletons/SkeletonSeatMap';
 import { formatCurrency } from '../utils/formatters';
-import { shouldPreserveSeatSelection } from '../utils/customerState';
+import { clearCheckoutState, shouldPreserveSeatSelection } from '../utils/customerState';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -54,8 +54,13 @@ export default function EventDetailPage() {
   const handleSeatStatusChanged = useCallback((payload: SeatStatusChangedPayload & { seatId: string; status: SeatStatus }) => {
     setEvent((prev) => {
       if (!prev) return prev;
+      const currentSeat = prev.seats.find(seat => seat.id === payload.seatId);
+      if (payload.version && currentSeat?.version && payload.version !== currentSeat.version) {
+        void fetchEvent();
+        return prev;
+      }
       const newSeats = prev.seats.map(seat => 
-        seat.id === payload.seatId ? { ...seat, status: payload.status } : seat
+        seat.id === payload.seatId ? { ...seat, status: payload.status, version: payload.version ?? seat.version, isLockedByMe: payload.isLockedByCurrentUser ?? payload.isLockedByMe } : seat
       );
       return { ...prev, seats: newSeats };
     });
@@ -83,6 +88,9 @@ export default function EventDetailPage() {
           toast.error('Hạn giữ chỗ 5 phút đã hết. Ghế đã được tự động mở khóa!', { duration: 5000 });
           setSelectedSeat(null);
           setIsCheckoutOpen(false);
+          const cleared = clearCheckoutState();
+          setTicketId(cleared.ticketId);
+          setLockExpiresAt(cleared.lockExpiresAt);
           fetchEvent(); // Refresh seats status
           return null;
         }
@@ -244,7 +252,7 @@ export default function EventDetailPage() {
                         <p className="text-[11px] text-warning font-bold">Đang khóa độc quyền</p>
                       </div>
                     </div>
-                    <span className="text-xl font-mono font-black text-warning bg-warning/10 px-2.5 py-0.5 rounded-lg border border-warning/20">
+                    <span role="timer" aria-live={lockTimeLeft <= 60 ? 'polite' : undefined} aria-atomic="true" className="text-xl font-mono font-black text-warning bg-warning/10 px-2.5 py-0.5 rounded-lg border border-warning/20">
                       {formatTimer(lockTimeLeft)}
                     </span>
                   </div>
@@ -301,9 +309,13 @@ export default function EventDetailPage() {
           event={event}
           ticketId={ticketId}
           expiresAt={lockExpiresAt || undefined}
-          onClose={() => {
+           onClose={() => {
             setIsCheckoutOpen(false);
-            setLockExpiresAt(null);
+            const cleared = clearCheckoutState();
+            setTicketId(cleared.ticketId);
+            setLockExpiresAt(cleared.lockExpiresAt);
+            setLockTimeLeft(cleared.lockTimeLeft);
+            setSelectedSeat(null);
             fetchEvent();
           }} 
         />

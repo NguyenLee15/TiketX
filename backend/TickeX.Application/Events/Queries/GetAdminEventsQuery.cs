@@ -45,8 +45,9 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var search = request.Search.Trim().ToLower();
-            query = query.Where(e => e.Title.ToLower().Contains(search) || e.Location.ToLower().Contains(search));
+            var search = request.Search.Trim();
+            var pattern = $"%{search}%";
+            query = query.Where(e => EF.Functions.Like(e.Title, pattern) || EF.Functions.Like(e.Location, pattern));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Category))
@@ -84,7 +85,8 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
                 e.BasePrice * 1.75m,
                 e.Status,
                 e.RefundCutoffHours,
-                e.IsDeleted
+                e.IsDeleted,
+                _context.Tickets.Any(t => t.EventId == e.Id)
             ))
             .ToListAsync(cancellationToken);
 

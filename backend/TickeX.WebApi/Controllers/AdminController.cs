@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using TickeX.Application.Admin.Commands;
 using TickeX.Application.Admin.Queries;
 using TickeX.Application.Interfaces;
+using TickeX.Application.Admin;
 
 namespace TickeX.WebApi.Controllers;
 
@@ -43,7 +44,7 @@ public class AdminController : ControllerBase
     {
         if (request is null)
             return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu vai trò mới." });
-        if (!TryDecodeVersion(request.ExpectedVersion, out var expectedVersion))
+        if (!AdminMutationVersionPolicy.TryDecodeRequiredVersion(request.ExpectedVersion, out var expectedVersion))
             return BadRequest(new { success = false, code = "INVALID_VERSION", message = "Phiên bản dữ liệu người dùng không hợp lệ." });
         var currentAdminIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         Guid.TryParse(currentAdminIdStr, out var currentAdminId);
@@ -72,7 +73,7 @@ public class AdminController : ControllerBase
     {
         if (request is null)
             return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu trạng thái tài khoản." });
-        if (!TryDecodeVersion(request.ExpectedVersion, out var expectedVersion))
+        if (!AdminMutationVersionPolicy.TryDecodeRequiredVersion(request.ExpectedVersion, out var expectedVersion))
             return BadRequest(new { success = false, code = "INVALID_VERSION", message = "Phiên bản dữ liệu người dùng không hợp lệ." });
         var currentAdminIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         Guid.TryParse(currentAdminIdStr, out var currentAdminId);
@@ -94,20 +95,4 @@ public class AdminController : ControllerBase
         return Ok(new { success = true, code = "OK", message = result.Message, data = (object?)null });
     }
 
-    private static bool TryDecodeVersion(string? encoded, out byte[]? version)
-    {
-        version = null;
-        if (string.IsNullOrWhiteSpace(encoded))
-            return true;
-
-        try
-        {
-            version = Convert.FromBase64String(encoded);
-            return version.Length > 0;
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
-    }
 }

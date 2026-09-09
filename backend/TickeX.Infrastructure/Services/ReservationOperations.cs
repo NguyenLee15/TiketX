@@ -16,6 +16,7 @@ public sealed class ReservationOperations : IReservationOperations
     private readonly IReservationExpiryScheduler _scheduler;
     private readonly ReservationOptions _options;
     private readonly ILogger<ReservationOperations> _logger;
+    private readonly ITimePolicy _time;
 
     public ReservationOperations(
         IApplicationDbContext context,
@@ -23,7 +24,8 @@ public sealed class ReservationOperations : IReservationOperations
         ISeatNotificationService notifications,
         IReservationExpiryScheduler scheduler,
         IOptions<ReservationOptions> options,
-        ILogger<ReservationOperations> logger)
+        ILogger<ReservationOperations> logger,
+        ITimePolicy? time = null)
     {
         _context = context;
         _locks = locks;
@@ -31,6 +33,7 @@ public sealed class ReservationOperations : IReservationOperations
         _scheduler = scheduler;
         _options = options.Value;
         _logger = logger;
+        _time = time ?? new UtcTimePolicy();
     }
 
     public async Task<ReservationResult> ReserveAsync(Guid eventId, Guid seatId, Guid userId, byte[] version, CancellationToken cancellationToken)
@@ -55,7 +58,7 @@ public sealed class ReservationOperations : IReservationOperations
             {
                 var seat = await _context.Seats.Include(s => s.Event)
                     .FirstOrDefaultAsync(s => s.Id == seatId && s.EventId == eventId, cancellationToken);
-                if (seat?.Event == null || seat.Event.IsDeleted || seat.Event.Status != EventStatus.Published || seat.Event.Date <= DateTime.UtcNow)
+                if (seat?.Event == null || seat.Event.IsDeleted || seat.Event.Status != EventStatus.Published || seat.Event.Date <= _time.UtcNow)
                     return Fail("EVENT_NOT_ON_SALE", "Sự kiện không còn mở bán.");
 
                 if (version.Length == 0 || !seat.Version.SequenceEqual(version))
@@ -82,7 +85,7 @@ public sealed class ReservationOperations : IReservationOperations
                 var ticket = new Ticket(eventId, seatId, userId, seat.Price);
                 _context.Tickets.Add(ticket);
                 await _context.SaveChangesAsync(cancellationToken);
-                var expiresAt = DateTime.UtcNow.Add(holdDuration);
+                var expiresAt = _time.UtcNow.Add(holdDuration);
                 try { _scheduler.Schedule(ticket.Id, holdDuration); }
                 catch (Exception ex) { _logger.LogError(ex, "Reservation {TicketId} committed but expiry scheduling failed; stale-lock reconciliation remains active", ticket.Id); }
                 try
@@ -121,12 +124,12 @@ public sealed class ReservationOperations : IReservationOperations
     }
 
     public async Task<ReservationResult> ReleaseAsync(Guid ticketId, Guid userId, string reason, CancellationToken cancellationToken)
-        => await ReleaseCoreAsync(ticketId, userId, requireOwner: true, cancellationToken);
+        => await ReleaseCoreAsync(ticketId, userId, requireOwner: true, reason, cancellationToken);
 
     public async Task<ReservationResult> ExpireAsync(Guid ticketId, CancellationToken cancellationToken)
-        => await ReleaseCoreAsync(ticketId, Guid.Empty, requireOwner: false, cancellationToken);
+        => await ReleaseCoreAsync(ticketId, Guid.Empty, requireOwner: false, "reservation_expired", cancellationToken);
 
-    private async Task<ReservationResult> ReleaseCoreAsync(Guid ticketId, Guid userId, bool requireOwner, CancellationToken cancellationToken)
+    private async Task<ReservationResult> ReleaseCoreAsync(Guid ticketId, Guid userId, bool requireOwner, string reason, CancellationToken cancellationToken)
     {
         var ticket = await _context.Tickets.Include(t => t.Seat)
             .FirstOrDefaultAsync(t => t.Id == ticketId, cancellationToken);
@@ -148,6 +151,14 @@ public sealed class ReservationOperations : IReservationOperations
                 return Fail("RESERVATION_NOT_PENDING", "Lượt giữ ghế đã thay đổi.");
             if (current.Seat?.Status == SeatStatus.Locked && (!requireOwner || current.Seat.LockedByUserId == userId))
                 current.Seat.Release();
+            _context.AuditLogs.Add(new AuditLog(
+                userId: requireOwner ? userId : null,
+                userEmail: string.Empty,
+                action: "RESERVATION_RELEASED",
+                entityName: "Ticket",
+                entityId: current.Id.ToString(),
+                beforeState: $"Status={TicketStatus.Pending},SeatStatus={current.Seat?.Status}",
+                afterState: $"Status={TicketStatus.Cancelled},Reason={reason}"));
             current.Cancel();
             await _context.SaveChangesAsync(cancellationToken);
             if (current.Seat != null)

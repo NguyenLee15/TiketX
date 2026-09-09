@@ -33,13 +33,18 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
   const openerRef = useRef<HTMLElement | null>(document.activeElement as HTMLElement | null);
   const [releaseError, setReleaseError] = useState('');
   const [releasing, setReleasing] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+  const requestClose = useCallback(() => {
+    if (!releasing && status === 'idle') setShowCloseConfirm(true);
+  }, [releasing, status]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     modalRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && status === 'idle') modalRef.current?.querySelector<HTMLButtonElement>('[data-release-close]')?.click();
+      if (event.key === 'Escape' && status === 'idle') requestClose();
       if (event.key === 'Tab' && modalRef.current) {
         const focusable = modalRef.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
         if (!focusable.length) return;
@@ -50,7 +55,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
     };
     document.addEventListener('keydown', onKeyDown);
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', onKeyDown); openerRef.current?.focus(); };
-  }, [onClose, status]);
+  }, [onClose, requestClose, status]);
 
   // Helper to compute remaining seconds from server expiresAt
   const calculateRemaining = useCallback((expiryStr?: string) => {
@@ -139,6 +144,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
     setReleaseError('');
     try {
       await api.post(`/api/reservations/${ticketId}/release`, { reason: 'CustomerClosedCheckout' });
+      setShowCloseConfirm(false);
       onClose();
     } catch (error: unknown) {
       const apiError = error as { response?: { data?: { message?: string } } };
@@ -184,7 +190,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
       <div 
         className="absolute inset-0 bg-surface-1/85 backdrop-blur-md animate-in fade-in duration-300"
         aria-hidden="true"
-        onClick={handleReleaseAndClose}
+        onClick={requestClose}
       />
       
       {/* Modal Content */}
@@ -212,7 +218,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
                 </p>
               </div>
               <button 
-                onClick={handleReleaseAndClose}
+                onClick={requestClose}
                 data-release-close
                 className="p-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-text-tertiary hover:text-white transition-colors"
                 aria-label="Đóng"
@@ -353,7 +359,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
               )}
 
               <button 
-                onClick={handleReleaseAndClose}
+                onClick={requestClose}
                 disabled={releasing}
                 className="w-full py-2.5 bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white text-xs font-semibold rounded-xl transition-colors border border-border-subtle"
               >
@@ -396,6 +402,20 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
             >
               Đóng & Quay Lại Sơ Đồ Ghế
             </button>
+          </div>
+        )}
+
+        {showCloseConfirm && status === 'idle' && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-surface-1/80 p-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="release-confirm-title">
+            <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-surface-2 p-5 shadow-2xl">
+              <h3 id="release-confirm-title" className="text-base font-bold text-white">Rời phiên thanh toán?</h3>
+              <p className="mt-2 text-xs leading-relaxed text-text-secondary">Ghế sẽ được trả lại và liên kết thanh toán hiện tại có thể không còn sử dụng được.</p>
+              {releaseError && <p role="alert" aria-live="polite" className="mt-3 text-xs text-danger">{releaseError}</p>}
+              <div className="mt-5 flex justify-end gap-2">
+                <button type="button" onClick={() => setShowCloseConfirm(false)} disabled={releasing} className="rounded-xl border border-border-subtle bg-surface-3 px-4 py-2 text-xs font-bold text-text-secondary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">Tiếp tục thanh toán</button>
+                <button type="button" onClick={handleReleaseAndClose} disabled={releasing} className="rounded-xl bg-danger px-4 py-2 text-xs font-bold text-white hover:bg-danger/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger">{releasing ? 'Đang trả ghế…' : 'Trả ghế & đóng'}</button>
+              </div>
+            </div>
           </div>
         )}
 

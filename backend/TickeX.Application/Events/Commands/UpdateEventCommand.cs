@@ -49,9 +49,9 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
         if (ev.IsDeleted)
             return AdminOperationResult.BadRequest("Không thể cập nhật sự kiện đã bị xóa.", "EVENT_DELETED");
 
-        // Invariant check: if event has paid or used tickets, forbid modifying total seats or base price
+        // Invariant check: any ticket/reservation history freezes financial and seat geometry fields.
         var hasSoldTickets = await _context.Tickets
-            .AnyAsync(t => t.EventId == request.Id && (t.Status == TicketStatus.Paid || t.Status == TicketStatus.Used), cancellationToken);
+            .AnyAsync(t => t.EventId == request.Id, cancellationToken);
 
         if (hasSoldTickets)
         {

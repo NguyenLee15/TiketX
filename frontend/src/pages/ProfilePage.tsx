@@ -176,7 +176,7 @@ export default function ProfilePage() {
                 <div className="relative group shrink-0">
                   <div className="absolute inset-0 bg-brand-primary rounded-full blur-md opacity-0 group-hover:opacity-40 transition-opacity" />
                   {currentAvatarUrl ? (
-                    <img src={currentAvatarUrl} alt="Avatar" className="relative w-20 h-20 rounded-full object-cover border-2 border-surface-2 shadow-xl group-hover:scale-105 transition-transform" />
+                    <img src={currentAvatarUrl} alt="Avatar" width="80" height="80" loading="lazy" className="relative w-20 h-20 rounded-full object-cover border-2 border-surface-2 shadow-xl group-hover:scale-105 transition-transform" />
                   ) : (
                     <div className="relative w-20 h-20 rounded-full bg-surface-3 flex items-center justify-center border-2 border-surface-2 shadow-xl group-hover:scale-105 transition-transform">
                       <User className="w-8 h-8 text-text-secondary" />

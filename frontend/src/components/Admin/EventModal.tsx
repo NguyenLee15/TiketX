@@ -94,6 +94,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
   const watchedRowCount = watch('rowCount') || 5;
   const watchedSeatsPerRow = watch('seatsPerRow') || 12;
   const totalMatrixSeats = watchedRowCount * watchedSeatsPerRow;
+  const hasTicketHistory = Boolean(event?.hasTicketHistory);
 
   useEffect(() => {
     setImageError(false);
@@ -281,7 +282,9 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   id="event-date"
                   type="datetime-local"
                   {...register('date')}
-                  className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors [color-scheme:dark]"
+                  disabled={hasTicketHistory || isLoading}
+                  aria-describedby={hasTicketHistory ? 'event-history-lock' : undefined}
+                  className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors [color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {errors.date && <p className="text-danger text-xs mt-1">{errors.date.message}</p>}
               </div>
@@ -294,7 +297,9 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   id="event-end-date"
                   type="datetime-local"
                   {...register('endDate')}
-                  className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors [color-scheme:dark]"
+                  disabled={hasTicketHistory || isLoading}
+                  aria-describedby={hasTicketHistory ? 'event-history-lock' : undefined}
+                  className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors [color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {errors.endDate && <p className="text-danger text-xs mt-1">{errors.endDate.message}</p>}
               </div>
@@ -315,7 +320,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
               {event ? (
                 <div className="flex items-center gap-2 text-xs text-text-secondary bg-surface-2/50 p-2.5 rounded-lg border border-border-subtle">
                   <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>Ma trận ghế đã được khởi tạo ({event.totalSeats} ghế). Để bảo đảm toàn vẹn dữ liệu đặt chỗ, không thể thay đổi số hàng/cột của sự kiện đã lưu.</span>
+                  <span id="event-history-lock">Ma trận ghế đã được khởi tạo ({event.totalSeats} ghế). Sự kiện đã có lịch sử vé/đặt chỗ nên ngày, giá và ma trận được khóa để bảo đảm toàn vẹn dữ liệu.</span>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -375,6 +380,9 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                       <img 
                         src={watchedImageUrl} 
                         alt="Xem trước" 
+                        width="80"
+                        height="56"
+                        loading="lazy"
                         className="w-full h-full object-cover"
                         onError={() => setImageError(true)}
                         onLoad={() => setImageError(false)}
@@ -403,8 +411,9 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
               </div>
               <button
                 type="button"
+                disabled={hasTicketHistory || isLoading}
                 onClick={() => append({ name: '', price: 0, totalQuantity: 50 })}
-                className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+                className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Thêm hạng vé
@@ -423,6 +432,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                     <input 
                       id={`ticket-type-name-${index}`}
                       {...register(`ticketTypes.${index}.name` as const)}
+                      disabled={hasTicketHistory || isLoading}
                       placeholder="VD: VIP, Standard"
                       className="w-full bg-surface-2 border border-border-subtle rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50"
                     />
@@ -437,6 +447,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                       id={`ticket-type-price-${index}`}
                       type="number"
                       {...register(`ticketTypes.${index}.price` as const, { valueAsNumber: true })}
+                      disabled={hasTicketHistory || isLoading}
                       placeholder="Giá"
                       className="w-full bg-surface-2 border border-border-subtle rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50"
                     />
@@ -451,6 +462,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                       id={`ticket-type-quantity-${index}`}
                       type="number"
                       {...register(`ticketTypes.${index}.totalQuantity` as const, { valueAsNumber: true })}
+                      disabled={hasTicketHistory || isLoading}
                       placeholder="SL"
                       className="w-full bg-surface-2 border border-border-subtle rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50"
                     />
@@ -462,7 +474,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   <div className="col-span-1 flex justify-end pt-4">
                     <button
                       type="button"
-                      disabled={fields.length <= 1}
+                      disabled={fields.length <= 1 || hasTicketHistory || isLoading}
                       onClick={() => remove(index)}
                       className="p-1.5 text-text-secondary hover:text-danger hover:bg-danger/10 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-30 disabled:hover:bg-transparent"
                       title="Xóa hạng vé"

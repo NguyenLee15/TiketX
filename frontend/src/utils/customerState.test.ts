@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   normalizePaymentStatus,
   parseCatalogState,
+  clearCheckoutState,
   shouldPreserveSeatSelection,
   writeCatalogState,
 } from './customerState';
@@ -9,7 +10,7 @@ import {
 describe('normalizePaymentStatus', () => {
   it.each([
     [0, 'Pending'], [1, 'Paid'], [2, 'Cancelled'], [3, 'Failed'], [4, 'Expired'],
-    ['pending', 'Pending'], ['PAID', 'Paid'], ['Cancelled', 'Cancelled'],
+    ['pending', 'Pending'], ['PAID', 'Paid'], ['Cancelled', 'Cancelled'], ['RefundPending', 'RefundPending'],
   ])('maps %s to %s', (input, expected) => {
     expect(normalizePaymentStatus(input)).toBe(expected);
   });
@@ -30,6 +31,16 @@ describe('seat ownership updates', () => {
     expect(shouldPreserveSeatSelection('seat-1', {
       seatId: 'seat-1', status: 1, isLockedByCurrentUser: false,
     })).toBe(false);
+  });
+});
+
+describe('checkout state', () => {
+  it('clears reservation-derived state after a successful release', () => {
+    expect(clearCheckoutState()).toEqual({
+      ticketId: null,
+      lockExpiresAt: null,
+      lockTimeLeft: null,
+    });
   });
 });
 

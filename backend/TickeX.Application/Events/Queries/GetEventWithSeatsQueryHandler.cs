@@ -11,11 +11,13 @@ public class GetEventWithSeatsQueryHandler : IRequestHandler<GetEventWithSeatsQu
 {
     private readonly IApplicationDbContext _context;
     private readonly TimeSpan _holdDuration;
+    private readonly ITimePolicy _time;
 
-    public GetEventWithSeatsQueryHandler(IApplicationDbContext context, IOptions<ReservationOptions>? options = null)
+    public GetEventWithSeatsQueryHandler(IApplicationDbContext context, IOptions<ReservationOptions>? options = null, ITimePolicy? time = null)
     {
         _context = context;
         _holdDuration = TimeSpan.FromMinutes(options?.Value.HoldMinutes ?? new ReservationOptions().HoldMinutes);
+        _time = time ?? new UtcTimePolicy();
     }
 
     public async Task<EventDetailDto?> Handle(GetEventWithSeatsQuery request, CancellationToken cancellationToken)
@@ -25,7 +27,7 @@ public class GetEventWithSeatsQueryHandler : IRequestHandler<GetEventWithSeatsQu
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.EventId, cancellationToken);
 
-        if (e == null || e.IsDeleted || e.Status != EventStatus.Published || e.Date <= DateTime.UtcNow) return null;
+        if (e == null || e.IsDeleted || e.Status != EventStatus.Published || e.Date <= _time.UtcNow) return null;
 
         var seats = e.Seats
             .OrderBy(s => s.Row)
@@ -43,7 +45,7 @@ public class GetEventWithSeatsQueryHandler : IRequestHandler<GetEventWithSeatsQu
             .ToList();
 
         // Treat stale locks as available immediately; the background job is only cleanup.
-        var lockExpiry = DateTime.UtcNow.Subtract(_holdDuration);
+        var lockExpiry = _time.UtcNow.Subtract(_holdDuration);
         seats = seats.Select(s => s.Status == SeatStatus.Locked && e.Seats.First(raw => raw.Id == s.Id).LockedAt <= lockExpiry
             ? s with { Status = SeatStatus.Available, IsLockedByCurrentUser = false }
             : s).ToList();

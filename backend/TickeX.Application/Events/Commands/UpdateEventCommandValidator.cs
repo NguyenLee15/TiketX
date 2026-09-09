@@ -1,11 +1,13 @@
 using FluentValidation;
+using TickeX.Application.Interfaces;
 
 namespace TickeX.Application.Events.Commands;
 
 public class UpdateEventCommandValidator : AbstractValidator<UpdateEventCommand>
 {
-    public UpdateEventCommandValidator()
+    public UpdateEventCommandValidator(ITimePolicy? time = null)
     {
+        var now = (time ?? new UtcTimePolicy()).UtcNow;
         RuleFor(x => x.Id)
             .NotEmpty().WithMessage("ID sự kiện không được để trống.");
 
@@ -21,7 +23,7 @@ public class UpdateEventCommandValidator : AbstractValidator<UpdateEventCommand>
             .MaximumLength(250).WithMessage("Địa điểm không được vượt quá 250 ký tự.");
 
         RuleFor(x => x.Date)
-            .GreaterThan(DateTime.UtcNow).WithMessage("Thời gian bắt đầu phải ở tương lai.");
+            .GreaterThan(now).WithMessage("Thời gian bắt đầu phải ở tương lai.");
 
         RuleFor(x => x.EndDate)
             .GreaterThan(x => x.Date).WithMessage("Thời gian kết thúc phải sau thời gian bắt đầu.");

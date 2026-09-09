@@ -41,8 +41,9 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PagedResult<U
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var search = request.Search.Trim().ToLower();
-            query = query.Where(u => u.Name.ToLower().Contains(search) || u.Email.ToLower().Contains(search));
+            var search = request.Search.Trim();
+            var pattern = $"%{search}%";
+            query = query.Where(u => EF.Functions.Like(u.Name, pattern) || EF.Functions.Like(u.Email, pattern));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Role))

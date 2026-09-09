@@ -22,7 +22,8 @@ public record EventDto(
     decimal MaxPrice,
     EventStatus Status,
     int RefundCutoffHours,
-    bool IsDeleted = false
+    bool IsDeleted = false,
+    bool HasTicketHistory = false
 );
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize)

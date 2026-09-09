@@ -81,7 +81,7 @@ public class AuthController : ControllerBase
         return Ok(new
         {
             success = true,
-            data = new { token = legacyToken, refreshToken = legacyToken is null ? null : result.RefreshToken, userId = result.UserId, name = result.Name, role = result.Role },
+            data = new { token = legacyToken, refreshToken = legacyToken is null ? null : result.RefreshToken, userId = result.UserId, name = result.Name, email = result.Email, role = result.Role },
             message = result.Message
         });
     }

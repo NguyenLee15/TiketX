@@ -11,14 +11,17 @@ public class RefundTicketCommandHandler : IRequestHandler<RefundTicketCommand, R
     private readonly IApplicationDbContext _context;
     private readonly IDistributedLockService _lockService;
     private readonly IRefundRequestPort _refundRequests;
+    private readonly ITimePolicy _time;
     public RefundTicketCommandHandler(
         IApplicationDbContext context, 
         IDistributedLockService lockService,
-        IRefundRequestPort refundRequests)
+        IRefundRequestPort refundRequests,
+        ITimePolicy? time = null)
     {
         _context = context;
         _lockService = lockService;
         _refundRequests = refundRequests;
+        _time = time ?? new UtcTimePolicy();
     }
 
     public async Task<RefundResult> Handle(RefundTicketCommand request, CancellationToken cancellationToken)
@@ -100,7 +103,7 @@ public class RefundTicketCommandHandler : IRequestHandler<RefundTicketCommand, R
             var eventStartTime = ticket.Event.Date;
             var allowedUntil = eventStartTime.AddHours(-cutoffHours);
 
-            if (DateTime.UtcNow > allowedUntil)
+            if (_time.UtcNow > allowedUntil)
             {
                 return new RefundResult(
                     false, 

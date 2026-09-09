@@ -18,9 +18,16 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
     private readonly IConfiguration _configuration;
     private readonly IHostEnvironment _environment;
     private readonly ILogger<CustomerCheckoutOperations> _logger;
+    private readonly ITimePolicy _time;
 
     public CustomerCheckoutOperations(IApplicationDbContext context, IPayOSService payOS, IMediator mediator,
         IConfiguration configuration, IHostEnvironment environment, ILogger<CustomerCheckoutOperations> logger)
+        : this(context, payOS, mediator, configuration, environment, logger, null)
+    {
+    }
+
+    public CustomerCheckoutOperations(IApplicationDbContext context, IPayOSService payOS, IMediator mediator,
+        IConfiguration configuration, IHostEnvironment environment, ILogger<CustomerCheckoutOperations> logger, ITimePolicy? time)
     {
         _context = context;
         _payOS = payOS;
@@ -28,6 +35,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         _configuration = configuration;
         _environment = environment;
         _logger = logger;
+        _time = time ?? new UtcTimePolicy();
     }
 
     public async Task<CustomerCheckoutResult> GetStatusAsync(long orderCode, Guid userId, CancellationToken cancellationToken)
@@ -49,7 +57,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         if (ticket.UserId != userId) return Fail("PAYMENT_FORBIDDEN", "Bạn không có quyền thanh toán vé này.");
         if (ticket.Status != TicketStatus.Pending)
             return Fail(ticket.Status == TicketStatus.Paid ? "PAYMENT_ALREADY_PAID" : "PAYMENT_NOT_PENDING", "Vé không còn chờ thanh toán.");
-        if (ticket.Event is null || ticket.Event.IsDeleted || ticket.Event.Status != EventStatus.Published || ticket.Event.Date <= DateTime.UtcNow)
+        if (ticket.Event is null || ticket.Event.IsDeleted || ticket.Event.Status != EventStatus.Published || ticket.Event.Date <= _time.UtcNow)
             return Fail("EVENT_NOT_ON_SALE", "Sự kiện không còn mở bán.");
 
         var existing = await _context.PaymentTransactions.AsNoTracking()
@@ -121,6 +129,6 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
     private static string ToPublicStatus(TicketStatus status) => status switch
     {
         TicketStatus.Pending => "Pending", TicketStatus.Paid => "Paid", TicketStatus.Cancelled => "Cancelled",
-        TicketStatus.RefundPending => "Pending", _ => "Paid"
+        TicketStatus.RefundPending => "RefundPending", _ => "Paid"
     };
 }

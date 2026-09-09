@@ -138,6 +138,31 @@ if (string.IsNullOrWhiteSpace(jwtKey))
 if (jwtKey.Length < 32)
     throw new InvalidOperationException("Jwt:Key must contain at least 32 characters.");
 
+if (!builder.Environment.IsDevelopment())
+{
+    var requiredInfrastructure = new[]
+    {
+        (Name: "ConnectionStrings:DefaultConnection", Value: builder.Configuration.GetConnectionString("DefaultConnection")),
+        (Name: "ConnectionStrings:Redis", Value: builder.Configuration.GetConnectionString("Redis")),
+        (Name: "ConnectionStrings:HangfireConnection", Value: builder.Configuration.GetConnectionString("HangfireConnection")),
+        (Name: "RabbitMQ:HostName", Value: builder.Configuration["RabbitMQ:HostName"])
+    };
+    var missingInfrastructure = requiredInfrastructure.FirstOrDefault(setting => string.IsNullOrWhiteSpace(setting.Value));
+    if (missingInfrastructure != default)
+        throw new InvalidOperationException($"{missingInfrastructure.Name} is required outside Development.");
+
+    var payOsSettings = new[]
+    {
+        (Name: "PayOS:ClientId", Value: builder.Configuration["PayOS:ClientId"]),
+        (Name: "PayOS:ApiKey", Value: builder.Configuration["PayOS:ApiKey"]),
+        (Name: "PayOS:ChecksumKey", Value: builder.Configuration["PayOS:ChecksumKey"])
+    };
+    var missingPayOsSetting = payOsSettings.FirstOrDefault(setting =>
+        string.IsNullOrWhiteSpace(setting.Value) || setting.Value.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase));
+    if (missingPayOsSetting != default)
+        throw new InvalidOperationException($"{missingPayOsSetting.Name} is required outside Development.");
+}
+
 builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

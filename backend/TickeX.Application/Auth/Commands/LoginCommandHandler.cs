@@ -76,6 +76,6 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResult>
             user.Id, RefreshTokenCrypto.Hash(refreshToken), DateTime.UtcNow.AddDays(30)), cancellationToken);
         _logger.LogInformation("User {Email} ({UserId}) logged in successfully.", user.Email, user.Id);
         
-        return new AuthResult(true, token, "Đăng nhập thành công.", user.Id, user.Name, user.Role, refreshToken);
+        return new AuthResult(true, token, "Đăng nhập thành công.", user.Id, user.Name, user.Role, refreshToken, user.Email);
     }
 }

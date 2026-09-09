@@ -270,4 +270,25 @@ public class EventLifecycleAndDeletionTests : IDisposable
         res2.StatusCode.Should().Be(400);
         res2.ErrorCode.Should().Be("CANNOT_MODIFY_PRICE_AFTER_SALES");
     }
+
+    [Fact]
+    public async Task UpdateEvent_WhenPendingReservationExists_ShouldForbidChangingSchedule()
+    {
+        var user = new User("Pending", "pending@example.com", "hash", "Customer");
+        _context.Users.Add(user);
+        var ev = new Event("Held Show", "Desc", DateTime.UtcNow.AddDays(3), DateTime.UtcNow.AddDays(3).AddHours(3), "Loc", "Venue", 2, basePrice: 200000m);
+        ev.GenerateSeatsMatrix(1, 2);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        _context.Tickets.Add(new Ticket(ev.Id, ev.Seats.First().Id, user.Id, 200000m));
+        await _context.SaveChangesAsync();
+
+        var result = await new UpdateEventCommandHandler(_context).Handle(new UpdateEventCommand(
+            ev.Id, ev.Title, ev.Description, ev.Date.AddHours(1), ev.EndDate.AddHours(1), ev.Location, ev.VenueName,
+            ev.TotalSeats, ev.Category, ev.ImageUrl, BasePrice: ev.BasePrice), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be("CANNOT_MODIFY_DATE_AFTER_SALES");
+    }
 }

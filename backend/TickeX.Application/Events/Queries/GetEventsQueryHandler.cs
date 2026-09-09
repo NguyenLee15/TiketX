@@ -8,17 +8,20 @@ namespace TickeX.Application.Events.Queries;
 public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, PagedResult<EventDto>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITimePolicy _time;
 
-    public GetEventsQueryHandler(IApplicationDbContext context)
+    public GetEventsQueryHandler(IApplicationDbContext context, ITimePolicy? time = null)
     {
         _context = context;
+        _time = time ?? new UtcTimePolicy();
     }
 
     public async Task<PagedResult<EventDto>> Handle(GetEventsQuery request, CancellationToken cancellationToken)
     {
+        var now = _time.UtcNow;
         var query = _context.Events
             .AsNoTracking()
-            .Where(e => e.Status == EventStatus.Published && !e.IsDeleted && e.Date > DateTime.UtcNow);
+            .Where(e => e.Status == EventStatus.Published && !e.IsDeleted && e.Date > now);
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
@@ -82,6 +85,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, PagedResult
                 e.Seats.Any() ? (decimal)e.Seats.Max(s => (double)s.Price) : e.BasePrice,
                 e.Status,
                 e.RefundCutoffHours,
+                false,
                 false
             ))
             .ToListAsync(cancellationToken);

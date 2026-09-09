@@ -10,11 +10,13 @@ public class CheckInTicketCommandHandler : IRequestHandler<CheckInTicketCommand,
 {
     private readonly IApplicationDbContext _context;
     private readonly ITicketSecurityService _ticketSecurityService;
+    private readonly ITimePolicy _time;
 
-    public CheckInTicketCommandHandler(IApplicationDbContext context, ITicketSecurityService ticketSecurityService)
+    public CheckInTicketCommandHandler(IApplicationDbContext context, ITicketSecurityService ticketSecurityService, ITimePolicy? time = null)
     {
         _context = context;
         _ticketSecurityService = ticketSecurityService;
+        _time = time ?? new UtcTimePolicy();
     }
 
     public async Task<CheckInResult> Handle(CheckInTicketCommand request, CancellationToken cancellationToken)
@@ -65,18 +67,18 @@ public class CheckInTicketCommandHandler : IRequestHandler<CheckInTicketCommand,
                 return new CheckInResult(false, $"Sự kiện chưa được xuất bản hoặc đã bị hủy (Trạng thái: {ticket.Event.Status}).", StatusCode: 400, Code: "EVENT_NOT_ACTIVE");
             }
 
-            var now = DateTime.UtcNow;
+            var now = _time.UtcNow;
             var checkInStartTime = ticket.Event.Date.AddHours(-2);
             var checkInEndTime = ticket.Event.EndDate.AddHours(4);
 
             if (now < checkInStartTime)
             {
-                return new CheckInResult(false, $"Chưa đến thời gian mở cổng soát vé. Cổng mở từ: {checkInStartTime.ToLocalTime():dd/MM/yyyy HH:mm}.", StatusCode: 400, Code: "CHECKIN_NOT_OPEN");
+                return new CheckInResult(false, $"Chưa đến thời gian mở cổng soát vé. Cổng mở từ: {_time.ToLocal(checkInStartTime):dd/MM/yyyy HH:mm}.", StatusCode: 400, Code: "CHECKIN_NOT_OPEN");
             }
 
             if (now > checkInEndTime)
             {
-                return new CheckInResult(false, $"Cổng soát vé đã đóng lúc {checkInEndTime.ToLocalTime():dd/MM/yyyy HH:mm}.", StatusCode: 400, Code: "CHECKIN_CLOSED");
+                return new CheckInResult(false, $"Cổng soát vé đã đóng lúc {_time.ToLocal(checkInEndTime):dd/MM/yyyy HH:mm}.", StatusCode: 400, Code: "CHECKIN_CLOSED");
             }
 
             // 5. Staff event assignment check (Admins can check in any event, Staff must be assigned)
@@ -161,7 +163,7 @@ public class CheckInTicketCommandHandler : IRequestHandler<CheckInTicketCommand,
                 tier,
                 ticket.Price,
                 ticket.OrderCode,
-                ticket.CheckedInAt ?? DateTime.UtcNow
+                ticket.CheckedInAt ?? _time.UtcNow
             );
 
             return new CheckInResult(
@@ -174,7 +176,7 @@ public class CheckInTicketCommandHandler : IRequestHandler<CheckInTicketCommand,
         {
             return new CheckInResult(
                 false, 
-                $"CẢNH BÁO XUNG ĐỘT: Vé vừa được xử lý bởi trạm soát vé khác lúc {DateTime.UtcNow:HH:mm:ss}!", 
+                $"CẢNH BÁO XUNG ĐỘT: Vé vừa được xử lý bởi trạm soát vé khác lúc {_time.ToLocal(_time.UtcNow):HH:mm:ss}!",
                 StatusCode: 409,
                 Code: "CHECKIN_CONCURRENCY_CONFLICT");
         }

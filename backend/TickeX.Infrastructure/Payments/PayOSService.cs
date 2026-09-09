@@ -102,21 +102,17 @@ public class PayOSService : IPayOSService
             var canonicalString = string.Join("&", sortedFields.Select(kv => $"{kv.Key}={kv.Value}"));
             string expectedSignature = HmacSha256(_checksumKey, canonicalString);
 
-            // In production or when valid checksum key is configured, verify signature strictly
-            if (!string.IsNullOrWhiteSpace(_checksumKey) && _checksumKey != "YOUR_PAYOS_CHECKSUM_KEY")
-            {
-                if (string.IsNullOrWhiteSpace(signature))
-                {
-                    return null;
-                }
+            // A webhook is an unauthenticated public endpoint. Never fail open when
+            // the checksum key is missing or still contains a template value.
+            if (string.IsNullOrWhiteSpace(_checksumKey) || _checksumKey == "YOUR_PAYOS_CHECKSUM_KEY")
+                return null;
+            if (string.IsNullOrWhiteSpace(signature))
+                return null;
 
-                var sigBytes = Encoding.UTF8.GetBytes(signature.ToLowerInvariant());
-                var expectedBytes = Encoding.UTF8.GetBytes(expectedSignature.ToLowerInvariant());
-                if (!CryptographicOperations.FixedTimeEquals(sigBytes, expectedBytes))
-                {
-                    return null;
-                }
-            }
+            var sigBytes = Encoding.UTF8.GetBytes(signature.ToLowerInvariant());
+            var expectedBytes = Encoding.UTF8.GetBytes(expectedSignature.ToLowerInvariant());
+            if (!CryptographicOperations.FixedTimeEquals(sigBytes, expectedBytes))
+                return null;
 
             decimal amount = dataElement.GetProperty("amount").GetDecimal();
             long orderCode = dataElement.GetProperty("orderCode").GetInt64();
@@ -125,6 +121,8 @@ public class PayOSService : IPayOSService
             string reference = dataElement.TryGetProperty("reference", out var r) ? r.GetString() ?? "" : "";
             string transactionDateTime = dataElement.TryGetProperty("transactionDateTime", out var tdt) ? tdt.GetString() ?? "" : "";
             string currency = dataElement.TryGetProperty("currency", out var curr) ? curr.GetString() ?? "VND" : "VND";
+            if (!string.Equals(currency, "VND", StringComparison.OrdinalIgnoreCase))
+                return null;
             string paymentLinkId = dataElement.TryGetProperty("paymentLinkId", out var plid) ? plid.GetString() ?? "" : "";
             string code = jsonDoc.RootElement.TryGetProperty("code", out var c) ? c.GetString() ?? "" : "";
 

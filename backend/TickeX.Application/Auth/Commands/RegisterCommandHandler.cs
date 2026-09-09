@@ -46,6 +46,6 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthResul
         await _refreshTokens.AddAsync(new TickeX.Domain.Entities.RefreshToken(
             user.Id, RefreshTokenCrypto.Hash(refreshToken), DateTime.UtcNow.AddDays(30)), cancellationToken);
         
-        return new AuthResult(true, token, "Registered successfully.", user.Id, user.Name, user.Role, refreshToken);
+        return new AuthResult(true, token, "Registered successfully.", user.Id, user.Name, user.Role, refreshToken, user.Email);
     }
 }

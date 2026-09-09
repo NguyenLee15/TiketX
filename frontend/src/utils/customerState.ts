@@ -1,17 +1,25 @@
 import type { SeatStatusChangedPayload } from '../types';
 
-export type PaymentStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Expired';
+export type PaymentStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Expired' | 'RefundPending' | 'Used';
 
 export const normalizePaymentStatus = (value: unknown): PaymentStatus => {
   if (value === 1 || String(value).toLowerCase() === 'paid') return 'Paid';
   if (value === 2 || String(value).toLowerCase() === 'cancelled' || String(value).toLowerCase() === 'canceled') return 'Cancelled';
   if (value === 3 || String(value).toLowerCase() === 'failed') return 'Failed';
   if (value === 4 || String(value).toLowerCase() === 'expired') return 'Expired';
+  if (String(value).toLowerCase() === 'refundpending' || String(value).toLowerCase() === 'refund_pending') return 'RefundPending';
+  if (String(value).toLowerCase() === 'used') return 'Used';
   return 'Pending';
 };
 
 export const shouldPreserveSeatSelection = (selectedSeatId: string, payload: SeatStatusChangedPayload) =>
   payload.seatId !== selectedSeatId || payload.status === 0 || payload.isLockedByCurrentUser === true || payload.isLockedByMe === true;
+
+export const clearCheckoutState = () => ({
+  ticketId: null as string | null,
+  lockExpiresAt: null as string | null,
+  lockTimeLeft: null as number | null,
+});
 
 export interface CatalogState { search: string; category: string; sort: string; page: number }
 export const parseCatalogState = (params: URLSearchParams): CatalogState => ({

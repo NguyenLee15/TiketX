@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using FluentValidation;
 using MediatR;
-using TickeX.Application.Admin.Queries;
 using TickeX.Application.Interfaces;
 
 namespace TickeX.Application;
@@ -18,7 +17,6 @@ public static class DependencyInjection
         });
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
-        services.AddScoped<IDashboardReadModel, GetDashboardStatsQueryHandler>();
         services.AddScoped<IAdminUserOperations, Admin.AdminUserOperations>();
         services.AddScoped<IAdminEventOperations, Events.AdminEventOperations>();
         services.AddScoped<ICheckInOperations, Tickets.CheckInOperations>();

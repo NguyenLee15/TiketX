@@ -33,7 +33,7 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
         var replacement = new TickeX.Domain.Entities.RefreshToken(
             user.Id, RefreshTokenCrypto.Hash(replacementRaw), DateTime.UtcNow.AddDays(30));
         await _tokens.RotateAsync(current, replacement, cancellationToken);
-        return new AuthResult(true, _jwt.GenerateToken(user), "Đã làm mới phiên.", user.Id, user.Name, user.Role, replacementRaw);
+        return new AuthResult(true, _jwt.GenerateToken(user), "Đã làm mới phiên.", user.Id, user.Name, user.Role, replacementRaw, user.Email);
     }
 
     private static AuthResult Invalid() => new(false, string.Empty, "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
