@@ -1,0 +1,73 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using TickeX.Application.Interfaces;
+
+namespace TickeX.WebApi.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[EnableRateLimiting("BookingPolicy")]
+public class PaymentsController : ControllerBase
+{
+    private readonly ICustomerCheckoutOperations _checkout;
+    public PaymentsController(ICustomerCheckoutOperations checkout) => _checkout = checkout;
+
+    public record CreatePaymentLinkRequest(Guid TicketId, string? ReturnUrl = null, string? CancelUrl = null);
+
+    [Authorize]
+    [HttpGet("status/{orderCode:long}")]
+    public async Task<IActionResult> GetStatus(long orderCode, CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId)) return Unauthorized();
+        return Respond(await _checkout.GetStatusAsync(orderCode, userId, cancellationToken), notFound: true);
+    }
+
+    [Authorize]
+    [HttpPost("create-link")]
+    public async Task<IActionResult> CreatePaymentLink([FromBody] CreatePaymentLinkRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId)) return Unauthorized();
+        return Respond(await _checkout.CreatePaymentLinkAsync(request.TicketId, userId, cancellationToken));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("webhook")]
+    public async Task<IActionResult> Webhook(CancellationToken cancellationToken)
+    {
+        using var reader = new StreamReader(Request.Body);
+        var body = await reader.ReadToEndAsync(cancellationToken);
+        var signature = Request.Headers["x-payos-signature"].FirstOrDefault()
+            ?? Request.Headers["X-PayOS-Signature"].FirstOrDefault() ?? string.Empty;
+        return Respond(await _checkout.ProcessWebhookAsync(body, signature, cancellationToken));
+    }
+
+    [Authorize]
+    [HttpPost("simulate-success/{orderCode:long}")]
+    public async Task<IActionResult> SimulateSuccess(long orderCode, CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId)) return Unauthorized();
+        var result = await _checkout.SimulateSuccessAsync(orderCode, userId, cancellationToken);
+        return result.Code == "PAYMENT_SIMULATION_DISABLED" ? NotFound() : Respond(result, notFound: true);
+    }
+
+    private bool TryGetUserId(out Guid userId) => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out userId);
+
+    private IActionResult Respond(CustomerCheckoutResult result, bool notFound = false)
+    {
+        if (result.Success)
+            return Ok(new { success = true, code = result.Code, message = result.Message, data = new
+            {
+                orderCode = result.OrderCode, amount = result.Amount, checkoutUrl = result.CheckoutUrl,
+                status = result.Status, ticketId = result.TicketId
+            }});
+        if (notFound && result.Code == "PAYMENT_NOT_FOUND")
+            return NotFound(new { success = false, code = result.Code, message = result.Message });
+        if (result.Code == "PAYMENT_FORBIDDEN")
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, code = result.Code, message = result.Message });
+        if (result.Code == "PAYMENT_PROVIDER_UNAVAILABLE")
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { success = false, code = result.Code, message = result.Message });
+        return BadRequest(new { success = false, code = result.Code, message = result.Message });
+    }
+}

@@ -1,0 +1,43 @@
+import { describe, expect, it } from 'vitest';
+import {
+  normalizePaymentStatus,
+  parseCatalogState,
+  shouldPreserveSeatSelection,
+  writeCatalogState,
+} from './customerState';
+
+describe('normalizePaymentStatus', () => {
+  it.each([
+    [0, 'Pending'], [1, 'Paid'], [2, 'Cancelled'], [3, 'Failed'], [4, 'Expired'],
+    ['pending', 'Pending'], ['PAID', 'Paid'], ['Cancelled', 'Cancelled'],
+  ])('maps %s to %s', (input, expected) => {
+    expect(normalizePaymentStatus(input)).toBe(expected);
+  });
+
+  it('keeps an unknown server response pending instead of reporting a false failure', () => {
+    expect(normalizePaymentStatus('Processing')).toBe('Pending');
+  });
+});
+
+describe('seat ownership updates', () => {
+  it('preserves a selected seat when the server says the lock belongs to this user', () => {
+    expect(shouldPreserveSeatSelection('seat-1', {
+      seatId: 'seat-1', status: 1, isLockedByCurrentUser: true,
+    })).toBe(true);
+  });
+
+  it('clears a selected seat when another customer locks it', () => {
+    expect(shouldPreserveSeatSelection('seat-1', {
+      seatId: 'seat-1', status: 1, isLockedByCurrentUser: false,
+    })).toBe(false);
+  });
+});
+
+describe('catalog URL state', () => {
+  it('round-trips shareable filters and omits defaults', () => {
+    const params = writeCatalogState({ search: 'rock', category: 'Concert', sort: 'price_asc', page: 3 });
+    expect(params.toString()).toBe('search=rock&category=Concert&sort=price_asc&page=3');
+    expect(parseCatalogState(params)).toEqual({ search: 'rock', category: 'Concert', sort: 'price_asc', page: 3 });
+    expect(writeCatalogState({ search: '', category: 'All', sort: 'date_asc', page: 1 }).toString()).toBe('');
+  });
+});

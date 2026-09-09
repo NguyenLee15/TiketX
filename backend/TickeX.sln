@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.Domain", "TickeX.Domain\TickeX.Domain.csproj", "{B950B47E-63B6-4F8B-B286-639278B1CAD9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.Application", "TickeX.Application\TickeX.Application.csproj", "{BCC0C939-93C6-4846-A3E4-CB104FEBA498}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.Infrastructure", "TickeX.Infrastructure\TickeX.Infrastructure.csproj", "{1B9FA14C-BD09-409F-AEB3-06F507A8CE9D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.WebApi", "TickeX.WebApi\TickeX.WebApi.csproj", "{EDD257E3-3C1F-42AA-A49C-39480A6349F2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.UnitTests", "TickeX.UnitTests\TickeX.UnitTests.csproj", "{89CBB83B-BE95-47CA-B0FC-8D3AEDD68357}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B950B47E-63B6-4F8B-B286-639278B1CAD9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B950B47E-63B6-4F8B-B286-639278B1CAD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B950B47E-63B6-4F8B-B286-639278B1CAD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B950B47E-63B6-4F8B-B286-639278B1CAD9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCC0C939-93C6-4846-A3E4-CB104FEBA498}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCC0C939-93C6-4846-A3E4-CB104FEBA498}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCC0C939-93C6-4846-A3E4-CB104FEBA498}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCC0C939-93C6-4846-A3E4-CB104FEBA498}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B9FA14C-BD09-409F-AEB3-06F507A8CE9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B9FA14C-BD09-409F-AEB3-06F507A8CE9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B9FA14C-BD09-409F-AEB3-06F507A8CE9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B9FA14C-BD09-409F-AEB3-06F507A8CE9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDD257E3-3C1F-42AA-A49C-39480A6349F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDD257E3-3C1F-42AA-A49C-39480A6349F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDD257E3-3C1F-42AA-A49C-39480A6349F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDD257E3-3C1F-42AA-A49C-39480A6349F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89CBB83B-BE95-47CA-B0FC-8D3AEDD68357}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89CBB83B-BE95-47CA-B0FC-8D3AEDD68357}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89CBB83B-BE95-47CA-B0FC-8D3AEDD68357}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89CBB83B-BE95-47CA-B0FC-8D3AEDD68357}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

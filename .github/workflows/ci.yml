@@ -1,0 +1,49 @@
+name: TickeX CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master", "develop" ]
+
+jobs:
+  backend-build-and-test:
+    name: Backend Build & Automated Tests (.NET 8)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET 8 SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore TickeX/backend/TickeX.sln
+
+    - name: Build Backend Solution
+      run: dotnet build TickeX/backend/TickeX.sln --no-restore --configuration Release
+
+    - name: Run Automated Tests & Concurrency Simulation
+      run: dotnet test TickeX/backend/TickeX.sln --no-build --configuration Release --verbosity normal
+
+  frontend-build-and-typecheck:
+    name: Frontend Build & Type Check (React 19 / TypeScript / Vite)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+        cache-dependency-path: TickeX/frontend/package-lock.json
+
+    - name: Install Frontend Dependencies
+      run: cd TickeX/frontend && npm ci
+
+    - name: TypeScript Type Check & Production Bundle Build
+      run: cd TickeX/frontend && npm run build
