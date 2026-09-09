@@ -23,5 +23,10 @@ RUN dotnet publish "./TickeX.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publ
 
 FROM base AS final
 WORKDIR /app
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=publish /app/publish .
+USER app
 ENTRYPOINT ["dotnet", "TickeX.WebApi.dll"]

@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddSingleton<ITimePolicy, VietnamTimePolicy>();
         services.AddScoped<IDashboardReadModel, DashboardReadModelAdapter>();
+        services.AddScoped<ICustomerEventCatalog, CustomerEventCatalogAdapter>();
         services.AddScoped<ICustomerTicketReadModel, CustomerTicketReadModelAdapter>();
         services.AddScoped<IRefundRequestPort, RefundRequestPort>();
         services.AddScoped<INotificationOutboxPort, NotificationOutboxPort>();

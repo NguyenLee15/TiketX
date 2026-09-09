@@ -41,7 +41,8 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         _context.Events.AddRange(future, deleted, started);
         await _context.SaveChangesAsync();
 
-        var result = await new GetEventsQueryHandler(_context)
+        var catalog = new CustomerEventCatalogAdapter(_context, new UtcTimePolicy());
+        var result = await new GetEventsQueryHandler(catalog)
             .Handle(new GetEventsQuery(), CancellationToken.None);
 
         result.Items.Select(x => x.Title).Should().Equal("Future");
