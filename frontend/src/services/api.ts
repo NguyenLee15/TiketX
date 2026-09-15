@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuthStore } from '../stores/useAuthStore';
 import { readCsrfToken } from '../utils/csrf';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

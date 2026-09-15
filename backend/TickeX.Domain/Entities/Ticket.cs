@@ -36,8 +36,7 @@ public class Ticket : BaseEntity
         UserId = userId;
         Price = price;
         Status = TicketStatus.Pending;
-        var suffix = RandomNumberGenerator.GetInt32(1000, 9999);
-        OrderCode = long.Parse(DateTimeOffset.UtcNow.ToString("yyMMddHHmmss") + suffix.ToString());
+        OrderCode = GenerateOrderCode();
         Version = Guid.NewGuid().ToByteArray();
     }
 
@@ -63,6 +62,12 @@ public class Ticket : BaseEntity
     public void SetQrSignature(string qrCodeSignature)
     {
         QrCodeSignature = qrCodeSignature;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RegenerateOrderCode()
+    {
+        OrderCode = GenerateOrderCode();
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -110,5 +115,12 @@ public class Ticket : BaseEntity
         Status = TicketStatus.Cancelled;
         UpdatedAt = DateTime.UtcNow;
         Version = Guid.NewGuid().ToByteArray();
+    }
+
+    private static long GenerateOrderCode()
+    {
+        var high = RandomNumberGenerator.GetInt32(100_000_000, 1_000_000_000);
+        var low = RandomNumberGenerator.GetInt32(0, 1_000_000_000);
+        return high * 1_000_000_000L + low;
     }
 }

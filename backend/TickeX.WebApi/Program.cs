@@ -8,8 +8,15 @@ using TickeX.Application;
 using TickeX.Infrastructure;
 using TickeX.Infrastructure.Persistence;
 using TickeX.Infrastructure.Services;
+using TickeX.WebApi.Health;
 
 var builder = WebApplication.CreateBuilder(args);
+
+static bool IsConfigured(string? value) => !string.IsNullOrWhiteSpace(value)
+    && !value.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase)
+    && !value.StartsWith("replace-with", StringComparison.OrdinalIgnoreCase);
+
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 1_048_576);
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -38,6 +45,15 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
         if (System.Net.IPAddress.TryParse(proxy, out var address))
             options.KnownProxies.Add(address);
     }
+
+    var configuredNetworks = builder.Configuration
+        .GetSection("ForwardedHeaders:KnownNetworks")
+        .Get<string[]>() ?? Array.Empty<string>();
+    foreach (var network in configuredNetworks)
+    {
+        if (Microsoft.AspNetCore.HttpOverrides.IPNetwork.TryParse(network, out var parsedNetwork))
+            options.KnownNetworks.Add(parsedNetwork);
+    }
 });
 
 builder.Services.AddRateLimiter(options =>
@@ -54,7 +70,8 @@ builder.Services.AddRateLimiter(options =>
             {
                 success = false,
                 code = "TOO_MANY_REQUESTS",
-                message = "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 1 phút."
+                message = "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 1 phút.",
+                error = new { code = "TOO_MANY_REQUESTS", message = "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 1 phút.", details = (object?)null }
             }), token);
     };
 
@@ -145,9 +162,17 @@ if (!builder.Environment.IsDevelopment())
         (Name: "ConnectionStrings:DefaultConnection", Value: builder.Configuration.GetConnectionString("DefaultConnection")),
         (Name: "ConnectionStrings:Redis", Value: builder.Configuration.GetConnectionString("Redis")),
         (Name: "ConnectionStrings:HangfireConnection", Value: builder.Configuration.GetConnectionString("HangfireConnection")),
-        (Name: "RabbitMQ:HostName", Value: builder.Configuration["RabbitMQ:HostName"])
+        (Name: "RabbitMQ:HostName", Value: builder.Configuration["RabbitMQ:HostName"]),
+        (Name: "RabbitMQ:UserName", Value: builder.Configuration["RabbitMQ:UserName"]),
+        (Name: "RabbitMQ:Password", Value: builder.Configuration["RabbitMQ:Password"]),
+        (Name: "Smtp:Server", Value: builder.Configuration["Smtp:Server"]),
+        (Name: "Smtp:Username", Value: builder.Configuration["Smtp:Username"]),
+        (Name: "Smtp:Password", Value: builder.Configuration["Smtp:Password"]),
+        (Name: "Smtp:FromEmail", Value: builder.Configuration["Smtp:FromEmail"]),
+        (Name: "PayOS:ReturnUrl", Value: builder.Configuration["PayOS:ReturnUrl"]),
+        (Name: "PayOS:CancelUrl", Value: builder.Configuration["PayOS:CancelUrl"])
     };
-    var missingInfrastructure = requiredInfrastructure.FirstOrDefault(setting => string.IsNullOrWhiteSpace(setting.Value));
+    var missingInfrastructure = requiredInfrastructure.FirstOrDefault(setting => !IsConfigured(setting.Value));
     if (missingInfrastructure != default)
         throw new InvalidOperationException($"{missingInfrastructure.Name} is required outside Development.");
 
@@ -158,9 +183,21 @@ if (!builder.Environment.IsDevelopment())
         (Name: "PayOS:ChecksumKey", Value: builder.Configuration["PayOS:ChecksumKey"])
     };
     var missingPayOsSetting = payOsSettings.FirstOrDefault(setting =>
-        string.IsNullOrWhiteSpace(setting.Value) || setting.Value.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase));
+        !IsConfigured(setting.Value));
     if (missingPayOsSetting != default)
         throw new InvalidOperationException($"{missingPayOsSetting.Name} is required outside Development.");
+    if (!Uri.TryCreate(builder.Configuration["PayOS:ReturnUrl"], UriKind.Absolute, out var returnUri) || returnUri.Scheme != Uri.UriSchemeHttps
+        || !Uri.TryCreate(builder.Configuration["PayOS:CancelUrl"], UriKind.Absolute, out var cancelUri) || cancelUri.Scheme != Uri.UriSchemeHttps)
+        throw new InvalidOperationException("PayOS return and cancellation URLs must use HTTPS outside Development.");
+
+    var activeTicketKeyId = builder.Configuration["TicketSecurity:ActiveKeyId"];
+    var activeTicketKey = string.IsNullOrWhiteSpace(activeTicketKeyId) ? null : builder.Configuration[$"TicketSecurity:SecretKeys:{activeTicketKeyId}"];
+    if (!IsConfigured(activeTicketKey))
+        throw new InvalidOperationException("An active TicketSecurity signing key is required outside Development.");
+
+    var cookies = builder.Configuration.GetSection(CookieAuthenticationSettings.SectionName).Get<CookieAuthenticationSettings>();
+    if (cookies?.Secure != true)
+        throw new InvalidOperationException("Authentication:Cookie:Secure must be true outside Development.");
 }
 
 builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)
@@ -236,10 +273,15 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddCheck<InfrastructureReadinessHealthCheck>("infrastructure", tags: ["ready"]);
 
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
-    ?? new[] { "http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173" };
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if (builder.Environment.IsDevelopment() && (allowedOrigins is null || allowedOrigins.Length == 0))
+    allowedOrigins = ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"];
+if (!builder.Environment.IsDevelopment() && (allowedOrigins is null || allowedOrigins.Length == 0 || allowedOrigins.Any(origin => Uri.TryCreate(origin, UriKind.Absolute, out var uri) && uri.IsLoopback)))
+    throw new InvalidOperationException("Cors:AllowedOrigins must contain explicit non-loopback production origins.");
+allowedOrigins ??= Array.Empty<string>();
 
 builder.Services.AddCors(options =>
 {
@@ -253,37 +295,38 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Migrate DB and conditionally seed in Development
-using (var scope = app.Services.CreateScope())
+if (args.Contains("--migrate", StringComparer.OrdinalIgnoreCase))
 {
+    using var scope = app.Services.CreateScope();
+    var database = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await database.Database.MigrateAsync();
+    return;
+}
+
+// Local SQLite and seed data are development conveniences. Production migration is
+// executed explicitly with `dotnet TickeX.WebApi.dll --migrate` by the release job.
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
-    try
+    var database = services.GetRequiredService<ApplicationDbContext>();
+    if (database.Database.IsSqlite())
     {
-        var db = services.GetRequiredService<ApplicationDbContext>();
-        if (db.Database.IsSqlite())
-        {
-            db.Database.EnsureCreated();
-        }
-        else
-        {
-            db.Database.Migrate();
-        }
-
-        if (app.Environment.IsDevelopment())
-        {
-            DatabaseSeeder.SeedAsync(services, logger).GetAwaiter().GetResult();
-        }
+        await database.Database.EnsureCreatedAsync();
     }
-    catch (Exception ex)
-    {
-        logger.LogCritical(ex, "Database migration or initialization failed on startup. Application terminating.");
-        throw;
-    }
+    else await database.Database.MigrateAsync();
+    await DatabaseSeeder.SeedAsync(services, logger);
 }
 
 // Configure the HTTP request pipeline.
 app.UseForwardedHeaders();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
 
 app.UseMiddleware<TickeX.WebApi.Middleware.GlobalExceptionMiddleware>();
 
@@ -291,7 +334,9 @@ app.Use(async (context, next) =>
 {
     context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
     context.Response.Headers.Append("X-Frame-Options", "DENY");
-    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    context.Response.Headers.Append("Permissions-Policy", "camera=(self), geolocation=(), microphone=()");
+    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self';");
     await next();
 });
 
@@ -329,7 +374,14 @@ app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 
-app.MapHealthChecks("/health").AllowAnonymous();
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+}).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+}).AllowAnonymous();
 app.MapControllers();
 app.MapHub<TickeX.Infrastructure.Hubs.SeatHub>("/hubs/seat");
 

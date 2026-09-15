@@ -9,6 +9,14 @@ namespace TickeX.UnitTests.Domain;
 public class TicketTests
 {
     [Fact]
+    public void New_ticket_uses_an_18_digit_cryptographically_generated_order_code()
+    {
+        var ticket = new Ticket(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 100_000m);
+
+        ticket.OrderCode.Should().BeInRange(100_000_000_000_000_000L, 999_999_999_999_999_999L);
+    }
+
+    [Fact]
     public void MarkAsPaid_ShouldUpdateStatusAndPaidAt()
     {
         // Arrange

@@ -1,14 +1,12 @@
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: tickex-sqlserver
     environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
-    ports:
-      - "1433:1433"
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
     volumes:
       - tickex_sqlserver_data:/var/opt/mssql
+    networks: [private]
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q \"SELECT 1\" || exit 1"]
       interval: 10s
@@ -17,26 +15,21 @@ services:
       start_period: 20s
 
   redis:
-    image: redis:alpine
-    container_name: tickex-redis
-    ports:
-      - "6379:6379"
-    command: redis-server --save 60 1 --loglevel warning
+    image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env} --save 60 1 --loglevel warning
+    networks: [private]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
       interval: 5s
       timeout: 3s
       retries: 10
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: tickex-rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
     environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
+    networks: [private]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -44,25 +37,35 @@ services:
       retries: 10
 
   backend:
-    container_name: tickex-api
+    image: tickex-api:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - "5000:8080"
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health >/dev/null || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
-      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=TickeXDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
-      - ConnectionStrings__HangfireConnection=Server=sqlserver,1433;Database=TickeXHangfire;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
-      - ConnectionStrings__Redis=redis:6379,abortConnect=false
-      - RabbitMQ__HostName=rabbitmq
-      - Jwt__Key=${JWT_KEY:?Set JWT_KEY in .env}
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
+      ConnectionStrings__HangfireConnection: Server=sqlserver,1433;Database=TickeXHangfire;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
+      ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD},abortConnect=false
+      RabbitMQ__HostName: rabbitmq
+      RabbitMQ__UserName: ${RABBITMQ_DEFAULT_USER}
+      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
+      Jwt__Key: ${JWT_KEY:?Set JWT_KEY in .env}
+      TicketSecurity__ActiveKeyId: key-2026-v1
+      TicketSecurity__SecretKeys__key-2026-v1: ${TICKET_SIGNING_KEY:?Set TICKET_SIGNING_KEY in .env}
+      PayOS__ClientId: ${PAYOS_CLIENT_ID:?Set PAYOS_CLIENT_ID in .env}
+      PayOS__ApiKey: ${PAYOS_API_KEY:?Set PAYOS_API_KEY in .env}
+      PayOS__ChecksumKey: ${PAYOS_CHECKSUM_KEY:?Set PAYOS_CHECKSUM_KEY in .env}
+      PayOS__ReturnUrl: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN in .env}/payment-result
+      PayOS__CancelUrl: ${PUBLIC_ORIGIN}/my-tickets
+      Smtp__Server: ${SMTP_SERVER:?Set SMTP_SERVER in .env}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__Username: ${SMTP_USERNAME:?Set SMTP_USERNAME in .env}
+      Smtp__Password: ${SMTP_PASSWORD:?Set SMTP_PASSWORD in .env}
+      Smtp__FromEmail: ${SMTP_FROM_EMAIL:?Set SMTP_FROM_EMAIL in .env}
+      Cors__AllowedOrigins__0: ${PUBLIC_ORIGIN}
+      ForwardedHeaders__KnownNetworks__0: 172.16.0.0/12
+    networks: [private]
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -70,17 +73,28 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health/ready >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   frontend:
-    container_name: tickex-frontend
+    image: tickex-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:80"
+    networks: [private]
     depends_on:
       backend:
         condition: service_healthy
+
+networks:
+  private:
+    internal: true
 
 volumes:
   tickex_sqlserver_data:

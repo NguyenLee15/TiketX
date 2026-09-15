@@ -16,6 +16,10 @@ public class TicketPaidEventConsumer : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly string _hostname;
     private readonly string _queueName;
+    private readonly string _username;
+    private readonly string _password;
+    private readonly int _port;
+    private readonly bool _useTls;
     private IConnection? _connection;
     private IChannel? _channel;
 
@@ -25,11 +29,15 @@ public class TicketPaidEventConsumer : BackgroundService
         _scopeFactory = scopeFactory;
         _hostname = configuration["RabbitMQ:HostName"] ?? "localhost";
         _queueName = configuration["RabbitMQ:QueueName"] ?? "ticket_events";
+        _username = configuration["RabbitMQ:UserName"] ?? string.Empty;
+        _password = configuration["RabbitMQ:Password"] ?? string.Empty;
+        _port = configuration.GetValue("RabbitMQ:Port", 5672);
+        _useTls = configuration.GetValue("RabbitMQ:UseTls", false);
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        var factory = new ConnectionFactory { HostName = _hostname };
+            var factory = CreateFactory();
         try
         {
             _connection = await factory.CreateConnectionAsync(cancellationToken);
@@ -57,7 +65,7 @@ public class TicketPaidEventConsumer : BackgroundService
         {
             try
             {
-                var factory = new ConnectionFactory { HostName = _hostname };
+                var factory = CreateFactory();
                 _connection = await factory.CreateConnectionAsync(stoppingToken);
                 _channel = await _connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
@@ -106,7 +114,7 @@ public class TicketPaidEventConsumer : BackgroundService
                         ";
                         
                         await emailService.SendEmailAsync(user.Email, subject, emailBody);
-                        _logger.LogInformation("Email with QR Code sent to User {UserId} ({Email}) for Ticket {TicketId}.", ticketEvent.UserId, user.Email, ticketEvent.TicketId);
+                        _logger.LogInformation("Ticket notification sent for User {UserId} and Ticket {TicketId}.", ticketEvent.UserId, ticketEvent.TicketId);
                     }
                 }
 
@@ -141,4 +149,10 @@ public class TicketPaidEventConsumer : BackgroundService
 
         await base.StopAsync(cancellationToken);
     }
+
+    private ConnectionFactory CreateFactory() => new()
+    {
+        HostName = _hostname, UserName = _username, Password = _password, Port = _port,
+        Ssl = new SslOption { Enabled = _useTls }
+    };
 }

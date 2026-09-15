@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TickeX.Application.Interfaces;
+using TickeX.Application.Payments;
 using TickeX.Domain.Entities;
 using TickeX.Domain.Enums;
 
@@ -107,6 +108,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
             string providerTxId = !string.IsNullOrWhiteSpace(data.Reference) 
                 ? data.Reference 
                 : (!string.IsNullOrWhiteSpace(data.PaymentLinkId) ? data.PaymentLinkId : data.OrderCode.ToString());
+            var auditSummary = PaymentAudit.CreateWebhookSummary(data.OrderCode, data.Amount, providerTxId, data.Code);
 
             if (data.Success)
             {
@@ -142,12 +144,12 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                         ticket.Price,
                         "VietQR_PayOS"
                     );
-                    transaction.MarkSuccess(providerTxId, data.RawPayload);
+                    transaction.MarkSuccess(providerTxId, auditSummary);
                     _context.PaymentTransactions.Add(transaction);
                 }
                 else
                 {
-                    existingTx.MarkSuccess(providerTxId, data.RawPayload);
+                    existingTx.MarkSuccess(providerTxId, auditSummary);
                 }
 
                 await _notificationOutbox.QueueTicketPaidAsync(ticket.Id, ticket.UserId, ticket.EventId, cancellationToken);
@@ -175,12 +177,12 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                         ticket.Price,
                         "VietQR_PayOS"
                     );
-                    transaction.MarkFailed("Payment rejected or cancelled by user", data.RawPayload);
+                    transaction.MarkFailed("Payment rejected or cancelled by user", auditSummary);
                     _context.PaymentTransactions.Add(transaction);
                 }
                 else
                 {
-                    existingTx.MarkFailed("Payment rejected or cancelled by user", data.RawPayload);
+                    existingTx.MarkFailed("Payment rejected or cancelled by user", auditSummary);
                 }
 
                 await _context.SaveChangesAsync(cancellationToken);

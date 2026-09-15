@@ -20,13 +20,13 @@ jobs:
         dotnet-version: 8.0.x
 
     - name: Restore dependencies
-      run: dotnet restore TickeX/backend/TickeX.sln
+      run: dotnet restore backend/TickeX.sln
 
     - name: Build Backend Solution
-      run: dotnet build TickeX/backend/TickeX.sln --no-restore --configuration Release
+      run: dotnet build backend/TickeX.sln --no-restore --configuration Release
 
-    - name: Run Automated Tests & Concurrency Simulation
-      run: dotnet test TickeX/backend/TickeX.sln --no-build --configuration Release --verbosity normal
+    - name: Run backend tests with coverage
+      run: dotnet test backend/TickeX.sln --no-build --configuration Release --collect:"XPlat Code Coverage" --verbosity normal
 
   frontend-build-and-typecheck:
     name: Frontend Build & Type Check (React 19 / TypeScript / Vite)
@@ -40,10 +40,67 @@ jobs:
       with:
         node-version: 20
         cache: 'npm'
-        cache-dependency-path: TickeX/frontend/package-lock.json
+        cache-dependency-path: frontend/package-lock.json
 
     - name: Install Frontend Dependencies
-      run: cd TickeX/frontend && npm ci
+      run: cd frontend && npm ci
 
     - name: TypeScript Type Check & Production Bundle Build
-      run: cd TickeX/frontend && npm run build
+      run: cd frontend && npm run build
+
+    - name: Run frontend tests
+      run: cd frontend && npm run test
+
+    - name: Audit production frontend dependencies
+      run: cd frontend && npm audit --omit=dev --audit-level=high
+
+  container-smoke:
+    name: Production Compose Smoke Test
+    runs-on: ubuntu-latest
+    needs: [backend-build-and-test, frontend-build-and-typecheck]
+    env:
+      MSSQL_SA_PASSWORD: CiOnly!2026Password
+      RABBITMQ_DEFAULT_USER: tickex-ci
+      RABBITMQ_DEFAULT_PASS: CiOnly!2026Password
+      REDIS_PASSWORD: CiOnly!2026Password
+      JWT_KEY: ci-only-jwt-key-that-is-at-least-32-characters
+      TICKET_SIGNING_KEY: ci-only-ticket-signing-key-that-is-at-least-32-characters
+      PAYOS_CLIENT_ID: ci-payos-client-id
+      PAYOS_API_KEY: ci-payos-api-key
+      PAYOS_CHECKSUM_KEY: ci-payos-checksum-key
+      SMTP_SERVER: smtp.invalid
+      SMTP_USERNAME: ci-smtp-user
+      SMTP_PASSWORD: ci-smtp-password
+      SMTP_FROM_EMAIL: ci@tickex.invalid
+      PUBLIC_ORIGIN: https://tickex-ci.invalid
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Validate production Compose contract
+      run: docker compose --env-file .env.example config -q
+
+    - name: Build and start private infrastructure
+      run: docker compose --env-file .env.example up -d --build sqlserver redis rabbitmq
+
+    - name: Apply migrations once
+      run: docker compose --env-file .env.example run --rm backend --migrate
+
+    - name: Start application and verify readiness
+      run: |
+        docker compose --env-file .env.example up -d backend frontend
+        for i in {1..30}; do curl --fail --silent http://127.0.0.1:3000/health/ready && exit 0; sleep 5; done
+        docker compose --env-file .env.example logs --no-color
+        exit 1
+
+    - name: Scan production images
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        image-ref: tickex-frontend:latest
+        format: table
+        exit-code: '1'
+        severity: CRITICAL,HIGH
+
+    - name: Collect Compose logs
+      if: always()
+      run: docker compose --env-file .env.example logs --no-color

@@ -32,7 +32,9 @@ public class GlobalExceptionMiddleware
             {
                 success = false,
                 message = "Dữ liệu đầu vào không hợp lệ.",
-                errors
+                code = "VALIDATION_FAILED",
+                errors,
+                error = new { code = "VALIDATION_FAILED", message = "Dữ liệu đầu vào không hợp lệ.", details = errors }
             };
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(response));
@@ -47,11 +49,12 @@ public class GlobalExceptionMiddleware
             {
                 success = false,
                 message = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.",
-                errors = new[] { "Internal server error." }
+                code = "INTERNAL_ERROR",
+                errors = new[] { "Internal server error." },
+                error = new { code = "INTERNAL_ERROR", message = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.", details = (object?)null }
             };
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(response));
         }
     }
 }
-

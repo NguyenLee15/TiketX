@@ -84,7 +84,18 @@ public sealed class ReservationOperations : IReservationOperations
 
                 var ticket = new Ticket(eventId, seatId, userId, seat.Price);
                 _context.Tickets.Add(ticket);
-                await _context.SaveChangesAsync(cancellationToken);
+                for (var attempt = 0; ; attempt++)
+                {
+                    try
+                    {
+                        await _context.SaveChangesAsync(cancellationToken);
+                        break;
+                    }
+                    catch (DbUpdateException ex) when (attempt < 2 && IsOrderCodeConflict(ex))
+                    {
+                        ticket.RegenerateOrderCode();
+                    }
+                }
                 var expiresAt = _time.UtcNow.Add(holdDuration);
                 try { _scheduler.Schedule(ticket.Id, holdDuration); }
                 catch (Exception ex) { _logger.LogError(ex, "Reservation {TicketId} committed but expiry scheduling failed; stale-lock reconciliation remains active", ticket.Id); }
@@ -192,4 +203,8 @@ public sealed class ReservationOperations : IReservationOperations
     }
 
     private static ReservationResult Fail(string code, string message) => new(false, code, message);
+
+    private static bool IsOrderCodeConflict(DbUpdateException exception) =>
+        exception.ToString().Contains("IX_tickets_OrderCode", StringComparison.OrdinalIgnoreCase)
+        || exception.ToString().Contains("OrderCode", StringComparison.OrdinalIgnoreCase);
 }

@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using TickeX.Application.Interfaces;
 
 namespace TickeX.Infrastructure.Payments;
@@ -13,15 +14,23 @@ public class PayOSService : IPayOSService
     private readonly string _clientId;
     private readonly string _apiKey;
     private readonly string _checksumKey;
+    private readonly ILogger<PayOSService> _logger;
 
     public PayOSService(HttpClient httpClient, IConfiguration configuration)
+        : this(httpClient, configuration, Microsoft.Extensions.Logging.Abstractions.NullLogger<PayOSService>.Instance)
+    {
+    }
+
+    public PayOSService(HttpClient httpClient, IConfiguration configuration, ILogger<PayOSService> logger)
     {
         _httpClient = httpClient;
         _clientId = configuration["PayOS:ClientId"] ?? throw new ArgumentNullException("PayOS:ClientId");
         _apiKey = configuration["PayOS:ApiKey"] ?? throw new ArgumentNullException("PayOS:ApiKey");
         _checksumKey = configuration["PayOS:ChecksumKey"] ?? throw new ArgumentNullException("PayOS:ChecksumKey");
+        _logger = logger;
         
         _httpClient.BaseAddress = new Uri("https://api-merchant.payos.vn/");
+        _httpClient.Timeout = TimeSpan.FromSeconds(15);
         _httpClient.DefaultRequestHeaders.Add("x-client-id", _clientId);
         _httpClient.DefaultRequestHeaders.Add("x-api-key", _apiKey);
     }
@@ -65,7 +74,7 @@ public class PayOSService : IPayOSService
         }
 
         var error = await response.Content.ReadAsStringAsync();
-        Console.WriteLine($"PayOS Error: {error}");
+        _logger.LogWarning("PayOS payment-link request failed with HTTP status {StatusCode}.", (int)response.StatusCode);
         return null;
     }
 
