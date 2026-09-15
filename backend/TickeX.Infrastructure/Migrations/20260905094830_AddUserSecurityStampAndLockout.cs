@@ -114,14 +114,11 @@ namespace TickeX.Infrastructure.Migrations
                 nullable: false,
                 defaultValue: new byte[0]);
 
-            migrationBuilder.AlterColumn<byte[]>(
-                name: "Version",
-                table: "seats",
-                type: "varbinary(max)",
-                nullable: false,
-                oldClrType: typeof(byte[]),
-                oldType: "rowversion",
-                oldRowVersion: true);
+            migrationBuilder.Sql("ALTER TABLE [seats] ADD [Version_Converted] varbinary(8) NULL;");
+            migrationBuilder.Sql("UPDATE [seats] SET [Version_Converted] = [Version];");
+            migrationBuilder.Sql("ALTER TABLE [seats] DROP COLUMN [Version];");
+            migrationBuilder.Sql("EXEC sp_rename N'[seats].[Version_Converted]', N'Version', N'COLUMN';");
+            migrationBuilder.Sql("ALTER TABLE [seats] ALTER COLUMN [Version] varbinary(8) NOT NULL;");
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "LockedAt",
@@ -480,14 +477,9 @@ namespace TickeX.Infrastructure.Migrations
                 oldType: "nvarchar(500)",
                 oldMaxLength: 500);
 
-            migrationBuilder.AlterColumn<byte[]>(
-                name: "Version",
-                table: "seats",
-                type: "rowversion",
-                rowVersion: true,
-                nullable: false,
-                oldClrType: typeof(byte[]),
-                oldType: "varbinary(max)");
+            migrationBuilder.Sql("ALTER TABLE [seats] ADD [Version_Rollback] rowversion NOT NULL;");
+            migrationBuilder.Sql("ALTER TABLE [seats] DROP COLUMN [Version];");
+            migrationBuilder.Sql("EXEC sp_rename N'[seats].[Version_Rollback]', N'Version', N'COLUMN';");
 
             migrationBuilder.AlterColumn<string>(
                 name: "Title",

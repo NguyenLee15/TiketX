@@ -19,21 +19,21 @@ public sealed class InfrastructureReadinessHealthCheck : IHealthCheck
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        if (!await _database.Database.CanConnectAsync(cancellationToken) || !_redis.IsConnected
-            || (await _database.Database.GetPendingMigrationsAsync(cancellationToken)).Any())
-            return HealthCheckResult.Unhealthy("A required infrastructure dependency is unavailable.");
-
-        var factory = new ConnectionFactory
-        {
-            HostName = _configuration["RabbitMQ:HostName"] ?? string.Empty,
-            UserName = _configuration["RabbitMQ:UserName"] ?? string.Empty,
-            Password = _configuration["RabbitMQ:Password"] ?? string.Empty,
-            Port = _configuration.GetValue("RabbitMQ:Port", 5672),
-            Ssl = new SslOption { Enabled = _configuration.GetValue("RabbitMQ:UseTls", false) }
-        };
-
         try
         {
+            if (!await _database.Database.CanConnectAsync(cancellationToken) || !_redis.IsConnected
+                || (await _database.Database.GetPendingMigrationsAsync(cancellationToken)).Any())
+                return HealthCheckResult.Unhealthy("A required infrastructure dependency is unavailable.");
+
+            var factory = new ConnectionFactory
+            {
+                HostName = _configuration["RabbitMQ:HostName"] ?? string.Empty,
+                UserName = _configuration["RabbitMQ:UserName"] ?? string.Empty,
+                Password = _configuration["RabbitMQ:Password"] ?? string.Empty,
+                Port = _configuration.GetValue("RabbitMQ:Port", 5672),
+                Ssl = new SslOption { Enabled = _configuration.GetValue("RabbitMQ:UseTls", false) }
+            };
+
             await using var connection = await factory.CreateConnectionAsync(cancellationToken);
             return HealthCheckResult.Healthy();
         }
