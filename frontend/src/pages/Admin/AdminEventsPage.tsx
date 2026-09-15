@@ -11,6 +11,7 @@ import EventModal, { EventFormValues } from '../../components/Admin/EventModal';
 import ConfirmModal from '../../components/Admin/ConfirmModal';
 import CancelEventModal from '../../components/Admin/CancelEventModal';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { formValueToEventStatus } from '../../utils/adminEventState';
 
 export default function AdminEventsPage() {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
@@ -122,7 +123,7 @@ export default function AdminEventsPage() {
           bannerUrl: data.imageUrl,
           organizerName: selectedEvent.organizerName || 'TickeX Live',
           basePrice: data.basePrice || selectedEvent.basePrice || 200000,
-          status: data.status === 'Draft' ? 0 : data.status === 'Cancelled' ? 3 : 1,
+          status: formValueToEventStatus(data.status),
           refundCutoffHours: selectedEvent.refundCutoffHours || 24
         };
 
@@ -152,7 +153,7 @@ export default function AdminEventsPage() {
           refundCutoffHours: 24,
           rowCount: data.rowCount,
           seatsPerRow: data.seatsPerRow,
-          status: data.status === 'Draft' ? 0 : data.status === 'Cancelled' ? 3 : 1
+          status: formValueToEventStatus(data.status)
         };
 
         const response = await api.post('/api/events', payload);
@@ -248,7 +249,7 @@ export default function AdminEventsPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-8 animate-in fade-in duration-500">
       {/* Top Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-2/30 p-5 sm:p-6 rounded-2xl border border-border-subtle backdrop-blur-md">
+      <div className="surface-panel flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Quản Lý Sự Kiện & Sơ Đồ Ghế</h1>
           <p className="text-text-secondary text-xs sm:text-sm mt-0.5">
@@ -265,7 +266,7 @@ export default function AdminEventsPage() {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="glass-panel p-3.5 sm:p-4 rounded-2xl flex flex-col md:flex-row gap-3 border border-border-subtle">
+      <div className="surface-panel p-3.5 sm:p-4 flex flex-col md:flex-row gap-3">
         <div className="flex-1 relative flex items-center bg-surface-2 rounded-xl border border-border-subtle focus-within:border-brand-primary/50">
           <Search className="absolute left-3.5 w-4 h-4 text-text-tertiary" />
           <input 
@@ -323,7 +324,7 @@ export default function AdminEventsPage() {
       ) : (
         <>
           {/* Desktop Table View */}
-          <div className="hidden md:block glass-panel rounded-2xl border border-border-subtle overflow-hidden shadow-lg">
+          <div className="hidden md:block surface-panel overflow-hidden shadow-lg">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>

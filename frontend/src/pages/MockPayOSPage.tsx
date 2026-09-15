@@ -44,8 +44,7 @@ export default function MockPayOSPage() {
         window.location.href = `/payment/result?orderCode=${encodeURIComponent(orderCode || '')}`;
       }, 1500);
 
-    } catch (err) {
-      console.error('Failed to simulate webhook', err);
+    } catch {
       setStatus('error');
     }
   };

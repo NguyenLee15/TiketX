@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { Seat, EventDetail } from '../types';
 import api from '../services/api';
 import { formatCurrency } from '../utils/formatters';
+import { useModalAccessibility } from './Admin/useModalAccessibility';
 
 interface CheckoutModalProps {
   seat: Seat;
@@ -30,7 +31,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
   const [loadingPayment, setLoadingPayment] = useState(true);
   const navigate = useNavigate();
   const modalRef = useRef<HTMLDivElement>(null);
-  const openerRef = useRef<HTMLElement | null>(document.activeElement as HTMLElement | null);
+  const closeConfirmRef = useRef<HTMLDivElement>(null);
   const [releaseError, setReleaseError] = useState('');
   const [releasing, setReleasing] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
@@ -39,28 +40,8 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
   const requestClose = useCallback(() => {
     if (!releasing && status === 'idle') setShowCloseConfirm(true);
   }, [releasing, status]);
-  const statusRef = useRef(status);
-  const requestCloseRef = useRef(requestClose);
-  statusRef.current = status;
-  requestCloseRef.current = requestClose;
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    modalRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && statusRef.current === 'idle') requestCloseRef.current();
-      if (event.key === 'Tab' && modalRef.current) {
-        const focusable = modalRef.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-        if (!focusable.length) return;
-        const first = focusable[0]; const last = focusable[focusable.length - 1];
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', onKeyDown); openerRef.current?.focus(); };
-  }, []);
+  useModalAccessibility(true, releasing, requestClose, modalRef);
+  useModalAccessibility(showCloseConfirm, releasing, () => setShowCloseConfirm(false), closeConfirmRef);
 
   useEffect(() => () => {
     if (simulateTimerRef.current) clearTimeout(simulateTimerRef.current);
@@ -83,8 +64,10 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
 
   // Load payment link / VietQR data upon opening
   useEffect(() => {
+    const controller = new AbortController();
     let isMounted = true;
     const initPayment = async () => {
+      if (!ticketId) return;
       try {
         setLoadingPayment(true);
         const returnUrl = `${window.location.origin}/payment/result`;
@@ -94,7 +77,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
           ticketId: ticketId,
           returnUrl: returnUrl,
           cancelUrl: cancelUrl
-        });
+        }, { signal: controller.signal });
 
         if (isMounted && response.data.success) {
           setPaymentData(response.data.data);
@@ -102,8 +85,9 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
       } catch (err: unknown) {
         if (!isMounted) return;
         const apiErr = err as { response?: { data?: { message?: string } } };
-        console.error('Error initiating payment:', err);
-        toast.error(apiErr.response?.data?.message || 'Không thể tạo mã thanh toán');
+        if ((err as { code?: string })?.code !== 'ERR_CANCELED') {
+          toast.error(apiErr.response?.data?.message || 'Không thể tạo mã thanh toán');
+        }
       } finally {
         if (isMounted) setLoadingPayment(false);
       }
@@ -112,6 +96,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
     initPayment();
     return () => {
       isMounted = false;
+      controller.abort();
     };
   }, [ticketId]);
 
@@ -201,9 +186,10 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
+      <button
+        type="button"
         className="absolute inset-0 bg-surface-1/95 animate-in fade-in duration-200"
-        aria-hidden="true"
+        aria-label="Đóng cửa sổ thanh toán"
         onClick={requestClose}
       />
       
@@ -417,8 +403,8 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
         )}
 
         {showCloseConfirm && status === 'idle' && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-surface-1/95 p-5" role="dialog" aria-modal="true" aria-labelledby="release-confirm-title">
-            <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-surface-2 p-5 shadow-2xl">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-surface-1/95 p-5" role="alertdialog" aria-modal="true" aria-labelledby="release-confirm-title">
+            <div ref={closeConfirmRef} className="w-full max-w-sm rounded-2xl border border-border-subtle bg-surface-2 p-5 shadow-2xl">
               <h3 id="release-confirm-title" className="text-base font-bold text-white">Rời phiên thanh toán?</h3>
               <p className="mt-2 text-xs leading-relaxed text-text-secondary">Ghế sẽ được trả lại và liên kết thanh toán hiện tại có thể không còn sử dụng được.</p>
               {releaseError && <p role="alert" aria-live="polite" className="mt-3 text-xs text-danger">{releaseError}</p>}

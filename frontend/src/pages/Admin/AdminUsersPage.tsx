@@ -193,7 +193,7 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-8 text-text-primary max-w-7xl mx-auto">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-2/30 p-5 sm:p-6 rounded-2xl border border-border-subtle backdrop-blur-md">
+      <div className="surface-panel flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 sm:p-6">
         <div>
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-0.5">Quản Lý Người Dùng & Phân Quyền</h2>
           <p className="text-text-secondary text-xs sm:text-sm">
@@ -206,7 +206,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="glass-card p-4 rounded-2xl border border-border-subtle flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="surface-panel p-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary" />
           <input 
@@ -262,7 +262,7 @@ export default function AdminUsersPage() {
       ) : (
         <>
           {/* Desktop Table View */}
-          <div className="hidden md:block glass-premium rounded-2xl border border-border-subtle overflow-hidden relative shadow-lg">
+          <div className="hidden md:block surface-panel overflow-hidden relative shadow-lg">
             <div className="overflow-x-auto relative z-10">
               <table className="w-full text-left border-collapse">
                 <thead>

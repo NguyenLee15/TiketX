@@ -1,6 +1,9 @@
 import { RefObject, useEffect, useRef } from 'react';
 
 const focusableSelector = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const dialogStack: HTMLElement[] = [];
+let scrollLockCount = 0;
+let previousBodyOverflow = '';
 
 export function useModalAccessibility(
   isOpen: boolean,
@@ -9,18 +12,31 @@ export function useModalAccessibility(
   containerRef: RefObject<HTMLElement | null>,
 ) {
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  const isBusyRef = useRef(isBusy);
+
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useEffect(() => { isBusyRef.current = isBusy; }, [isBusy]);
 
   useEffect(() => {
     if (!isOpen) return;
 
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    requestAnimationFrame(() => containerRef.current?.querySelector<HTMLElement>(focusableSelector)?.focus());
+    const container = containerRef.current;
+    if (container) dialogStack.push(container);
+    if (scrollLockCount++ === 0) {
+      previousBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+    }
+    requestAnimationFrame(() => container?.querySelector<HTMLElement>(focusableSelector)?.focus());
 
     return () => {
-      document.body.style.overflow = previousOverflow;
-      previousFocusRef.current?.focus();
+      if (container) {
+        const index = dialogStack.lastIndexOf(container);
+        if (index >= 0) dialogStack.splice(index, 1);
+      }
+      if (--scrollLockCount === 0) document.body.style.overflow = previousBodyOverflow;
+      if (previousFocusRef.current?.isConnected) previousFocusRef.current.focus();
     };
   }, [containerRef, isOpen]);
 
@@ -28,14 +44,16 @@ export function useModalAccessibility(
     if (!isOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !isBusy) {
+      const container = containerRef.current;
+      if (!container || dialogStack[dialogStack.length - 1] !== container) return;
+      if (event.key === 'Escape' && !isBusyRef.current) {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
-      if (event.key !== 'Tab' || !containerRef.current) return;
-      const items = Array.from(containerRef.current.querySelectorAll<HTMLElement>(focusableSelector));
+      if (event.key !== 'Tab') return;
+      const items = Array.from(container.querySelectorAll<HTMLElement>(focusableSelector));
       if (!items.length) return;
 
       const first = items[0];
@@ -51,5 +69,5 @@ export function useModalAccessibility(
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [containerRef, isBusy, isOpen, onClose]);
+  }, [containerRef, isOpen]);
 }

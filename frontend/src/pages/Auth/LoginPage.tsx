@@ -130,7 +130,7 @@ export default function LoginPage() {
     <div className="min-h-[100dvh] bg-surface-1 flex items-center justify-center py-10 px-4 relative text-text-primary">
       <div className="w-full max-w-md relative z-10 animate-scale-in">
         {/* Sleek Floating Panel */}
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl relative">
+        <div className="surface-panel p-6 sm:p-8 rounded-2xl relative">
           {/* Subtle top highlight */}
           
           <div className="text-center mb-6 sm:mb-8">

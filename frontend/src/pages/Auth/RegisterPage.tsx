@@ -68,7 +68,7 @@ export default function RegisterPage() {
       {/* Decorative Grid */}
       <div className="w-full max-w-md relative z-10 animate-scale-in">
         {/* Sleek Floating Panel */}
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl relative overflow-hidden">
+        <div className="surface-panel p-6 sm:p-8 rounded-2xl relative overflow-hidden">
           {/* Subtle top highlight */}
           
           <div className="text-center mb-8">

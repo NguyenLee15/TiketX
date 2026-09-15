@@ -78,7 +78,6 @@ export default function AdminDashboardPage() {
       }
     } catch (err: unknown) {
       if ((err as { code?: string })?.code === 'ERR_CANCELED') return;
-      console.error(err);
       setError(true);
       toast.error('Không thể tải dữ liệu thống kê bảng điều khiển');
     } finally {
@@ -132,7 +131,7 @@ export default function AdminDashboardPage() {
       bg: 'bg-success/10',
       border: 'border-success/20',
       badge: 'Gross trước hoàn tiền',
-      glow: 'shadow-[0_0_30px_rgba(34,197,94,0.15)]'
+      glow: ''
     },
     {
       title: 'Vé Đã Bán Ra',
@@ -142,7 +141,7 @@ export default function AdminDashboardPage() {
       bg: 'bg-brand-primary/10',
       border: 'border-brand-primary/20',
       badge: 'Đã thanh toán',
-      glow: 'shadow-brand-glow'
+      glow: ''
     },
     {
       title: 'Tỷ Lệ Check-in',
@@ -153,7 +152,7 @@ export default function AdminDashboardPage() {
       bg: 'bg-emerald-500/10',
       border: 'border-emerald-500/20',
       badge: 'Trực tiếp tại cổng',
-      glow: 'shadow-[0_0_30px_rgba(16,185,129,0.15)]'
+      glow: ''
     },
     {
       title: 'Tiền Đã Hoàn Trả',
@@ -163,7 +162,7 @@ export default function AdminDashboardPage() {
       bg: 'bg-warning/10',
       border: 'border-warning/20',
       badge: 'Đã xử lý hoàn',
-      glow: 'shadow-[0_0_30px_rgba(245,158,11,0.15)]'
+      glow: ''
     },
     {
       title: 'Đang Chờ Hoàn',
@@ -173,7 +172,7 @@ export default function AdminDashboardPage() {
       bg: 'bg-amber-400/10',
       border: 'border-amber-400/20',
       badge: 'Provider chưa xác nhận',
-      glow: 'shadow-[0_0_30px_rgba(251,191,36,0.12)]'
+      glow: ''
     },
     {
       title: 'Doanh Thu Thuần',
@@ -183,27 +182,27 @@ export default function AdminDashboardPage() {
       bg: 'bg-emerald-400/10',
       border: 'border-emerald-400/20',
       badge: 'Gross trừ đã hoàn + đang chờ',
-      glow: 'shadow-[0_0_30px_rgba(52,211,153,0.12)]'
+      glow: ''
     },
     {
       title: 'Tổng Số Sự Kiện',
       value: numberFormatter.format(stats.totalEvents || 0),
       icon: Calendar,
-      color: 'text-blue-400',
-      bg: 'bg-blue-400/10',
-      border: 'border-blue-400/20',
+      color: 'text-brand-primary',
+      bg: 'bg-brand-primary/10',
+      border: 'border-brand-primary/20',
       badge: 'Trên toàn hệ thống',
-      glow: 'shadow-[0_0_30px_rgba(96,165,250,0.15)]'
+      glow: ''
     },
     {
       title: 'Người Dùng Đăng Ký',
       value: numberFormatter.format(stats.totalUsers || 0),
       icon: Users,
-      color: 'text-purple-400',
-      bg: 'bg-purple-400/10',
-      border: 'border-purple-400/20',
+      color: 'text-brand-primary',
+      bg: 'bg-brand-primary/10',
+      border: 'border-brand-primary/20',
        badge: 'Tài khoản trong hệ thống',
-      glow: 'shadow-[0_0_30px_rgba(192,132,252,0.15)]'
+      glow: ''
     }
   ];
 
@@ -216,7 +215,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6 pb-8 text-text-primary animate-in fade-in duration-500 max-w-7xl mx-auto">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-2/30 p-5 sm:p-6 rounded-2xl border border-border-subtle backdrop-blur-md">
+      <div className="surface-panel flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-5 sm:p-6">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary/15 border border-brand-primary/30 w-fit mb-1.5 text-xs font-bold text-brand-primary">
             <TrendingUp className="w-3.5 h-3.5" />
@@ -244,10 +243,8 @@ export default function AdminDashboardPage() {
         {statCards.map((stat, idx) => (
           <div 
             key={idx}
-            className={`glass-premium p-5 sm:p-6 rounded-2xl border border-border-subtle relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 ${stat.glow}`}
+            className={`surface-panel p-5 sm:p-6 relative overflow-hidden group hover:-translate-y-0.5 transition-transform duration-200 ${stat.glow}`}
           >
-            <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-[50px] pointer-events-none opacity-40 ${stat.bg}`} />
-            
             <div className="flex justify-between items-start mb-3 relative z-10 gap-2">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${stat.border} ${stat.bg} shrink-0`}>
                 <stat.icon className={`w-5 h-5 ${stat.color}`} />
@@ -318,7 +315,7 @@ export default function AdminDashboardPage() {
                   {/* Revenue Bar */}
                   <div className="w-full max-w-[48px] bg-surface-3/50 rounded-t-xl overflow-hidden flex flex-col justify-end p-0.5 h-full">
                     <div 
-                      className="w-full bg-gradient-to-t from-brand-primary to-emerald-400 rounded-t-lg transition-[height,filter] duration-700 motion-reduce:transition-none group-hover:brightness-125 shadow-sm"
+                      className="w-full bg-brand-primary rounded-t-lg transition-[height] duration-300 motion-reduce:transition-none"
                       style={{ height: `${Math.max(heightPercent, 4)}%` }}
                     />
                   </div>
@@ -334,8 +331,10 @@ export default function AdminDashboardPage() {
           </div>}
         </div>
         {dailyStats.length > 0 && (
-          <div className="sr-only focus-within:not-sr-only focus-within:absolute focus-within:p-4 focus-within:bg-surface-1 focus-within:border focus-within:border-border-subtle focus-within:rounded-xl">
-            <table>
+          <details className="rounded-lg border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-secondary">
+            <summary className="cursor-pointer font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">Xem dữ liệu chi tiết</summary>
+            <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-left">
               <caption>Chi tiết doanh thu 7 ngày gần nhất</caption>
               <thead>
                 <tr><th scope="col">Ngày</th><th scope="col">Doanh thu</th><th scope="col">Vé bán</th></tr>
@@ -350,7 +349,8 @@ export default function AdminDashboardPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          </details>
         )}
       </div>
 
@@ -387,7 +387,7 @@ export default function AdminDashboardPage() {
                     {/* Occupancy Progress Bar */}
                     <div className="w-full bg-surface-3 h-1.5 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-brand-primary to-brand-secondary transition-[width] duration-500 motion-reduce:transition-none rounded-full"
+                        className="h-full bg-brand-primary transition-[width] duration-300 motion-reduce:transition-none rounded-full"
                         style={{ width: `${Math.min(fillPercent, 100)}%` }}
                       />
                     </div>

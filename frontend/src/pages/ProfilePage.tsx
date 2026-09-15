@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -6,6 +6,7 @@ import { User, Lock, Save, Loader2, Image as ImageIcon, Phone, Mail, Shield } fr
 import { toast } from 'react-hot-toast';
 import api from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
+import { ResilientImage } from '../components/ResilientImage';
 
 // 1. Profile Schema
 const profileSchema = z.object({
@@ -37,6 +38,7 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 export default function ProfilePage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const user = useAuthStore(state => state.user);
   const setAuth = useAuthStore(state => state.setAuth);
@@ -75,13 +77,11 @@ export default function ProfilePage() {
 
   const currentAvatarUrl = watchProfile('avatarUrl');
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await api.get('/api/users/me');
+      setLoading(true);
+      setLoadError(false);
+      const res = await api.get('/api/users/me', { signal });
       if (res.data.success) {
         setEmail(res.data.data.email || '');
         resetProfile({
@@ -90,12 +90,19 @@ export default function ProfilePage() {
           avatarUrl: res.data.data.avatarUrl || ''
         });
       }
-    } catch {
-      toast.error('Không thể tải thông tin hồ sơ');
+    } catch (error: unknown) {
+      if ((error as { code?: string })?.code === 'ERR_CANCELED') return;
+      setLoadError(true);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [resetProfile]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchProfile(controller.signal);
+    return () => controller.abort();
+  }, [fetchProfile]);
 
   const onUpdateProfile = async (values: ProfileFormValues) => {
     try {
@@ -140,6 +147,16 @@ export default function ProfilePage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="surface-panel mx-auto flex min-h-[40vh] max-w-lg flex-col items-center justify-center gap-4 p-6 text-center">
+        <h1 className="text-xl font-display font-bold text-text-primary">Không thể tải hồ sơ</h1>
+        <p className="text-base text-text-secondary">Kiểm tra kết nối rồi thử lại.</p>
+        <button type="button" onClick={() => void fetchProfile()} className="min-h-11 rounded-lg bg-brand-primary px-5 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">Thử lại</button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-12 relative text-text-primary">
       <div className="surface-panel flex flex-col gap-1.5 p-6 sm:p-8">
@@ -171,7 +188,7 @@ export default function ProfilePage() {
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-4 p-4 bg-surface-2/50 rounded-xl border border-border-subtle">
                 <div className="relative group shrink-0">
                   {currentAvatarUrl ? (
-                    <img src={currentAvatarUrl} alt="Avatar" width="80" height="80" loading="lazy" className="relative w-20 h-20 rounded-full object-cover border-2 border-surface-2 shadow-xl group-hover:scale-105 transition-transform" />
+                    <ResilientImage src={currentAvatarUrl} alt="Ảnh đại diện" width="80" height="80" className="relative w-20 h-20 rounded-full object-cover border-2 border-surface-2 shadow-xl group-hover:scale-105 transition-transform" fallbackClassName="relative flex h-20 w-20 items-center justify-center rounded-full border-2 border-surface-2 bg-surface-3 text-text-secondary" />
                   ) : (
                     <div className="relative w-20 h-20 rounded-full bg-surface-3 flex items-center justify-center border-2 border-surface-2 shadow-xl group-hover:scale-105 transition-transform">
                       <User className="w-8 h-8 text-text-secondary" />

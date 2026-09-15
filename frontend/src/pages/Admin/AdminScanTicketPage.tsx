@@ -219,7 +219,6 @@ export default function AdminScanTicketPage() {
       } catch (err: unknown) {
         if (!mounted) return;
         const errMsg = (err instanceof Error ? err.message : String(err)) || 'Không thể truy cập camera.';
-        console.warn('Camera start error:', errMsg);
         setCameraError(errMsg.includes('NotAllowedError') 
           ? 'Trình duyệt bị từ chối quyền truy cập camera. Vui lòng cấp quyền trong cài đặt trình duyệt.' 
           : 'Không thể khởi tạo camera. Vui lòng kiểm tra thiết bị hoặc chuyển sang nhập tay.');
@@ -267,7 +266,7 @@ export default function AdminScanTicketPage() {
   return (
     <div className="space-y-6 pb-8 animate-in fade-in duration-500 text-text-primary max-w-7xl mx-auto">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-2/30 p-5 sm:p-6 rounded-2xl border border-border-subtle backdrop-blur-md">
+      <div className="surface-panel flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 sm:p-6">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase mb-1.5">
             <ShieldCheck className="w-3.5 h-3.5" /> Trạm Soát Vé An Ninh Cổng
@@ -388,15 +387,16 @@ export default function AdminScanTicketPage() {
         <div className="lg:col-span-5 space-y-5">
           {/* Scan Result Card with ARIA live region */}
           <div 
-            role="status" 
-            aria-live="assertive"
-            className="glass-card p-5 sm:p-6 rounded-2xl border border-border-subtle min-h-[220px] flex flex-col justify-center relative overflow-hidden"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="surface-panel p-5 sm:p-6 min-h-[220px] flex flex-col justify-center relative overflow-hidden"
           >
             {scanResult ? (
               <div className="space-y-3.5 animate-in zoom-in-95 duration-300">
                 {scanResult.status === 'valid' && (
                   <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-center space-y-1.5">
-                    <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto animate-bounce" />
+                    <CheckCircle2 className="w-10 h-10 text-success mx-auto" aria-hidden="true" />
                     <h3 className="text-sm font-black text-emerald-400 uppercase tracking-wide">{scanResult.message}</h3>
                   </div>
                 )}
@@ -417,7 +417,7 @@ export default function AdminScanTicketPage() {
 
                 {/* Ticket Details Box */}
                 {scanResult.ticket && (
-                  <div className="bg-surface-2 p-3.5 rounded-xl border border-border-subtle space-y-2 text-xs">
+                  <div aria-live="off" className="bg-surface-2 p-3.5 rounded-xl border border-border-subtle space-y-2 text-xs">
                     <div className="flex justify-between items-center pb-1.5 border-b border-border-subtle">
                       <span className="text-text-secondary">Khách Hàng:</span>
                       <span className="font-bold text-white text-sm">{scanResult.ticket.attendeeName}</span>
@@ -455,7 +455,7 @@ export default function AdminScanTicketPage() {
           </div>
 
           {/* Recent Scans History Log */}
-          <div className="glass-card p-5 sm:p-6 rounded-2xl border border-border-subtle">
+          <div className="surface-panel p-5 sm:p-6">
             <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
               <RefreshCw className="w-4 h-4 text-brand-primary" />
               Lịch sử soát vé gần nhất

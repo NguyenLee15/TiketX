@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Loader2, Plus, Trash2, Image as ImageIcon, Ticket, Grid3X3, AlertCircle } from 'lucide-react';
+import { X, Loader2, Image as ImageIcon, Grid3X3, AlertCircle } from 'lucide-react';
 import { Event } from '../../types';
 import { useModalAccessibility } from './useModalAccessibility';
+import { eventStatusToFormValue } from '../../utils/adminEventState';
 
 // Timezone conversion helpers
 export function toLocalDatetimeInput(isoOrDateString?: string | null): string {
@@ -27,12 +28,6 @@ export function toUtcIsoString(localDatetimeStr: string): string {
   return d.toISOString();
 }
 
-const ticketTypeSchema = z.object({
-  name: z.string().min(1, "Tên hạng vé là bắt buộc"),
-  price: z.number().min(0, "Giá vé không được âm"),
-  totalQuantity: z.number().min(1, "Số lượng vé phải từ 1 trở lên"),
-});
-
 const eventSchema = z.object({
   title: z.string().min(3, "Tên sự kiện phải từ 3 ký tự trở lên"),
   description: z.string().min(10, "Mô tả phải từ 10 ký tự trở lên"),
@@ -42,11 +37,10 @@ const eventSchema = z.object({
   endDate: z.string().optional(),
   imageUrl: z.union([z.literal(''), z.string().url("URL hình ảnh không hợp lệ")]),
   category: z.string().min(1, "Danh mục là bắt buộc"),
-  status: z.enum(['Draft', 'Published', 'Cancelled']),
+  status: z.enum(['Draft', 'Published', 'Completed', 'Cancelled']),
   rowCount: z.number().min(1, "Tối thiểu 1 hàng").max(50, "Tối đa 50 hàng"),
   seatsPerRow: z.number().min(1, "Tối thiểu 1 ghế/hàng").max(50, "Tối đa 50 ghế/hàng"),
   basePrice: z.number().positive("Giá vé cơ sở phải lớn hơn 0"),
-  ticketTypes: z.array(ticketTypeSchema).min(1, "Bắt buộc có ít nhất 1 hạng vé"),
 }).refine(data => !data.endDate || new Date(data.endDate).getTime() > new Date(data.date).getTime(), {
   path: ['endDate'],
   message: 'Thời gian kết thúc phải sau thời gian bắt đầu',
@@ -69,7 +63,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
   const modalRef = useRef<HTMLDivElement>(null);
   useModalAccessibility(isOpen, Boolean(isLoading), onClose, modalRef);
 
-  const { register, control, handleSubmit, reset, watch, formState: { errors } } = useForm<EventFormValues>({
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<EventFormValues>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       title: '',
@@ -84,12 +78,11 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
       rowCount: 5,
       seatsPerRow: 12,
       basePrice: 100000,
-      ticketTypes: [{ name: 'Standard', price: 100000, totalQuantity: 60 }],
     }
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'ticketTypes' });
   const watchedImageUrl = watch('imageUrl');
+  const watchedStatus = watch('status');
   const watchedRowCount = watch('rowCount') || 5;
   const watchedSeatsPerRow = watch('seatsPerRow') || 12;
   const totalMatrixSeats = watchedRowCount * watchedSeatsPerRow;
@@ -98,9 +91,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
   useEffect(() => {
     setImageError(false);
     if (event) {
-      const statusStr = (typeof event.status === 'string' && ['Draft', 'Published', 'Cancelled'].includes(event.status))
-        ? event.status as 'Draft' | 'Published' | 'Cancelled'
-        : 'Published';
+      const statusStr = eventStatusToFormValue(event.status);
 
       const defaultEndDate = event.date 
         ? new Date(new Date(event.date).getTime() + 3 * 3600 * 1000).toISOString() 
@@ -119,7 +110,6 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
         rowCount: 5,
         seatsPerRow: 12,
         basePrice: Number(event.basePrice) || 100000,
-        ticketTypes: event.ticketTypes && event.ticketTypes.length > 0 ? event.ticketTypes.map(t => ({ name: t.name, price: Number(t.price), totalQuantity: Number(t.totalQuantity) })) : [{ name: 'Standard', price: Number(event.basePrice) || 100000, totalQuantity: event.totalSeats || 60 }],
       });
     } else {
       reset({
@@ -135,7 +125,6 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
         rowCount: 5,
         seatsPerRow: 12,
         basePrice: 100000,
-        ticketTypes: [{ name: 'Standard', price: 100000, totalQuantity: 60 }],
       });
     }
   }, [event, reset, isOpen]);
@@ -231,11 +220,13 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                 <select
                   id="event-status"
                   {...register('status')}
+                  disabled={watchedStatus === 'Completed' || isLoading}
                   aria-label="Trạng thái sự kiện"
                   className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors cursor-pointer"
                 >
                   <option value="Published" className="bg-surface-1 text-white">Đang mở bán (Published)</option>
                   <option value="Draft" className="bg-surface-1 text-white">Bản nháp (Draft)</option>
+                  {watchedStatus === 'Completed' && <option value="Completed" className="bg-surface-1 text-white">Đã kết thúc (Completed)</option>}
                   <option value="Cancelled" className="bg-surface-1 text-white">Đã hủy (Cancelled)</option>
                 </select>
                 {errors.status && <p className="text-danger text-xs mt-1">{errors.status.message}</p>}
@@ -404,91 +395,6 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
             <p className="text-[11px] text-text-secondary">Giá ghế được tạo tự động theo hạng: VIP 1,75×, Standard 1×, Economy 0,75×.</p>
           </div>
 
-          {/* Legacy ticket tier fields retained only for form compatibility; backend stores BasePrice. */}
-          <div className="hidden" aria-hidden="true">
-            <div className="flex justify-between items-center mb-2.5">
-              <div className="flex items-center gap-2">
-                <Ticket className="w-4 h-4 text-brand-primary" />
-                <h3 className="text-sm font-bold text-white">Cấu hình phân hạng vé</h3>
-              </div>
-              <button
-                type="button"
-                disabled={hasTicketHistory || isLoading}
-                onClick={() => append({ name: '', price: 0, totalQuantity: 50 })}
-                className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary border border-brand-primary/30 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Thêm hạng vé
-              </button>
-            </div>
-
-            {errors.ticketTypes && typeof errors.ticketTypes.message === 'string' && (
-              <p className="text-danger text-xs mb-2">{errors.ticketTypes.message}</p>
-            )}
-
-            <div className="space-y-2">
-              {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-12 gap-2 items-center bg-surface-2/40 p-2.5 rounded-xl border border-border-subtle">
-                  <div className="col-span-5 sm:col-span-4">
-                    <label htmlFor={`ticket-type-name-${index}`} className="block text-[10px] font-bold text-text-secondary uppercase mb-0.5">Tên hạng</label>
-                    <input 
-                      id={`ticket-type-name-${index}`}
-                      {...register(`ticketTypes.${index}.name` as const)}
-                      disabled={hasTicketHistory || isLoading}
-                      placeholder="VD: VIP, Standard"
-                      className="w-full bg-surface-2 border border-border-subtle rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50"
-                    />
-                    {errors.ticketTypes?.[index]?.name && (
-                      <p className="text-danger text-[10px] mt-0.5">{errors.ticketTypes[index]?.name?.message}</p>
-                    )}
-                  </div>
-
-                  <div className="col-span-4 sm:col-span-4">
-                    <label htmlFor={`ticket-type-price-${index}`} className="block text-[10px] font-bold text-text-secondary uppercase mb-0.5">Giá (VNĐ)</label>
-                    <input 
-                      id={`ticket-type-price-${index}`}
-                      type="number"
-                      {...register(`ticketTypes.${index}.price` as const, { valueAsNumber: true })}
-                      disabled={hasTicketHistory || isLoading}
-                      placeholder="Giá"
-                      className="w-full bg-surface-2 border border-border-subtle rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50"
-                    />
-                    {errors.ticketTypes?.[index]?.price && (
-                      <p className="text-danger text-[10px] mt-0.5">{errors.ticketTypes[index]?.price?.message}</p>
-                    )}
-                  </div>
-
-                  <div className="col-span-2 sm:col-span-3">
-                    <label htmlFor={`ticket-type-quantity-${index}`} className="block text-[10px] font-bold text-text-secondary uppercase mb-0.5">Số lượng</label>
-                    <input 
-                      id={`ticket-type-quantity-${index}`}
-                      type="number"
-                      {...register(`ticketTypes.${index}.totalQuantity` as const, { valueAsNumber: true })}
-                      disabled={hasTicketHistory || isLoading}
-                      placeholder="SL"
-                      className="w-full bg-surface-2 border border-border-subtle rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50"
-                    />
-                    {errors.ticketTypes?.[index]?.totalQuantity && (
-                      <p className="text-danger text-[10px] mt-0.5">{errors.ticketTypes[index]?.totalQuantity?.message}</p>
-                    )}
-                  </div>
-
-                  <div className="col-span-1 flex justify-end pt-4">
-                    <button
-                      type="button"
-                      disabled={fields.length <= 1 || hasTicketHistory || isLoading}
-                      onClick={() => remove(index)}
-                      className="p-1.5 text-text-secondary hover:text-danger hover:bg-danger/10 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-30 disabled:hover:bg-transparent"
-                      title="Xóa hạng vé"
-                      aria-label={`Xóa hạng vé ${index + 1}`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
 
           <div className="pt-3 flex justify-end gap-2.5 border-t border-border-subtle">
             <button 

@@ -15,35 +15,48 @@ export default function PaymentResultPage() {
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(true);
   const attemptRef = useRef(0);
+  const mountedRef = useRef(true);
 
-  const checkStatus = useCallback(async () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const checkStatus = useCallback(async (signal?: AbortSignal) => {
     if (!orderCode) {
-      setStatus('Failed'); setError('Thiếu mã đơn hàng. Hãy mở giao dịch từ trang Vé của tôi.'); setChecking(false); return true;
+      if (!signal?.aborted && mountedRef.current) {
+        setStatus('Failed'); setError('Thiếu mã đơn hàng. Hãy mở giao dịch từ trang Vé của tôi.'); setChecking(false);
+      }
+      return true;
     }
     try {
-      setChecking(true); setError('');
-      const response = await api.get(`/api/payments/status/${encodeURIComponent(orderCode)}`);
+      if (!signal?.aborted && mountedRef.current) { setChecking(true); setError(''); }
+      const response = await api.get(`/api/payments/status/${encodeURIComponent(orderCode)}`, { signal });
       const next = normalizePaymentStatus(response.data?.data?.status);
-      setStatus(next);
-      if (next === 'Paid' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+      if (!signal?.aborted && mountedRef.current) {
+        setStatus(next);
+        if (next === 'Paid' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+      }
       return TERMINAL.has(next);
-    } catch {
-      setError('Chưa thể kiểm tra giao dịch. Hệ thống sẽ tự thử lại.'); return false;
-    } finally { setChecking(false); }
+    } catch (requestError: unknown) {
+      if ((requestError as { code?: string })?.code !== 'ERR_CANCELED' && mountedRef.current) setError('Chưa thể kiểm tra giao dịch. Hệ thống sẽ tự thử lại.');
+      return false;
+    } finally { if (!signal?.aborted && mountedRef.current) setChecking(false); }
   }, [orderCode]);
 
   useEffect(() => {
     let cancelled = false; let timer: number | undefined;
+    const controller = new AbortController();
     attemptRef.current = 0;
     const poll = async () => {
-      const done = await checkStatus();
+      const done = await checkStatus(controller.signal);
       if (cancelled || done) return;
       const attempt = attemptRef.current++;
       if (attempt >= BACKOFF_MS.length) { setError('Giao dịch vẫn đang được xử lý. Bạn có thể kiểm tra lại hoặc xem danh sách vé.'); return; }
       timer = window.setTimeout(poll, BACKOFF_MS[attempt]);
     };
     void poll();
-    return () => { cancelled = true; if (timer) window.clearTimeout(timer); };
+    return () => { cancelled = true; controller.abort(); if (timer) window.clearTimeout(timer); };
   }, [checkStatus]);
 
   const paid = status === 'Paid' || status === 'Used'; const pending = status === 'Pending' || status === 'RefundPending';

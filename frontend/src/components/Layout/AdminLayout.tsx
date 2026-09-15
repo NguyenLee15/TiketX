@@ -48,8 +48,10 @@ export default function AdminLayout() {
 
         <button
           onClick={() => setIsMobileMenuOpen(prev => !prev)}
-          className="p-2 rounded-xl bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white transition-colors border border-border-subtle"
+          className="min-h-11 min-w-11 p-2 rounded-xl bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white transition-colors border border-border-subtle"
           aria-label={isMobileMenuOpen ? "Đóng menu" : "Mở menu"}
+          aria-controls="admin-mobile-navigation"
+          aria-expanded={isMobileMenuOpen}
         >
           {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -57,14 +59,16 @@ export default function AdminLayout() {
 
       {/* Mobile Off-Canvas Drawer Backdrop */}
       {isMobileMenuOpen && (
-        <div 
-           className="fixed inset-0 z-50 bg-surface-1/85 md:hidden animate-in fade-in duration-200"
+        <button
+          type="button"
+          aria-label="Đóng menu quản trị"
+          className="fixed inset-0 z-50 bg-surface-1/85 md:hidden animate-in fade-in duration-200"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Mobile Slide-over Drawer (< md) */}
-      <div ref={mobileDrawerRef} role="dialog" aria-modal="true" aria-hidden={!isMobileMenuOpen} inert={!isMobileMenuOpen || undefined} aria-label="Điều hướng quản trị" className={`fixed top-0 left-0 bottom-0 w-72 bg-surface-1 border-r border-border-subtle z-50 flex flex-col md:hidden transition-transform duration-300 ease-in-out motion-reduce:transition-none shadow-2xl ${
+      <div id="admin-mobile-navigation" ref={mobileDrawerRef} role="dialog" aria-modal="true" aria-hidden={!isMobileMenuOpen} inert={!isMobileMenuOpen || undefined} aria-label="Điều hướng quản trị" className={`fixed top-0 left-0 bottom-0 w-72 bg-surface-1 border-r border-border-subtle z-50 flex flex-col md:hidden transition-transform duration-300 ease-in-out motion-reduce:transition-none shadow-2xl ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="h-16 flex items-center justify-between px-5 border-b border-border-subtle shrink-0">
@@ -79,7 +83,7 @@ export default function AdminLayout() {
           <button 
             onClick={() => setIsMobileMenuOpen(false)}
             aria-label="Đóng menu"
-            className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-surface-2"
+            className="min-h-11 min-w-11 p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-surface-2"
           >
             <X className="w-4 h-4" />
           </button>

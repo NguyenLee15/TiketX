@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { LogOut, ShieldCheck, Zap, Ticket, Calendar, Menu, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import api from '../../services/api';
+import { ResilientImage } from '../ResilientImage';
 
 export default function StandardLayout() {
   const { isAuthenticated, isAdmin, logout, user } = useAuthStore();
@@ -76,7 +77,7 @@ export default function StandardLayout() {
                 <div className="flex items-center gap-3 border-l border-border-subtle pl-4 ml-4">
                   <Link to="/profile" className="flex items-center gap-2 hover:bg-surface-3 px-2.5 py-1.5 rounded-lg transition-colors group">
                     {user?.avatarUrl ? (
-                      <img src={user.avatarUrl} alt="Ảnh đại diện" width="28" height="28" loading="lazy" className="w-7 h-7 rounded-full object-cover border border-border-subtle" />
+                      <ResilientImage src={user.avatarUrl} alt="Ảnh đại diện" width="28" height="28" className="w-7 h-7 rounded-full object-cover border border-border-subtle" fallbackClassName="w-7 h-7 rounded-full bg-surface-3 border border-border-subtle flex items-center justify-center text-text-tertiary" />
                     ) : (
                       <div className="w-7 h-7 rounded-full bg-surface-3 border border-border-subtle flex items-center justify-center">
                         <span className="text-xs font-bold text-white uppercase">{user?.name?.charAt(0)}</span>

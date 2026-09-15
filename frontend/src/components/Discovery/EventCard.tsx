@@ -2,6 +2,7 @@ import { Calendar, MapPin, ArrowRight, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Event } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { ResilientImage } from '../ResilientImage';
 
 interface EventCardProps { event: Event; featured?: boolean }
 
@@ -11,7 +12,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
       <article className="surface-panel overflow-hidden">
         <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
           <div className="relative min-h-64 bg-surface-0 lg:min-h-80">
-            <img src={event.bannerUrl || event.imageUrl} alt={event.title} width="1280" height="720" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover" />
+            <ResilientImage src={event.bannerUrl || event.imageUrl} alt={event.title} width="1280" height="720" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover" fallbackClassName="absolute inset-0 flex items-center justify-center bg-surface-3 text-text-tertiary" />
             <div className="absolute inset-0 bg-surface-0/20" />
           </div>
           <div className="flex flex-col justify-between gap-6 p-6 sm:p-8">
@@ -31,7 +32,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
   return (
     <Link to={`/events/${event.id}`} className="group surface-raised flex h-full flex-col overflow-hidden transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-brand-primary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">
       <div className="relative aspect-[16/10] overflow-hidden bg-surface-0">
-        <img src={event.imageUrl} alt={event.title} width="640" height="400" loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+        <ResilientImage src={event.imageUrl} alt={event.title} width="640" height="400" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" fallbackClassName="flex h-full w-full items-center justify-center bg-surface-3 text-text-tertiary" />
         <span className="absolute left-3 top-3 rounded-md bg-surface-0/85 px-2.5 py-1 text-xs font-semibold text-text-primary">{event.category}</span>
       </div>
       <div className="flex flex-1 flex-col gap-4 p-5">

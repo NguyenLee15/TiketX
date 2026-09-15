@@ -263,8 +263,7 @@ export default function MyTicketsPage() {
 
       doc.save(`TickeX_Ticket_${ticket.orderCode}_${ticket.row}${ticket.number}.pdf`);
       toast.success('Đã tải xuống vé PDF vector thành công!', { id: 'pdf-toast' });
-    } catch (err) {
-      console.error('Failed to generate vector PDF', err);
+    } catch {
       toast.error('Lỗi khi tạo file PDF', { id: 'pdf-toast' });
     }
   };
