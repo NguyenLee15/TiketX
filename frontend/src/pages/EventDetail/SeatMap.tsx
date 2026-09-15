@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Seat } from '../../types';
 import { SeatLegend } from './SeatLegend';
 import { formatCurrency } from '../../utils/formatters';
@@ -10,8 +10,6 @@ interface SeatMapProps {
 }
 
 export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatClick }) => {
-  const [hoveredSeat, setHoveredSeat] = useState<Seat | null>(null);
-
   const formatVND = (price: number) => {
     return formatCurrency(price);
   };
@@ -40,13 +38,13 @@ export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatCli
     // Available seat styles by tier
     const tier = getSeatTierInfo(seat);
     if (tier.isVip) {
-      return 'bg-amber-500/15 border-amber-400/70 hover:border-amber-400 hover:bg-amber-500/30 text-amber-300 cursor-pointer hover:scale-105 hover:z-10';
+      return 'bg-amber-500/15 border-amber-400/70 hover:border-amber-400 hover:bg-amber-500/30 text-amber-300 cursor-pointer';
     }
     if (tier.name.includes('Economy')) {
-      return 'bg-emerald-500/15 border-emerald-400/70 hover:border-emerald-400 hover:bg-emerald-500/30 text-emerald-300 cursor-pointer hover:scale-105 hover:z-10';
+      return 'bg-emerald-500/15 border-emerald-400/70 hover:border-emerald-400 hover:bg-emerald-500/30 text-emerald-300 cursor-pointer';
     }
 
-    return 'bg-surface-2 border-border-subtle hover:border-brand-primary hover:bg-brand-primary/20 text-text-primary cursor-pointer hover:scale-105 hover:z-10';
+    return 'bg-surface-2 border-border-subtle hover:border-brand-primary hover:bg-brand-primary/20 text-text-primary cursor-pointer';
   };
 
   // Group seats by row using useMemo to prevent unnecessary recalculations on re-renders
@@ -75,34 +73,6 @@ export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatCli
         Vuốt ngang để xem toàn bộ sơ đồ ghế
       </div>
 
-      {/* Hover Tooltip Banner */}
-      {hoveredSeat && (
-        <div className="mb-4 p-3 bg-surface-2/95 border border-brand-primary/50 rounded-xl flex items-center justify-between animate-in fade-in duration-200 shadow-xl backdrop-blur-xl relative z-20 text-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-brand-primary/20 flex items-center justify-center text-brand-primary font-black text-xs">
-              {hoveredSeat.row}{hoveredSeat.number}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-white">Hàng {hoveredSeat.row} - Ghế {hoveredSeat.number}</span>
-                {getSeatTierInfo(hoveredSeat).isVip && (
-                  <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-400/40">VIP</span>
-                )}
-                {getSeatTierInfo(hoveredSeat).name.includes('Economy') && (
-                  <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">Tiết Kiệm</span>
-                )}
-              </div>
-              <span className="text-[11px] text-text-secondary">
-                {hoveredSeat.status === 0 ? 'Có sẵn để đặt' : hoveredSeat.status === 1 ? 'Đang được giữ chỗ' : 'Đã bán'}
-              </span>
-            </div>
-          </div>
-          <div className="font-black text-sm text-success font-display">
-            {formatVND(hoveredSeat.price)}
-          </div>
-        </div>
-      )}
-
       {/* Seat Matrix Grid */}
       <div className="flex flex-col gap-3 sm:gap-3.5 items-center flex-1 justify-center relative z-10 overflow-x-auto pb-3 hide-scrollbar">
         {sortedRowKeys.map(rowName => {
@@ -122,11 +92,9 @@ export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatCli
                     <button
                       key={seat.id}
                       onClick={() => onSeatClick(seat)}
-                      onMouseEnter={() => setHoveredSeat(seat)}
-                      onMouseLeave={() => setHoveredSeat(null)}
                       disabled={seat.status !== 0}
                       aria-label={`Hàng ${seat.row}, ghế ${seat.number}, ${seat.status === 0 ? 'còn trống' : seat.status === 1 ? 'đang được giữ' : 'đã bán'}, giá ${formatVND(seat.price)}`}
-                      className={`w-11 h-11 sm:w-10 sm:h-10 md:w-9 md:h-9 rounded-lg border-2 flex items-center justify-center text-xs font-bold transition-[transform,opacity,background-color,border-color] duration-200 ease-out relative group/seat focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 ${getSeatColor(seat, isSelected)}`}
+                      className={`w-11 h-11 sm:w-10 sm:h-10 md:w-9 md:h-9 rounded-lg border-2 flex items-center justify-center text-xs font-bold transition-[opacity,background-color,border-color] duration-150 ease-out relative group/seat focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 ${getSeatColor(seat, isSelected)}`}
                       style={{ animationDelay: `${(sortedRowKeys.indexOf(rowName) * 0.04) + (index * 0.015)}s` }}
                     >
                       {seat.number}
