@@ -16,7 +16,6 @@ export const EventInfoCard: React.FC<EventInfoCardProps> = ({ event }) => {
             className="absolute inset-0 bg-cover bg-center opacity-25 blur-xl scale-110 transition-transform duration-1000 group-hover:scale-125" 
             style={{ backgroundImage: `url(${event.imageUrl})` }} 
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-surface-1/80 via-surface-1/95 to-surface-1" />
         </>
       )}
       

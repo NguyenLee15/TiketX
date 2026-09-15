@@ -28,7 +28,7 @@ export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatCli
 
   const getSeatColor = (seat: Seat, isSelected: boolean) => {
     if (isSelected) {
-      return 'bg-brand-primary border-brand-primary text-white shadow-lg shadow-brand-glow scale-110 z-20 ring-2 ring-white/40';
+      return 'bg-brand-primary border-brand-primary text-white scale-105 z-20 ring-2 ring-brand-accent/60';
     }
     if (seat.status === 1) {
       return 'bg-warning/20 border-warning/50 text-warning/50 cursor-not-allowed opacity-60'; // Locked
@@ -40,13 +40,13 @@ export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatCli
     // Available seat styles by tier
     const tier = getSeatTierInfo(seat);
     if (tier.isVip) {
-      return 'bg-amber-500/15 border-amber-400/70 hover:border-amber-400 hover:bg-amber-500/30 text-amber-300 cursor-pointer hover:scale-110 hover:z-10 hover:shadow-lg hover:shadow-amber-500/30';
+      return 'bg-amber-500/15 border-amber-400/70 hover:border-amber-400 hover:bg-amber-500/30 text-amber-300 cursor-pointer hover:scale-105 hover:z-10';
     }
     if (tier.name.includes('Economy')) {
-      return 'bg-emerald-500/15 border-emerald-400/70 hover:border-emerald-400 hover:bg-emerald-500/30 text-emerald-300 cursor-pointer hover:scale-110 hover:z-10 hover:shadow-lg hover:shadow-emerald-500/30';
+      return 'bg-emerald-500/15 border-emerald-400/70 hover:border-emerald-400 hover:bg-emerald-500/30 text-emerald-300 cursor-pointer hover:scale-105 hover:z-10';
     }
 
-    return 'bg-surface-2 border-border-subtle hover:border-brand-primary hover:bg-brand-primary/20 text-text-primary cursor-pointer hover:scale-110 hover:z-10 hover:shadow-lg hover:shadow-brand-glow';
+    return 'bg-surface-2 border-border-subtle hover:border-brand-primary hover:bg-brand-primary/20 text-text-primary cursor-pointer hover:scale-105 hover:z-10';
   };
 
   // Group seats by row using useMemo to prevent unnecessary recalculations on re-renders
@@ -62,21 +62,17 @@ export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatCli
 
   return (
     <div className="glass-premium p-5 sm:p-7 md:p-8 rounded-2xl border border-border-subtle shadow-xl relative overflow-hidden min-h-[480px] lg:min-h-[540px] flex flex-col justify-between">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-[85%] bg-brand-primary/5 rounded-[100%] blur-[100px] pointer-events-none" />
-      
       {/* Curved Stage Header */}
       <div className="mb-8 text-center relative z-10">
-        <div className="w-3/5 max-w-md mx-auto h-3 bg-gradient-to-r from-transparent via-brand-secondary to-transparent rounded-full mb-2 shadow-[0_0_25px_rgba(20,184,166,0.6)] relative overflow-hidden">
-          <div className="absolute inset-0 bg-white/40 translate-x-[-100%] animate-shimmer" />
-        </div>
-        <p className="text-[11px] font-black text-brand-secondary uppercase tracking-[0.35em] drop-shadow-md">
-          SÂN KHẤU TRUNG TÂM
+        <div className="w-3/5 max-w-md mx-auto h-1 bg-brand-primary rounded-full mb-3" />
+        <p className="text-xs font-bold text-brand-primary uppercase tracking-[0.2em]">
+          Sân khấu trung tâm
         </p>
       </div>
 
       {/* Mobile Scroll Hint */}
-      <div className="block md:hidden text-center pb-2 text-[10px] text-text-tertiary animate-pulse font-medium">
-        👈 Vuốt ngang sơ đồ để xem thêm ghế 👉
+      <div className="block md:hidden text-center pb-2 text-xs text-text-tertiary font-medium">
+        Vuốt ngang để xem toàn bộ sơ đồ ghế
       </div>
 
       {/* Hover Tooltip Banner */}
@@ -130,7 +126,7 @@ export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatCli
                       onMouseLeave={() => setHoveredSeat(null)}
                       disabled={seat.status !== 0}
                       aria-label={`Hàng ${seat.row}, ghế ${seat.number}, ${seat.status === 0 ? 'còn trống' : seat.status === 1 ? 'đang được giữ' : 'đã bán'}, giá ${formatVND(seat.price)}`}
-                      className={`w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 rounded-t-xl rounded-b border-2 flex items-center justify-center text-[10px] sm:text-xs font-bold transition-[transform,opacity,background-color,border-color,box-shadow] duration-200 ease-out animate-seat-pop relative group/seat focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 ${getSeatColor(seat, isSelected)}`}
+                      className={`w-11 h-11 sm:w-10 sm:h-10 md:w-9 md:h-9 rounded-lg border-2 flex items-center justify-center text-xs font-bold transition-[transform,opacity,background-color,border-color] duration-200 ease-out relative group/seat focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 ${getSeatColor(seat, isSelected)}`}
                       style={{ animationDelay: `${(sortedRowKeys.indexOf(rowName) * 0.04) + (index * 0.015)}s` }}
                     >
                       {seat.number}

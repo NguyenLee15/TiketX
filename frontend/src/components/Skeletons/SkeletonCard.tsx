@@ -2,10 +2,9 @@ import React from 'react';
 
 export const SkeletonCard: React.FC = () => {
   return (
-    <div className="glass-premium rounded-3xl overflow-hidden border border-border-subtle/80 flex flex-col h-full animate-pulse">
+    <div className="surface-raised rounded-xl overflow-hidden flex flex-col h-full animate-pulse">
       {/* Poster Image Placeholder */}
       <div className="relative aspect-[16/10] bg-surface-2/80 w-full overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
         <div className="absolute top-4 left-4 w-20 h-6 rounded-full bg-surface-3/80" />
       </div>
 
@@ -41,4 +40,3 @@ export const SkeletonCard: React.FC = () => {
     </div>
   );
 };
-

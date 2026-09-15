@@ -135,12 +135,11 @@ export default function LoginPage() {
         {/* Sleek Floating Panel */}
         <div className="glass-panel p-6 sm:p-8 rounded-3xl relative">
           {/* Subtle top highlight */}
-          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-50" />
           
           <div className="text-center mb-6 sm:mb-8">
             <Link 
               to="/" 
-              className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-surface-2 border border-border-focus shadow-[0_0_20px_rgba(94,106,210,0.2)] mb-4 hover:scale-105 transition-transform group"
+              className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-surface-2 border border-border-focus mb-4 hover:bg-surface-3 transition-colors group"
               aria-label="Về trang chủ TickeX"
             >
               <Zap className="w-6 h-6 text-brand-primary group-hover:text-white transition-colors" aria-hidden="true" />

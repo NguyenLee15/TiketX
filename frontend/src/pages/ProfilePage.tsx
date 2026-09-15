@@ -143,7 +143,6 @@ export default function ProfilePage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-12 relative text-text-primary">
       {/* Background ambient effects */}
-      <div className="absolute top-[-10%] left-[-5%] w-[40vw] h-[40vw] rounded-full bg-brand-primary/10 blur-[120px] pointer-events-none z-[-1]" />
       
       <div className="flex flex-col gap-1.5 bg-surface-2/30 p-6 sm:p-8 rounded-2xl border border-border-subtle backdrop-blur-md">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary/10 border border-brand-primary/20 w-fit mb-1">
@@ -159,10 +158,9 @@ export default function ProfilePage() {
         {/* Profile Card */}
         <div className="lg:col-span-7">
           <div className="glass-premium rounded-2xl p-6 sm:p-7 border border-border-subtle relative overflow-hidden h-full shadow-xl">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-brand-secondary/10 rounded-full blur-[80px] pointer-events-none" />
             
             <div className="flex items-center gap-3.5 mb-6 relative z-10 border-b border-border-subtle pb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-primary/20 to-brand-primary/5 border border-brand-primary/20 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-brand-primary/15 border border-brand-primary/30 flex items-center justify-center shrink-0">
                 <User className="w-5 h-5 text-brand-primary" />
               </div>
               <div>
@@ -295,10 +293,9 @@ export default function ProfilePage() {
         {/* Password Card */}
         <div className="lg:col-span-5">
           <div className="glass-premium rounded-2xl p-6 sm:p-7 border border-border-subtle relative overflow-hidden h-full shadow-xl">
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-brand-secondary/10 rounded-full blur-[80px] pointer-events-none" />
             
             <div className="flex items-center gap-3.5 mb-6 relative z-10 border-b border-border-subtle pb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-secondary/20 to-brand-secondary/5 border border-brand-secondary/20 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-brand-secondary/15 border border-brand-secondary/30 flex items-center justify-center shrink-0">
                 <Lock className="w-5 h-5 text-brand-secondary" />
               </div>
               <div>
@@ -381,7 +378,7 @@ export default function ProfilePage() {
                 <button 
                   type="submit" 
                   disabled={savingPassword}
-                  className="w-full py-2.5 bg-gradient-to-r from-brand-secondary to-brand-primary hover:opacity-90 text-white font-bold rounded-xl transition-[opacity,transform,box-shadow] shadow-md shadow-brand-glow flex items-center justify-center gap-1.5 text-xs sm:text-sm disabled:opacity-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-secondary"
+                  className="w-full py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-1.5 text-sm disabled:opacity-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
                 >
                   {savingPassword ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

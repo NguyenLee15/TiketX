@@ -278,7 +278,7 @@ export default function MyTicketsPage() {
     const s = status.toLowerCase();
     if (s === 'paid') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-success/15 text-success border border-success/30 uppercase tracking-wider shadow-[0_0_15px_rgba(34,197,94,0.2)] whitespace-nowrap shrink-0">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold bg-success/15 text-success border border-success/30 uppercase tracking-wider whitespace-nowrap shrink-0">
           <CheckCircle2 className="w-3.5 h-3.5" /> Hợp Lệ
         </span>
       );
@@ -334,7 +334,6 @@ export default function MyTicketsPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500 pb-12 relative text-text-primary">
-      <div className="absolute top-[-10%] right-[-5%] w-[40vw] h-[40vw] rounded-full bg-brand-primary/10 blur-[130px] pointer-events-none z-[-1]" />
 
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-2/40 p-5 sm:p-6 rounded-2xl border border-border-subtle backdrop-blur-xl shadow-xl">
@@ -390,7 +389,6 @@ export default function MyTicketsPage() {
                 key={ticket.id} 
                 className="glass-premium rounded-2xl overflow-hidden shadow-xl flex flex-col md:flex-row relative group border border-border-subtle"
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/10 rounded-full blur-[40px] pointer-events-none group-hover:bg-brand-primary/20 transition-colors" />
                 
                 {/* Left: Concert Pass Information */}
                 <div className="p-5 sm:p-6 flex-1 border-b md:border-b-0 md:border-r border-border-subtle border-dashed relative z-10 flex flex-col justify-between space-y-4">

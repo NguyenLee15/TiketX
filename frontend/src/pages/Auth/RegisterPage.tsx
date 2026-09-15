@@ -72,10 +72,9 @@ export default function RegisterPage() {
         {/* Sleek Floating Panel */}
         <div className="glass-panel p-6 sm:p-8 rounded-3xl relative overflow-hidden">
           {/* Subtle top highlight */}
-          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-50" />
           
           <div className="text-center mb-8">
-            <Link to="/" className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-surface-2 border border-border-focus shadow-[0_0_20px_rgba(94,106,210,0.2)] mb-4 hover:scale-105 transition-transform group">
+          <Link to="/" className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-surface-2 border border-border-focus mb-4 hover:bg-surface-3 transition-colors group">
               <Zap className="w-6 h-6 text-brand-primary group-hover:text-white transition-colors" />
             </Link>
             <h1 className="text-2xl sm:text-3xl font-display font-bold text-white mb-1 tracking-tight">Tạo Tài Khoản Mới</h1>

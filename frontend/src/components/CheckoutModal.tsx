@@ -197,8 +197,6 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
       <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="checkout-title" tabIndex={-1} className="glass-card w-full max-w-xl p-6 md:p-8 rounded-3xl shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300 border border-border-subtle z-10 max-h-[90vh] overflow-y-auto overscroll-contain">
         
         {/* Ambient Glows */}
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-brand-primary/20 rounded-full blur-[70px] pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-brand-secondary/20 rounded-full blur-[70px] pointer-events-none" />
 
         {status === 'idle' && (
           <div className="relative z-10 space-y-5">
@@ -341,7 +339,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
               {paymentData?.checkoutUrl && paymentData.checkoutUrl.startsWith('http') && (
                 <button 
                   onClick={handleProceedPayOS}
-                  className="w-full py-3.5 bg-gradient-to-r from-brand-primary to-brand-secondary hover:opacity-95 text-white font-bold rounded-xl transition-[opacity,transform] shadow-lg shadow-brand-glow flex items-center justify-center gap-2 group text-sm active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
+                  className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-2 group text-sm active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
                 >
                   <span>Chuyển Đến Cổng Thanh Toán PayOS</span>
                   <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -351,7 +349,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
               {import.meta.env.DEV && paymentData?.checkoutUrl && (
                 <button 
                   onClick={handleSimulatePayment}
-                  className="w-full py-3 bg-gradient-to-r from-success to-emerald-500 hover:opacity-95 text-white font-bold rounded-xl transition-[opacity,transform] shadow-md shadow-success/20 flex items-center justify-center gap-2 text-xs active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
+                  className="w-full py-3 bg-success hover:bg-success/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-2 text-xs active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Mô Phỏng Chuyển Khoản Thành Công (Môi trường Dev)</span>
@@ -373,7 +371,6 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
         {status === 'verifying' && (
           <div className="flex flex-col items-center justify-center py-16 relative z-10 space-y-4">
             <div className="relative">
-              <div className="absolute inset-0 bg-brand-primary/20 rounded-full blur-xl animate-pulse" />
               <div className="w-16 h-16 bg-surface-2 rounded-2xl flex items-center justify-center border border-brand-primary/30 relative z-10">
                 <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
               </div>

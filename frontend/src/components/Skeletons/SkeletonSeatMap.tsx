@@ -55,7 +55,7 @@ export const SkeletonSeatMap: React.FC = () => {
           <div className="glass-premium p-6 sm:p-8 rounded-3xl border border-border-subtle/80 space-y-6">
             {/* Stage Indicator Placeholder */}
             <div className="flex flex-col items-center justify-center space-y-2 py-4">
-              <div className="w-48 h-2 rounded-full bg-gradient-to-r from-transparent via-surface-3 to-transparent" />
+              <div className="w-48 h-2 rounded-full bg-surface-3" />
               <div className="w-32 h-4 rounded-lg bg-surface-2" />
             </div>
 
@@ -96,4 +96,3 @@ export const SkeletonSeatMap: React.FC = () => {
     </div>
   );
 };
-

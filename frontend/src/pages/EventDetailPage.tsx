@@ -186,8 +186,6 @@ export default function EventDetailPage() {
     <div className="animate-in fade-in duration-500 pb-12 relative text-text-primary max-w-7xl mx-auto">
       {/* Background ambient effects */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] overflow-hidden">
-        <div className="absolute top-[-10%] right-[-5%] w-[50vw] h-[50vw] rounded-full bg-brand-primary/10 blur-[140px]" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[40vw] h-[40vw] rounded-full bg-brand-secondary/10 blur-[140px]" />
       </div>
 
       <div className="flex items-center justify-between mb-6">
@@ -216,7 +214,6 @@ export default function EventDetailPage() {
 
           {/* Seat Selection Panel */}
           <div className="glass-premium p-5 sm:p-6 rounded-2xl border border-border-subtle shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/10 rounded-full blur-[50px] pointer-events-none" />
             <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-surface-3 flex items-center justify-center text-brand-primary">
                 <Check className="w-3.5 h-3.5" />
@@ -227,7 +224,6 @@ export default function EventDetailPage() {
             {selectedSeat ? (
               <div className="space-y-4 animate-slide-up">
                 <div className="flex justify-between items-center bg-surface-2/80 p-4 rounded-xl border border-brand-primary/40 shadow-inner relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-brand-primary/15 to-transparent pointer-events-none" />
                   <div className="relative z-10">
                     <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-wider mb-0.5">Vị trí ghế</p>
                     <p className="text-xl font-black text-white font-display tracking-tight">
@@ -261,9 +257,8 @@ export default function EventDetailPage() {
                 <button
                   onClick={handleBookTicket}
                   disabled={locking}
-                  className="w-full py-3.5 bg-gradient-to-r from-brand-primary to-brand-secondary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-[opacity,transform] shadow-md shadow-brand-glow flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
+                  className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
                 >
-                  <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:animate-shimmer" />
                   {locking ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
