@@ -38,7 +38,8 @@ public class Event : BaseEntity
         string bannerUrl = "",
         string organizerName = "TickeX Live",
         decimal basePrice = 200000m,
-        int refundCutoffHours = 24)
+        int refundCutoffHours = 24,
+        EventStatus status = EventStatus.Published)
     {
         Title = title;
         Description = description;
@@ -52,7 +53,7 @@ public class Event : BaseEntity
         BannerUrl = string.IsNullOrEmpty(bannerUrl) ? imageUrl : bannerUrl;
         OrganizerName = organizerName;
         BasePrice = basePrice;
-        Status = EventStatus.Published;
+        Status = status;
         RefundCutoffHours = refundCutoffHours;
     }
 

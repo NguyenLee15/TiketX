@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Shield, ShieldAlert, Ban, CheckCircle, Loader2, Mail, 
   Phone, Users, ShieldCheck, Search, ChevronLeft, ChevronRight
@@ -52,8 +52,12 @@ export default function AdminUsersPage() {
   const [confirmModal, setConfirmModal] = useState<ConfirmState | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mutationError, setMutationError] = useState('');
+  const requestRef = useRef<AbortController | null>(null);
 
   const fetchUsers = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     try {
       setLoading(true);
       setLoadError(false);
@@ -66,7 +70,7 @@ export default function AdminUsersPage() {
       if (blockFilter === 'blocked') params.isBlocked = 'true';
       if (blockFilter === 'active') params.isBlocked = 'false';
 
-      const res = await api.get('/api/admin/users', { params });
+      const res = await api.get('/api/admin/users', { params, signal: controller.signal });
       if (res.data.success) {
         const data = res.data.data;
         if (Array.isArray(data)) {
@@ -79,7 +83,8 @@ export default function AdminUsersPage() {
           setTotalPages(data.totalPages || 1);
         }
       }
-    } catch {
+    } catch (error: unknown) {
+      if ((error as { code?: string })?.code === 'ERR_CANCELED') return;
       setLoadError(true);
       toast.error('Không thể tải danh sách người dùng.');
     } finally {
@@ -92,7 +97,7 @@ export default function AdminUsersPage() {
     const timer = setTimeout(() => {
       fetchUsers();
     }, 300);
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); requestRef.current?.abort(); };
   }, [fetchUsers]);
 
   useEffect(() => {
@@ -380,7 +385,7 @@ export default function AdminUsersPage() {
             {users.map(user => {
               const isSelf = currentUser?.id === user.id;
               return (
-                <div key={user.id} className="glass-card p-4 rounded-2xl border border-border-subtle space-y-3">
+                <div key={user.id} className="surface-panel p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                       {user.avatarUrl ? (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Users, Calendar, DollarSign, Activity, Ticket, 
   RotateCcw, CheckCircle2, TrendingUp, BarChart3, Clock, RefreshCw
@@ -51,6 +51,8 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const requestRef = useRef<AbortController | null>(null);
+  const hasLoadedStatsRef = useRef(false);
 
   const numberFormatter = new Intl.NumberFormat('vi-VN');
   const currencyFormatter = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
@@ -58,19 +60,24 @@ export default function AdminDashboardPage() {
   const chartDateFormatter = new Intl.DateTimeFormat('vi-VN', { day: 'numeric', month: 'numeric', timeZone: 'UTC' });
   const chartDayFormatter = new Intl.DateTimeFormat('vi-VN', { weekday: 'short', timeZone: 'UTC' });
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     try {
-      if (!stats) setLoading(true);
+      if (!hasLoadedStatsRef.current) setLoading(true);
       else setIsRefreshing(true);
       setError(false);
-      const response = await api.get('/api/admin/stats');
+      const response = await api.get('/api/admin/stats', { signal: controller.signal });
       if (response.data.success) {
         setStats(response.data.data);
+        hasLoadedStatsRef.current = true;
         setLastUpdated(new Date());
       } else {
         setError(true);
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      if ((err as { code?: string })?.code === 'ERR_CANCELED') return;
       console.error(err);
       setError(true);
       toast.error('Không thể tải dữ liệu thống kê bảng điều khiển');
@@ -78,11 +85,12 @@ export default function AdminDashboardPage() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchStats();
-  }, []);
+    return () => requestRef.current?.abort();
+  }, [fetchStats]);
 
   if (loading) {
     return (
@@ -263,7 +271,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* 7-Day Revenue Chart Section */}
-      <div className="glass-card p-5 sm:p-6 rounded-2xl border border-border-subtle space-y-4">
+      <div className="surface-panel p-5 sm:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
@@ -349,7 +357,7 @@ export default function AdminDashboardPage() {
       {/* Analytics & Tables Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Top Events Leaderboard (6 cols) */}
-        <div className="lg:col-span-6 glass-card p-5 sm:p-6 rounded-2xl border border-border-subtle">
+        <div className="lg:col-span-6 surface-panel p-5 sm:p-6">
           <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2 whitespace-nowrap">
             <Activity className="w-4 h-4 text-brand-primary" />
             Top Sự Kiện Bán Chạy Nhất
@@ -393,7 +401,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Recent Transactions Stream (6 cols) */}
-        <div className="lg:col-span-6 glass-card p-5 sm:p-6 rounded-2xl border border-border-subtle">
+        <div className="lg:col-span-6 surface-panel p-5 sm:p-6">
           <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2 whitespace-nowrap">
             <DollarSign className="w-4 h-4 text-success" />
             Lịch Sử Giao Dịch Mới Nhất

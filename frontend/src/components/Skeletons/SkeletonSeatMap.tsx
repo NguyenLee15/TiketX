@@ -12,7 +12,7 @@ export const SkeletonSeatMap: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Col: Event Information Skeleton (4 cols) */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="glass-card rounded-3xl overflow-hidden border border-border-subtle/80 space-y-4 p-5">
+          <div className="surface-panel overflow-hidden space-y-4 p-5">
             {/* Image Placeholder */}
             <div className="aspect-[16/10] bg-surface-2 rounded-2xl w-full" />
             
@@ -52,7 +52,7 @@ export const SkeletonSeatMap: React.FC = () => {
 
         {/* Right Col: Interactive Auditorium Seat Map Skeleton (8 cols) */}
         <div className="lg:col-span-8">
-          <div className="glass-premium p-6 sm:p-8 rounded-3xl border border-border-subtle/80 space-y-6">
+          <div className="surface-panel p-6 sm:p-8 space-y-6">
             {/* Stage Indicator Placeholder */}
             <div className="flex flex-col items-center justify-center space-y-2 py-4">
               <div className="w-48 h-2 rounded-full bg-surface-3" />

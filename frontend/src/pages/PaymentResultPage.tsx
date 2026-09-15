@@ -49,7 +49,7 @@ export default function PaymentResultPage() {
   const paid = status === 'Paid' || status === 'Used'; const pending = status === 'Pending' || status === 'RefundPending';
   const title = paid ? 'Đặt Vé Thành Công!' : status === 'RefundPending' ? 'Yêu Cầu Hoàn Tiền Đang Xử Lý' : pending ? 'Đang Xác Nhận Giao Dịch' : status === 'Cancelled' ? 'Giao Dịch Đã Hủy' : status === 'Expired' ? 'Giao Dịch Đã Hết Hạn' : 'Thanh Toán Không Thành Công';
   return <div className="min-h-[80vh] flex items-center justify-center p-4 text-text-primary">
-    <section className="glass-premium max-w-lg w-full rounded-3xl p-8 md:p-12 text-center border border-border-subtle shadow-2xl" aria-live="polite" aria-busy={checking}>
+    <section className="surface-panel max-w-lg w-full p-8 md:p-12 text-center shadow-2xl" aria-live="polite" aria-busy={checking}>
       <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center border ${paid ? 'border-success/40 bg-success/10 text-success' : pending ? 'border-warning/40 bg-warning/10 text-warning' : 'border-danger/30 bg-danger/10 text-danger'}`}>
         {pending ? <Clock3 className="w-12 h-12" aria-hidden="true" /> : paid ? <CheckCircle2 className="w-12 h-12" aria-hidden="true" /> : <XCircle className="w-12 h-12" aria-hidden="true" />}
       </div>

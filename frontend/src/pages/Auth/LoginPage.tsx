@@ -127,10 +127,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen mesh-bg flex items-center justify-center py-10 px-4 relative text-text-primary">
-      {/* Decorative Grid */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-30 pointer-events-none" />
-
+    <div className="min-h-[100dvh] bg-surface-1 flex items-center justify-center py-10 px-4 relative text-text-primary">
       <div className="w-full max-w-md relative z-10 animate-scale-in">
         {/* Sleek Floating Panel */}
         <div className="glass-panel p-6 sm:p-8 rounded-3xl relative">
@@ -189,7 +186,7 @@ export default function LoginPage() {
                   />
                 </div>
                 {errors.email && (
-                  <p id="email-error" className="text-[11px] text-danger pl-1 animate-slide-up">
+                  <p id="email-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">
                     {errors.email.message}
                   </p>
                 )}
@@ -231,7 +228,7 @@ export default function LoginPage() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p id="password-error" className="text-[11px] text-danger pl-1 animate-slide-up">
+                  <p id="password-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">
                     {errors.password.message}
                   </p>
                 )}

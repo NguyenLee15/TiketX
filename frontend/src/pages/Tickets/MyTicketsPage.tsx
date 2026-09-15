@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
 import { QRCodeSVG } from 'qrcode.react';
@@ -58,28 +58,30 @@ export default function MyTicketsPage() {
     setFilterTab(next);
   }, [searchParams]);
 
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async (signal?: AbortSignal) => {
     try {
       setIsLoading(true);
       setLoadError(false);
-      const response = await api.get('/api/tickets/my-tickets');
+      const response = await api.get('/api/tickets/my-tickets', { signal });
       if (response.data.success) {
         setTickets(response.data.data || []);
       } else {
         setLoadError(true);
       }
     } catch (error) {
-      console.error('Failed to fetch tickets:', error);
+      if ((error as { code?: string })?.code === 'ERR_CANCELED') return;
       setLoadError(true);
       toast.error('Không thể tải danh sách vé của bạn');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchTickets();
-  }, []);
+    const controller = new AbortController();
+    void fetchTickets(controller.signal);
+    return () => controller.abort();
+  }, [fetchTickets]);
 
   const handleRefund = async (ticket: TicketData) => {
     setRefundingId(ticket.id);
@@ -325,7 +327,7 @@ export default function MyTicketsPage() {
         <XCircle className="w-10 h-10 text-danger" aria-hidden="true" />
         <h1 className="text-xl font-bold text-white">Không thể tải danh sách vé</h1>
         <p className="text-sm text-text-secondary">Kiểm tra kết nối và thử lại.</p>
-        <button onClick={fetchTickets} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-brand-primary">
+        <button onClick={() => void fetchTickets()} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-brand-primary">
           Thử lại
         </button>
       </div>
@@ -336,7 +338,7 @@ export default function MyTicketsPage() {
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500 pb-12 relative text-text-primary">
 
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-2/40 p-5 sm:p-6 rounded-2xl border border-border-subtle backdrop-blur-xl shadow-xl">
+      <div className="surface-panel flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 shadow-xl">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary/15 border border-brand-primary/30 w-fit mb-2 whitespace-nowrap">
             <Ticket className="w-3.5 h-3.5 text-brand-primary" />
@@ -369,7 +371,7 @@ export default function MyTicketsPage() {
       </div>
         
       {filteredTickets.length === 0 ? (
-      <div className="text-center py-16 bg-surface-2/20 rounded-2xl border border-dashed border-border-subtle backdrop-blur-md" aria-live="polite">
+      <div className="text-center py-16 bg-surface-2 rounded-2xl border border-dashed border-border-subtle" aria-live="polite">
           <div className="w-12 h-12 bg-surface-3 rounded-xl flex items-center justify-center mx-auto mb-3 text-text-tertiary">
             <Ticket className="w-6 h-6" />
           </div>
@@ -387,7 +389,7 @@ export default function MyTicketsPage() {
               <div 
                 id={`ticket-${ticket.id}`} 
                 key={ticket.id} 
-                className="glass-premium rounded-2xl overflow-hidden shadow-xl flex flex-col md:flex-row relative group border border-border-subtle"
+                className="surface-panel rounded-2xl overflow-hidden shadow-xl flex flex-col md:flex-row relative group"
               >
                 
                 {/* Left: Concert Pass Information */}
@@ -476,7 +478,7 @@ export default function MyTicketsPage() {
                 </div>
                 
                 {/* Right: Live QR Code & Download Box */}
-                <div className="p-5 sm:p-6 flex flex-col items-center justify-center md:w-72 bg-surface-2/30 relative z-10 backdrop-blur-md space-y-3 shrink-0">
+                <div className="p-5 sm:p-6 flex flex-col items-center justify-center md:w-72 bg-surface-2 relative z-10 space-y-3 shrink-0">
                   {canShowQr ? (
                     <div className="bg-white p-3 rounded-xl shadow-xl relative group-hover:scale-105 transition-transform">
                       <QRCodeSVG id={`qr-svg-${ticket.id}`} value={ticket.qrCodeSignature} size={135} level="H" />

@@ -1,6 +1,8 @@
 using FluentAssertions;
 using TickeX.Application.Admin.Commands;
 using TickeX.Application.Events.Commands;
+using TickeX.Domain.Entities;
+using TickeX.Domain.Enums;
 using Xunit;
 
 namespace TickeX.UnitTests.Admin;
@@ -31,6 +33,22 @@ public class AdminCommandValidationTests
         var result = _createEventValidator.Validate(command);
 
         result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void EventConstructor_PreservesRequestedStatus()
+    {
+        var draft = new Event(
+            "Draft event",
+            "Description",
+            DateTime.UtcNow.AddDays(2),
+            DateTime.UtcNow.AddDays(2).AddHours(2),
+            "Hà Nội",
+            "Venue",
+            10,
+            status: EventStatus.Draft);
+
+        draft.Status.Should().Be(EventStatus.Draft);
     }
 
     [Fact]
@@ -146,4 +164,3 @@ public class AdminCommandValidationTests
         result.IsValid.Should().Be(expectedValid);
     }
 }
-

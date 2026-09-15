@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Loader2, Plus, Edit2, Trash2, Calendar as CalendarIcon, 
   MapPin, Search, ChevronLeft, ChevronRight, XCircle, Grid3X3, Clock
@@ -33,8 +33,12 @@ export default function AdminEventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [deleteEventTarget, setDeleteEventTarget] = useState<Event | null>(null);
   const [cancelEventTarget, setCancelEventTarget] = useState<Event | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
 
   const fetchEvents = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     try {
       setLoading(true);
       setLoadError(false);
@@ -50,7 +54,7 @@ export default function AdminEventsPage() {
         params.status = Number(statusFilter);
       }
 
-      const res = await api.get('/api/events/admin-all', { params });
+      const res = await api.get('/api/events/admin-all', { params, signal: controller.signal });
       if (res.data.success) {
         const data = res.data.data;
         if (data && data.items) {
@@ -63,7 +67,8 @@ export default function AdminEventsPage() {
           setTotalPages(1);
         }
       }
-    } catch {
+    } catch (error: unknown) {
+      if ((error as { code?: string })?.code === 'ERR_CANCELED') return;
       setLoadError(true);
       toast.error('Không thể tải danh sách sự kiện');
     } finally {
@@ -76,7 +81,7 @@ export default function AdminEventsPage() {
     const timer = setTimeout(() => {
       fetchEvents();
     }, 300);
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); requestRef.current?.abort(); };
   }, [fetchEvents]);
 
   useEffect(() => {
@@ -103,7 +108,7 @@ export default function AdminEventsPage() {
     try {
       if (selectedEvent) {
         // Edit event
-        const payload = {
+          const payload = {
           id: selectedEvent.id,
           title: data.title,
           description: data.description,
@@ -116,7 +121,7 @@ export default function AdminEventsPage() {
           imageUrl: data.imageUrl,
           bannerUrl: data.imageUrl,
           organizerName: selectedEvent.organizerName || 'TickeX Live',
-          basePrice: data.ticketTypes?.[0]?.price || selectedEvent.basePrice || 200000,
+          basePrice: data.basePrice || selectedEvent.basePrice || 200000,
           status: data.status === 'Draft' ? 0 : data.status === 'Cancelled' ? 3 : 1,
           refundCutoffHours: selectedEvent.refundCutoffHours || 24
         };
@@ -143,10 +148,11 @@ export default function AdminEventsPage() {
           imageUrl: data.imageUrl,
           bannerUrl: data.imageUrl,
           organizerName: 'TickeX Live',
-          basePrice: data.ticketTypes?.[0]?.price || 200000,
+          basePrice: data.basePrice || 200000,
           refundCutoffHours: 24,
           rowCount: data.rowCount,
-          seatsPerRow: data.seatsPerRow
+          seatsPerRow: data.seatsPerRow,
+          status: data.status === 'Draft' ? 0 : data.status === 'Cancelled' ? 3 : 1
         };
 
         const response = await api.post('/api/events', payload);
@@ -444,7 +450,7 @@ export default function AdminEventsPage() {
               const isCompleted = String(event.status) === '2' || String(event.status).toLowerCase() === 'completed';
 
               return (
-                <div key={event.id} className="glass-card p-4 rounded-2xl border border-border-subtle space-y-3">
+                <div key={event.id} className="surface-panel p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <img 

@@ -74,7 +74,8 @@ public class EventsController : ControllerBase
             request.BasePrice,
             request.RefundCutoffHours,
             request.RowCount,
-            request.SeatsPerRow);
+            request.SeatsPerRow,
+            request.Status);
         var id = await _adminEventOperations.CreateAsync(command, HttpContext.RequestAborted);
         return Ok(new { success = true, code = "CREATED", message = "Tạo sự kiện thành công.", data = new { id } });
     }
@@ -94,7 +95,8 @@ public class EventsController : ControllerBase
         decimal BasePrice = 200000m,
         int RefundCutoffHours = 24,
         int RowCount = 5,
-        int SeatsPerRow = 12);
+        int SeatsPerRow = 12,
+        TickeX.Domain.Enums.EventStatus Status = TickeX.Domain.Enums.EventStatus.Published);
 
     public record UpdateEventRequest(
         Guid? Id,

@@ -59,7 +59,7 @@ export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatCli
   const sortedRowKeys = useMemo(() => Object.keys(rows).sort(), [rows]);
 
   return (
-    <div className="glass-premium p-5 sm:p-7 md:p-8 rounded-2xl border border-border-subtle shadow-xl relative overflow-hidden min-h-[480px] lg:min-h-[540px] flex flex-col justify-between">
+    <div className="surface-panel p-5 sm:p-7 md:p-8 shadow-xl relative overflow-hidden min-h-[480px] lg:min-h-[540px] flex flex-col justify-between">
       {/* Curved Stage Header */}
       <div className="mb-8 text-center relative z-10">
         <div className="w-3/5 max-w-md mx-auto h-1 bg-brand-primary rounded-full mb-3" />

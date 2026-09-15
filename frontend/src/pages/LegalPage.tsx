@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 
 export default function LegalPage() {
   const privacy = useLocation().pathname === '/privacy';
-  return <article className="glass-premium mx-auto max-w-3xl rounded-3xl border border-border-subtle p-6 sm:p-10">
+  return <article className="surface-panel mx-auto max-w-3xl p-6 sm:p-10">
     <h1 className="text-3xl font-display font-black text-white text-balance">{privacy ? 'Chính Sách Bảo Mật' : 'Điều Khoản Sử Dụng'}</h1>
     <p className="mt-3 text-sm text-text-tertiary">Cập nhật ngày 09/09/2026</p>
     <div className="mt-8 space-y-6 text-sm leading-7 text-text-secondary">

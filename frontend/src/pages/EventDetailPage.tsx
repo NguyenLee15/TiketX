@@ -18,6 +18,8 @@ export default function EventDetailPage() {
   const location = useLocation();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [locking, setLocking] = useState(false);
@@ -31,24 +33,29 @@ export default function EventDetailPage() {
   const navigate = useNavigate();
 
   // Fetch initial event data
-  const fetchEvent = async () => {
+  const fetchEvent = useCallback(async (signal?: AbortSignal) => {
     try {
       setLoading(true);
-      const res = await api.get(`/api/events/${id}`);
+      setLoadError(false);
+      const res = await api.get(`/api/events/${id}`, { signal });
       if (res.data.success) {
         setEvent(res.data.data);
       }
     } catch (err) {
-      console.error('Error fetching event', err);
-      toast.error('Không thể tải thông tin sự kiện');
+      if ((err as { code?: string })?.code !== 'ERR_CANCELED') {
+        setLoadError(true);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
-    if (id) fetchEvent();
-  }, [id]);
+    if (!id) return;
+    const controller = new AbortController();
+    void fetchEvent(controller.signal);
+    return () => controller.abort();
+  }, [id, retryKey, fetchEvent]);
 
   // Handle Real-time Seat Status Updates from SignalR
   const handleSeatStatusChanged = useCallback((payload: SeatStatusChangedPayload & { seatId: string; status: SeatStatus }) => {
@@ -73,9 +80,9 @@ export default function EventDetailPage() {
       }
       return prev;
     });
-  }, []);
+  }, [fetchEvent]);
 
-  useSeatSignalR(id, handleSeatStatusChanged);
+  const { status: seatConnectionStatus, retry: retrySeatConnection } = useSeatSignalR(id, handleSeatStatusChanged);
 
   // Lock timer countdown effect
   useEffect(() => {
@@ -169,12 +176,13 @@ export default function EventDetailPage() {
 
   if (!event) {
     return (
-      <div className="text-center p-16 glass-premium rounded-3xl mt-8 border border-border-subtle shadow-2xl">
+      <div className="text-center p-16 surface-panel mt-8">
         <div className="w-20 h-20 bg-danger/10 rounded-full flex items-center justify-center mx-auto mb-6">
           <Info className="w-10 h-10 text-danger" />
         </div>
-        <h3 className="text-2xl font-display font-bold text-white mb-2">Không Tìm Thấy Sự Kiện</h3>
-        <p className="text-text-secondary">Sự kiện bạn yêu cầu không tồn tại hoặc đã kết thúc.</p>
+        <h3 className="text-2xl font-display font-bold text-white mb-2">{loadError ? 'Không thể tải sự kiện' : 'Không tìm thấy sự kiện'}</h3>
+        <p className="text-text-secondary">Kiểm tra kết nối rồi thử lại.</p>
+        <button type="button" onClick={() => setRetryKey(value => value + 1)} className="inline-flex mt-6 px-6 py-3 bg-brand-primary text-white rounded-xl font-medium focus-visible:ring-2 focus-visible:ring-brand-primary">Thử lại</button>
         <Link to="/" className="inline-block mt-6 px-6 py-3 bg-surface-3 hover:bg-surface-2 text-white rounded-xl transition-colors font-medium">
           Quay lại danh sách sự kiện
         </Link>
@@ -184,26 +192,19 @@ export default function EventDetailPage() {
 
   return (
     <div className="animate-in fade-in duration-500 pb-12 relative text-text-primary max-w-7xl mx-auto">
-      {/* Background ambient effects */}
-      <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] overflow-hidden">
-      </div>
-
       <div className="flex items-center justify-between mb-6">
         <Link 
           to="/" 
-          className="inline-flex items-center px-3.5 py-1.5 rounded-xl bg-surface-2/60 border border-border-subtle text-text-secondary hover:text-white hover:bg-surface-3 transition-colors backdrop-blur-md text-xs sm:text-sm font-medium focus-visible:ring-2 focus-visible:ring-brand-primary"
+          className="inline-flex min-h-11 items-center px-3.5 rounded-xl bg-surface-2 border border-border-subtle text-text-secondary hover:text-white hover:bg-surface-3 transition-colors text-xs sm:text-sm font-medium focus-visible:ring-2 focus-visible:ring-brand-primary"
         >
           <ArrowLeft className="w-4 h-4 mr-1.5" />
           <span>Quay lại danh sách</span>
         </Link>
 
-        {/* Live SignalR Status Indicator Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-sm">
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          <span>SignalR: Đồng Bộ Trực Tuyến</span>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-2 border border-border-subtle text-text-secondary text-xs font-semibold" role="status" aria-live="polite">
+          <span className={`h-2 w-2 rounded-full ${seatConnectionStatus === 'connected' ? 'bg-success' : seatConnectionStatus === 'connecting' || seatConnectionStatus === 'reconnecting' ? 'bg-warning' : 'bg-danger'}`} aria-hidden="true" />
+          <span>{seatConnectionStatus === 'connected' ? 'Đã đồng bộ ghế' : seatConnectionStatus === 'connecting' || seatConnectionStatus === 'reconnecting' ? 'Đang kết nối ghế' : 'Chưa đồng bộ ghế'}</span>
+          {seatConnectionStatus === 'disconnected' && <button type="button" onClick={retrySeatConnection} className="underline underline-offset-2 hover:text-white">Thử lại</button>}
         </div>
       </div>
 
@@ -213,7 +214,7 @@ export default function EventDetailPage() {
           <EventInfoCard event={event} />
 
           {/* Seat Selection Panel */}
-          <div className="glass-premium p-5 sm:p-6 rounded-2xl border border-border-subtle shadow-xl relative overflow-hidden">
+          <div className="surface-panel p-5 sm:p-6 relative overflow-hidden">
             <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-surface-3 flex items-center justify-center text-brand-primary">
                 <Check className="w-3.5 h-3.5" />
@@ -238,7 +239,7 @@ export default function EventDetailPage() {
 
                 {/* Lock Countdown Timer Display */}
                 {lockTimeLeft !== null && (
-                  <div className="p-3 bg-surface-2/90 rounded-xl border border-warning/40 flex items-center justify-between animate-pulse">
+                  <div className="p-3 bg-surface-2 rounded-xl border border-warning/40 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-warning/20 border border-warning/30 flex items-center justify-center text-warning">
                         <Clock className="w-4 h-4" />

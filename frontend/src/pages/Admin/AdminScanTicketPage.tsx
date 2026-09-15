@@ -164,6 +164,7 @@ export default function AdminScanTicketPage() {
   // Initialize and manage Html5Qrcode instance
   useEffect(() => {
     let mounted = true;
+    let startCancelled = false;
     const elementId = 'tickex-qr-reader';
 
     if (!cameraActive) {
@@ -210,6 +211,11 @@ export default function AdminScanTicketPage() {
             // Per-frame error when QR not detected in frame; ignore
           }
         );
+        if (!mounted || startCancelled) {
+          await scanner.stop().catch(() => undefined);
+          scanner.clear();
+          if (scannerRef.current === scanner) scannerRef.current = null;
+        }
       } catch (err: unknown) {
         if (!mounted) return;
         const errMsg = (err instanceof Error ? err.message : String(err)) || 'Không thể truy cập camera.';
@@ -222,6 +228,7 @@ export default function AdminScanTicketPage() {
 
     return () => {
       mounted = false;
+      startCancelled = true;
       clearTimeout(timer);
       if (scannerRef.current) {
         if (scannerRef.current.isScanning) {
@@ -279,7 +286,7 @@ export default function AdminScanTicketPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Camera Scanner & Quick Input */}
         <div className="lg:col-span-7 space-y-5">
-          <div className="glass-card p-5 sm:p-6 rounded-2xl border border-border-subtle relative overflow-hidden">
+          <div className="surface-panel p-5 sm:p-6 relative overflow-hidden">
             <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <Camera className="w-4 h-4 text-brand-primary" />

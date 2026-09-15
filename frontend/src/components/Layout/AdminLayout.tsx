@@ -36,7 +36,7 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-surface-0 flex flex-col md:flex-row text-text-primary relative overflow-hidden">
       {/* Mobile Top App Bar (< md) */}
-      <header className="md:hidden h-16 bg-surface-1 border-b border-border-subtle px-4 flex items-center justify-between shrink-0 sticky top-0 z-40 backdrop-blur-md">
+      <header className="md:hidden h-16 bg-surface-1 border-b border-border-subtle px-4 flex items-center justify-between shrink-0 sticky top-0 z-40">
         <Link to={currentRole === 'Staff' ? "/admin/scan-ticket" : "/admin"} className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded bg-surface-2 border border-border-subtle flex items-center justify-center shrink-0">
             <Ticket className="w-4 h-4 text-brand-primary" />
@@ -58,13 +58,13 @@ export default function AdminLayout() {
       {/* Mobile Off-Canvas Drawer Backdrop */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm md:hidden animate-in fade-in duration-200"
+           className="fixed inset-0 z-50 bg-surface-1/85 md:hidden animate-in fade-in duration-200"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Mobile Slide-over Drawer (< md) */}
-      <div ref={mobileDrawerRef} role="dialog" aria-modal="true" aria-label="Điều hướng quản trị" className={`fixed top-0 left-0 bottom-0 w-72 bg-surface-1 border-r border-border-subtle z-50 flex flex-col md:hidden transition-transform duration-300 ease-in-out motion-reduce:transition-none shadow-2xl ${
+      <div ref={mobileDrawerRef} role="dialog" aria-modal="true" aria-hidden={!isMobileMenuOpen} inert={!isMobileMenuOpen || undefined} aria-label="Điều hướng quản trị" className={`fixed top-0 left-0 bottom-0 w-72 bg-surface-1 border-r border-border-subtle z-50 flex flex-col md:hidden transition-transform duration-300 ease-in-out motion-reduce:transition-none shadow-2xl ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="h-16 flex items-center justify-between px-5 border-b border-border-subtle shrink-0">

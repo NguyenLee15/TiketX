@@ -29,6 +29,9 @@ public class CreateEventCommandValidator : AbstractValidator<CreateEventCommand>
         RuleFor(x => x.BasePrice)
             .GreaterThan(0).WithMessage("Giá vé cơ sở phải lớn hơn 0.");
 
+        RuleFor(x => x.Status)
+            .IsInEnum().WithMessage("Trạng thái sự kiện không hợp lệ.");
+
         RuleFor(x => x.RowCount)
             .InclusiveBetween(1, 100).WithMessage("Số lượng hàng ghế phải từ 1 đến 100.");
 

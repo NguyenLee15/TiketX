@@ -45,7 +45,11 @@ const eventSchema = z.object({
   status: z.enum(['Draft', 'Published', 'Cancelled']),
   rowCount: z.number().min(1, "Tối thiểu 1 hàng").max(50, "Tối đa 50 hàng"),
   seatsPerRow: z.number().min(1, "Tối thiểu 1 ghế/hàng").max(50, "Tối đa 50 ghế/hàng"),
+  basePrice: z.number().positive("Giá vé cơ sở phải lớn hơn 0"),
   ticketTypes: z.array(ticketTypeSchema).min(1, "Bắt buộc có ít nhất 1 hạng vé"),
+}).refine(data => !data.endDate || new Date(data.endDate).getTime() > new Date(data.date).getTime(), {
+  path: ['endDate'],
+  message: 'Thời gian kết thúc phải sau thời gian bắt đầu',
 });
 
 export type EventFormValues = z.infer<typeof eventSchema>;
@@ -79,17 +83,12 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
       status: 'Published',
       rowCount: 5,
       seatsPerRow: 12,
-      ticketTypes: [
-        { name: 'Standard', price: 100000, totalQuantity: 60 },
-      ],
+      basePrice: 100000,
+      ticketTypes: [{ name: 'Standard', price: 100000, totalQuantity: 60 }],
     }
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "ticketTypes"
-  });
-
+  const { fields, append, remove } = useFieldArray({ control, name: 'ticketTypes' });
   const watchedImageUrl = watch('imageUrl');
   const watchedRowCount = watch('rowCount') || 5;
   const watchedSeatsPerRow = watch('seatsPerRow') || 12;
@@ -119,11 +118,8 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
         status: statusStr,
         rowCount: 5,
         seatsPerRow: 12,
-        ticketTypes: event.ticketTypes && event.ticketTypes.length > 0
-          ? event.ticketTypes.map(t => ({ name: t.name, price: Number(t.price), totalQuantity: Number(t.totalQuantity) }))
-          : [
-              { name: 'Standard', price: Number(event.basePrice) || 100000, totalQuantity: event.totalSeats || 60 },
-            ]
+        basePrice: Number(event.basePrice) || 100000,
+        ticketTypes: event.ticketTypes && event.ticketTypes.length > 0 ? event.ticketTypes.map(t => ({ name: t.name, price: Number(t.price), totalQuantity: Number(t.totalQuantity) })) : [{ name: 'Standard', price: Number(event.basePrice) || 100000, totalQuantity: event.totalSeats || 60 }],
       });
     } else {
       reset({
@@ -138,9 +134,8 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
         status: 'Published',
         rowCount: 5,
         seatsPerRow: 12,
-        ticketTypes: [
-          { name: 'Standard', price: 100000, totalQuantity: 60 },
-        ],
+        basePrice: 100000,
+        ticketTypes: [{ name: 'Standard', price: 100000, totalQuantity: 60 }],
       });
     }
   }, [event, reset, isOpen]);
@@ -159,14 +154,14 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-surface-1/95 animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="event-modal-title"
     >
       <div 
         ref={modalRef}
-        className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto overscroll-contain p-6 sm:p-7 rounded-2xl shadow-2xl relative animate-in zoom-in-95 duration-300 border border-border-subtle z-10"
+        className="surface-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto overscroll-contain p-6 sm:p-7 shadow-2xl relative animate-in zoom-in-95 duration-300 z-10"
       >
         <button 
           onClick={onClose}
@@ -402,8 +397,15 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
             </div>
           </div>
 
-          {/* Ticket Types Multi-Tier Setup */}
-          <div className="pt-3 border-t border-border-subtle">
+          <div className="pt-3 border-t border-border-subtle space-y-2">
+            <label htmlFor="event-base-price" className="block text-xs font-bold uppercase tracking-wider text-text-secondary">Giá vé cơ sở (VNĐ)</label>
+            <input id="event-base-price" type="number" min={1} {...register('basePrice', { valueAsNumber: true })} disabled={isLoading} className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary" />
+            {errors.basePrice && <p role="alert" className="text-danger text-xs">{errors.basePrice.message}</p>}
+            <p className="text-[11px] text-text-secondary">Giá ghế được tạo tự động theo hạng: VIP 1,75×, Standard 1×, Economy 0,75×.</p>
+          </div>
+
+          {/* Legacy ticket tier fields retained only for form compatibility; backend stores BasePrice. */}
+          <div className="hidden" aria-hidden="true">
             <div className="flex justify-between items-center mb-2.5">
               <div className="flex items-center gap-2">
                 <Ticket className="w-4 h-4 text-brand-primary" />

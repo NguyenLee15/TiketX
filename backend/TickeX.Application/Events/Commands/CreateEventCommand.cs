@@ -20,7 +20,8 @@ public record CreateEventCommand(
     decimal BasePrice = 200000m,
     int RefundCutoffHours = 24,
     int RowCount = 5,
-    int SeatsPerRow = 12) : IRequest<Guid>;
+    int SeatsPerRow = 12,
+    EventStatus Status = EventStatus.Published) : IRequest<Guid>;
 
 public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
 {
@@ -46,7 +47,8 @@ public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Gui
             request.BannerUrl,
             request.OrganizerName,
             request.BasePrice,
-            request.RefundCutoffHours);
+            request.RefundCutoffHours,
+            request.Status);
 
         newEvent.GenerateSeatsMatrix(
             request.RowCount,

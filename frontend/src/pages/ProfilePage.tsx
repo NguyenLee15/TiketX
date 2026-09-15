@@ -142,9 +142,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-12 relative text-text-primary">
-      {/* Background ambient effects */}
-      
-      <div className="flex flex-col gap-1.5 bg-surface-2/30 p-6 sm:p-8 rounded-2xl border border-border-subtle backdrop-blur-md">
+      <div className="surface-panel flex flex-col gap-1.5 p-6 sm:p-8">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary/10 border border-brand-primary/20 w-fit mb-1">
           <Shield className="w-3.5 h-3.5 text-brand-primary" />
           <span className="text-xs font-bold text-brand-primary uppercase tracking-wider">Cài Đặt Tài Khoản</span>
@@ -157,7 +155,7 @@ export default function ProfilePage() {
         
         {/* Profile Card */}
         <div className="lg:col-span-7">
-          <div className="glass-premium rounded-2xl p-6 sm:p-7 border border-border-subtle relative overflow-hidden h-full shadow-xl">
+          <div className="surface-panel p-6 sm:p-7 relative overflow-hidden h-full shadow-xl">
             
             <div className="flex items-center gap-3.5 mb-6 relative z-10 border-b border-border-subtle pb-4">
               <div className="w-10 h-10 rounded-xl bg-brand-primary/15 border border-brand-primary/30 flex items-center justify-center shrink-0">
@@ -172,7 +170,6 @@ export default function ProfilePage() {
             <form onSubmit={handleProfileSubmit(onUpdateProfile)} className="space-y-4 relative z-10" noValidate>
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-4 p-4 bg-surface-2/50 rounded-xl border border-border-subtle">
                 <div className="relative group shrink-0">
-                  <div className="absolute inset-0 bg-brand-primary rounded-full blur-md opacity-0 group-hover:opacity-40 transition-opacity" />
                   {currentAvatarUrl ? (
                     <img src={currentAvatarUrl} alt="Avatar" width="80" height="80" loading="lazy" className="relative w-20 h-20 rounded-full object-cover border-2 border-surface-2 shadow-xl group-hover:scale-105 transition-transform" />
                   ) : (
@@ -292,7 +289,7 @@ export default function ProfilePage() {
 
         {/* Password Card */}
         <div className="lg:col-span-5">
-          <div className="glass-premium rounded-2xl p-6 sm:p-7 border border-border-subtle relative overflow-hidden h-full shadow-xl">
+          <div className="surface-panel p-6 sm:p-7 relative overflow-hidden h-full shadow-xl">
             
             <div className="flex items-center gap-3.5 mb-6 relative z-10 border-b border-border-subtle pb-4">
               <div className="w-10 h-10 rounded-xl bg-brand-secondary/15 border border-brand-secondary/30 flex items-center justify-center shrink-0">

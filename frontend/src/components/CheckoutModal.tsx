@@ -34,17 +34,22 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
   const [releaseError, setReleaseError] = useState('');
   const [releasing, setReleasing] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const simulateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const requestClose = useCallback(() => {
     if (!releasing && status === 'idle') setShowCloseConfirm(true);
   }, [releasing, status]);
+  const statusRef = useRef(status);
+  const requestCloseRef = useRef(requestClose);
+  statusRef.current = status;
+  requestCloseRef.current = requestClose;
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     modalRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && status === 'idle') requestClose();
+      if (event.key === 'Escape' && statusRef.current === 'idle') requestCloseRef.current();
       if (event.key === 'Tab' && modalRef.current) {
         const focusable = modalRef.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
         if (!focusable.length) return;
@@ -55,7 +60,11 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
     };
     document.addEventListener('keydown', onKeyDown);
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', onKeyDown); openerRef.current?.focus(); };
-  }, [onClose, requestClose, status]);
+  }, []);
+
+  useEffect(() => () => {
+    if (simulateTimerRef.current) clearTimeout(simulateTimerRef.current);
+  }, []);
 
   // Helper to compute remaining seconds from server expiresAt
   const calculateRemaining = useCallback((expiryStr?: string) => {
@@ -125,8 +134,13 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
   }, [status, expiresAt, calculateRemaining]);
 
   const copyToClipboard = (text: string, fieldName: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`Đã sao chép ${fieldName}!`);
+    if (!navigator.clipboard?.writeText) {
+      toast.error(`Không thể sao chép ${fieldName}.`);
+      return;
+    }
+    void navigator.clipboard.writeText(text)
+      .then(() => toast.success(`Đã sao chép ${fieldName}!`))
+      .catch(() => toast.error(`Không thể sao chép ${fieldName}.`));
   };
 
   const handleProceedPayOS = () => {
@@ -158,7 +172,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
     if (!paymentData?.orderCode) return;
     setStatus('verifying');
     toast.success('Mô phỏng thanh toán thành công!');
-    setTimeout(() => {
+    simulateTimerRef.current = setTimeout(() => {
       navigate(`/payment/result?orderCode=${paymentData.orderCode}&status=PAID`);
     }, 700);
   };
@@ -188,13 +202,13 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-surface-1/85 backdrop-blur-md animate-in fade-in duration-300"
+        className="absolute inset-0 bg-surface-1/95 animate-in fade-in duration-200"
         aria-hidden="true"
         onClick={requestClose}
       />
       
       {/* Modal Content */}
-      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="checkout-title" tabIndex={-1} className="glass-card w-full max-w-xl p-6 md:p-8 rounded-3xl shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300 border border-border-subtle z-10 max-h-[90vh] overflow-y-auto overscroll-contain">
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="checkout-title" tabIndex={-1} className="surface-panel w-full max-w-xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200 z-10 max-h-[90vh] overflow-y-auto overscroll-contain">
         
         {/* Ambient Glows */}
 
@@ -210,7 +224,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
                 <p className="text-text-secondary text-xs flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-warning" />
                   Thời gian giữ chỗ còn lại:{' '}
-                  <span className="text-warning font-mono font-bold animate-pulse text-sm">
+                  <span className="text-warning font-mono font-bold text-sm">
                     {formatTime(timeLeft)}
                   </span>
                 </p>
@@ -403,7 +417,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
         )}
 
         {showCloseConfirm && status === 'idle' && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-surface-1/80 p-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="release-confirm-title">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-surface-1/95 p-5" role="dialog" aria-modal="true" aria-labelledby="release-confirm-title">
             <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-surface-2 p-5 shadow-2xl">
               <h3 id="release-confirm-title" className="text-base font-bold text-white">Rời phiên thanh toán?</h3>
               <p className="mt-2 text-xs leading-relaxed text-text-secondary">Ghế sẽ được trả lại và liên kết thanh toán hiện tại có thể không còn sử dụng được.</p>
