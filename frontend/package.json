@@ -27,7 +27,7 @@
     "vitest": "^5.0.0"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.4.0",
+    "@hookform/resolvers": "^5.9.1",
     "@microsoft/signalr": "^10.0.0",
     "axios": "^1.18.1",
     "canvas-confetti": "^1.9.4",
