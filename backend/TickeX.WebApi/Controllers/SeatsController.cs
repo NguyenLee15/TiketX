@@ -28,7 +28,13 @@ public class SeatsController : ControllerBase
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var currentUserId))
         {
-            return Unauthorized();
+            return Unauthorized(new 
+            { 
+                success = false, 
+                code = "UNAUTHORIZED", 
+                message = "User is not authenticated.",
+                error = new { code = "UNAUTHORIZED", message = "User is not authenticated." }
+            });
         }
 
         byte[] versionBytes;
@@ -38,11 +44,23 @@ public class SeatsController : ControllerBase
         }
         catch (FormatException)
         {
-            return BadRequest(new { success = false, code = "INVALID_SEAT_VERSION", message = "Invalid seat version token format. Valid Base64 string is required." });
+            return BadRequest(new 
+            { 
+                success = false, 
+                code = "INVALID_SEAT_VERSION", 
+                message = "Invalid seat version token format. Valid Base64 string is required.",
+                error = new { code = "INVALID_SEAT_VERSION", message = "Invalid seat version token format. Valid Base64 string is required." }
+            });
         }
         if (versionBytes.Length != 16)
         {
-            return BadRequest(new { success = false, code = "INVALID_SEAT_VERSION", message = "Invalid seat version token length." });
+            return BadRequest(new 
+            { 
+                success = false, 
+                code = "INVALID_SEAT_VERSION", 
+                message = "Invalid seat version token length.",
+                error = new { code = "INVALID_SEAT_VERSION", message = "Invalid seat version token length." }
+            });
         }
 
         var command = new LockSeatCommand(request.EventId, id, currentUserId, versionBytes);
@@ -55,10 +73,16 @@ public class SeatsController : ControllerBase
                 : lockResult.Code == "RESERVATION_LOCK_UNAVAILABLE"
                     ? StatusCodes.Status503ServiceUnavailable
                     : StatusCodes.Status400BadRequest;
-            return StatusCode(statusCode, new { success = false, code = lockResult.Code, message = lockResult.Message });
+            return StatusCode(statusCode, new 
+            { 
+                success = false, 
+                code = lockResult.Code, 
+                message = lockResult.Message,
+                error = new { code = lockResult.Code, message = lockResult.Message }
+            });
         }
 
-        return Ok(new 
+        return StatusCode(StatusCodes.Status201Created, new 
         { 
             success = true, 
             data = new 

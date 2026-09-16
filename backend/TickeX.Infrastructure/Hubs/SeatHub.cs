@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace TickeX.Infrastructure.Hubs;
 
-[Authorize]
+[AllowAnonymous]
 public class SeatHub : Hub
 {
     public async Task JoinEventGroup(Guid eventId)

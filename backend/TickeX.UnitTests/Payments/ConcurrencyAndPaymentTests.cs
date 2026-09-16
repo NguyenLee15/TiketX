@@ -43,4 +43,20 @@ public class ConcurrencyAndPaymentTests
         tx.Status.Should().Be("Refunded");
         tx.ProviderTransactionId.Should().Be("REFUND_TX_001");
     }
+
+    [Fact]
+    public void PaymentTransaction_MarkOrphaned_ShouldFlagCompensationState()
+    {
+        // Arrange
+        var tx = new PaymentTransaction(778899L, Guid.NewGuid(), 350000);
+
+        // Act
+        tx.MarkOrphaned("Hold expired: Cancelled", "PAYOS_TX_999", "{\"code\":\"00\"}");
+
+        // Assert
+        tx.Status.Should().Be("OrphanedPaid");
+        tx.ProviderTransactionId.Should().Be("PAYOS_TX_999");
+        tx.RawWebhookPayload.Should().Contain("Hold expired: Cancelled");
+        tx.Amount.Should().Be(350000);
+    }
 }

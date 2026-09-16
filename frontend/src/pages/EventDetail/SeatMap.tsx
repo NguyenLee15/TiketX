@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Lock, X, Crown, Check } from 'lucide-react';
 import { Seat } from '../../types';
 import { SeatLegend } from './SeatLegend';
 import { formatCurrency } from '../../utils/formatters';
@@ -9,7 +10,7 @@ interface SeatMapProps {
   onSeatClick: (seat: Seat) => void;
 }
 
-export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatClick }) => {
+export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat, onSeatClick }) => {
   const formatVND = (price: number) => {
     return formatCurrency(price);
   };
@@ -88,6 +89,7 @@ export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatCli
               <div className="flex gap-1.5 sm:gap-2 md:gap-2.5">
                 {rows[rowName].sort((a, b) => a.number - b.number).map((seat, index) => {
                   const isSelected = selectedSeat?.id === seat.id;
+                  const tierInfo = getSeatTierInfo(seat);
                   return (
                     <button
                       key={seat.id}
@@ -97,7 +99,20 @@ export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatCli
                       className={`w-11 h-11 sm:w-10 sm:h-10 md:w-9 md:h-9 rounded-lg border-2 flex items-center justify-center text-xs font-bold transition-[opacity,background-color,border-color] duration-150 ease-out relative group/seat focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 ${getSeatColor(seat, isSelected)}`}
                       style={{ animationDelay: `${(sortedRowKeys.indexOf(rowName) * 0.04) + (index * 0.015)}s` }}
                     >
-                      {seat.number}
+                      {/* Subtle status indicator for color-blind accessibility */}
+                      {isSelected && (
+                        <Check className="w-2.5 h-2.5 text-white absolute -top-1 -right-1" aria-hidden="true" />
+                      )}
+                      {!isSelected && seat.status === 1 && (
+                        <Lock className="w-2.5 h-2.5 text-warning/80 absolute -top-1 -right-1" aria-hidden="true" />
+                      )}
+                      {!isSelected && seat.status === 2 && (
+                        <X className="w-2.5 h-2.5 text-danger/80 absolute -top-1 -right-1" aria-hidden="true" />
+                      )}
+                      {!isSelected && seat.status === 0 && tierInfo.isVip && (
+                        <Crown className="w-2 h-2 text-amber-400 absolute -top-0.5 -right-0.5" aria-hidden="true" />
+                      )}
+                      <span>{seat.number}</span>
                     </button>
                   );
                 })}
@@ -117,4 +132,5 @@ export const SeatMap: React.FC<SeatMapProps> = ({ seats, selectedSeat, onSeatCli
       <SeatLegend />
     </div>
   );
-};
+});
+

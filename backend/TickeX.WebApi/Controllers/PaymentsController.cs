@@ -20,7 +20,7 @@ public class PaymentsController : ControllerBase
     [HttpGet("status/{orderCode:long}")]
     public async Task<IActionResult> GetStatus(long orderCode, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
+        if (!TryGetUserId(out var userId)) return UnauthorizedEnvelope();
         return Respond(await _checkout.GetStatusAsync(orderCode, userId, cancellationToken), notFound: true);
     }
 
@@ -28,7 +28,7 @@ public class PaymentsController : ControllerBase
     [HttpPost("create-link")]
     public async Task<IActionResult> CreatePaymentLink([FromBody] CreatePaymentLinkRequest request, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
+        if (!TryGetUserId(out var userId)) return UnauthorizedEnvelope();
         return Respond(await _checkout.CreatePaymentLinkAsync(request.TicketId, userId, cancellationToken));
     }
 
@@ -55,12 +55,20 @@ public class PaymentsController : ControllerBase
     [HttpPost("simulate-success/{orderCode:long}")]
     public async Task<IActionResult> SimulateSuccess(long orderCode, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
+        if (!TryGetUserId(out var userId)) return UnauthorizedEnvelope();
         var result = await _checkout.SimulateSuccessAsync(orderCode, userId, cancellationToken);
         return result.Code == "PAYMENT_SIMULATION_DISABLED" ? NotFound() : Respond(result, notFound: true);
     }
 
     private bool TryGetUserId(out Guid userId) => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out userId);
+
+    private IActionResult UnauthorizedEnvelope() => Unauthorized(new
+    {
+        success = false,
+        code = "UNAUTHORIZED",
+        message = "User is not authenticated.",
+        error = new { code = "UNAUTHORIZED", message = "User is not authenticated." }
+    });
 
     private IActionResult Respond(CustomerCheckoutResult result, bool notFound = false)
     {
@@ -71,11 +79,11 @@ public class PaymentsController : ControllerBase
                 status = result.Status, ticketId = result.TicketId
             }});
         if (notFound && result.Code == "PAYMENT_NOT_FOUND")
-            return NotFound(new { success = false, code = result.Code, message = result.Message });
+            return NotFound(new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
         if (result.Code == "PAYMENT_FORBIDDEN")
-            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, code = result.Code, message = result.Message });
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
         if (result.Code == "PAYMENT_PROVIDER_UNAVAILABLE")
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { success = false, code = result.Code, message = result.Message });
-        return BadRequest(new { success = false, code = result.Code, message = result.Message });
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
+        return BadRequest(new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
     }
 }

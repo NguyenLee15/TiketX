@@ -98,17 +98,42 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 }
             }
 
-            // Invariant 2: Ticket must be Pending to process payment
-            if (ticket.Status != TicketStatus.Pending)
-            {
-                _logger.LogWarning("Cannot process payment for ticket {TicketId} with status {Status}.", ticket.Id, ticket.Status);
-                return false;
-            }
-
             string providerTxId = !string.IsNullOrWhiteSpace(data.Reference) 
                 ? data.Reference 
                 : (!string.IsNullOrWhiteSpace(data.PaymentLinkId) ? data.PaymentLinkId : data.OrderCode.ToString());
             var auditSummary = PaymentAudit.CreateWebhookSummary(data.OrderCode, data.Amount, providerTxId, data.Code);
+
+            // Invariant 2: Ticket must be Pending to process payment
+            if (ticket.Status != TicketStatus.Pending)
+            {
+                if (data.Success)
+                {
+                    _logger.LogError("ORPHANED PAYMENT DETECTED: Order {OrderCode}, Ticket {TicketId}, Amount {Amount}. Ticket status is {Status}. Money captured but reservation hold expired or invalid. Recording OrphanedPaid transaction for compensation.",
+                        data.OrderCode, ticket.Id, data.Amount, ticket.Status);
+
+                    if (existingTx == null)
+                    {
+                        var transaction = new PaymentTransaction(
+                            ticket.OrderCode,
+                            ticket.Id,
+                            data.Amount,
+                            "VietQR_PayOS"
+                        );
+                        transaction.MarkOrphaned($"Hold expired or invalid status: {ticket.Status}", providerTxId, auditSummary);
+                        _context.PaymentTransactions.Add(transaction);
+                    }
+                    else
+                    {
+                        existingTx.MarkOrphaned($"Hold expired or invalid status: {ticket.Status}", providerTxId, auditSummary);
+                    }
+
+                    await _context.SaveChangesAsync(cancellationToken);
+                    return true; // Acknowledge webhook to avoid endless retries while preserving compensation state
+                }
+
+                _logger.LogWarning("Cannot process failed payment webhook for ticket {TicketId} with status {Status}.", ticket.Id, ticket.Status);
+                return false;
+            }
 
             if (data.Success)
             {
@@ -151,6 +176,9 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 {
                     existingTx.MarkSuccess(providerTxId, auditSummary);
                 }
+
+                // Explicitly commit financial and seat state into database
+                await _context.SaveChangesAsync(cancellationToken);
 
                 await _notificationOutbox.QueueTicketPaidAsync(ticket.Id, ticket.UserId, ticket.EventId, cancellationToken);
 

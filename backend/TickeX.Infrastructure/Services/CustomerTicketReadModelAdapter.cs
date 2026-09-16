@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TickeX.Application.Interfaces;
 using TickeX.Application.Tickets.Queries;
+using TickeX.Domain.Entities;
 using TickeX.Domain.Enums;
 
 namespace TickeX.Infrastructure.Services;
@@ -16,15 +17,22 @@ public sealed class CustomerTicketReadModelAdapter : ICustomerTicketReadModel
         _time = time;
     }
 
-    public async Task<IReadOnlyList<TicketDto>> GetForUserAsync(Guid userId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<TicketDto>> GetForUserAsync(Guid userId, int? page = null, int? pageSize = null, CancellationToken cancellationToken = default)
     {
-        var tickets = await _context.Tickets
+        IQueryable<Ticket> query = _context.Tickets
             .AsNoTracking()
             .Include(t => t.Event)
             .Include(t => t.Seat)
             .Where(t => t.UserId == userId)
-            .OrderByDescending(t => t.CreatedAt)
-            .ToListAsync(cancellationToken);
+            .OrderByDescending(t => t.CreatedAt);
+
+        if (page.HasValue && page.Value > 0)
+        {
+            var clampedSize = Math.Clamp(pageSize ?? 10, 1, 50);
+            query = query.Skip((page.Value - 1) * clampedSize).Take(clampedSize);
+        }
+
+        var tickets = await query.ToListAsync(cancellationToken);
 
         var now = _time.UtcNow;
         var result = new List<TicketDto>(tickets.Count);

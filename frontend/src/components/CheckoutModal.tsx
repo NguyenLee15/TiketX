@@ -1,82 +1,73 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, XCircle, CreditCard, Clock, Copy, CheckCircle2, Receipt, ExternalLink } from 'lucide-react';
+import { X, Sparkles, Loader2, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { Seat, EventDetail } from '../types';
+import { EventDetail, Seat } from '../types';
 import api from '../services/api';
-import { formatCurrency } from '../utils/formatters';
-import { useModalAccessibility } from './Admin/useModalAccessibility';
+import { CheckoutInvoice } from './Checkout/CheckoutInvoice';
+import { CheckoutVietQrView, PaymentInfo } from './Checkout/CheckoutVietQrView';
+import { CheckoutReleaseDialog } from './Checkout/CheckoutReleaseDialog';
 
 interface CheckoutModalProps {
-  seat: Seat;
-  event: EventDetail;
-  ticketId: string;
-  expiresAt?: string;
+  isOpen?: boolean;
   onClose: () => void;
+  event: EventDetail;
+  seat: Seat;
+  ticketId: string | null;
+  expiresAt: string | null | undefined;
 }
 
-interface PaymentInfo {
-  orderCode: number;
-  amount: number;
-  accountNumber: string;
-  accountName: string;
-  bankName: string;
-  qrCodeUrl: string;
-  checkoutUrl?: string;
-}
-
-export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClose }: CheckoutModalProps) {
-  const [status, setStatus] = useState<'idle' | 'processing' | 'verifying' | 'error'>('idle');
-  const [paymentData, setPaymentData] = useState<PaymentInfo | null>(null);
-  const [loadingPayment, setLoadingPayment] = useState(true);
+export default function CheckoutModal({
+  isOpen = true,
+  onClose,
+  event,
+  seat,
+  ticketId,
+  expiresAt,
+}: CheckoutModalProps) {
   const navigate = useNavigate();
-  const modalRef = useRef<HTMLDivElement>(null);
-  const closeConfirmRef = useRef<HTMLDivElement>(null);
-  const [releaseError, setReleaseError] = useState('');
-  const [releasing, setReleasing] = useState(false);
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
-  const simulateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [paymentData, setPaymentData] = useState<PaymentInfo | null>(null);
+  const [loadingPayment, setLoadingPayment] = useState(false);
+  const [paymentInitError, setPaymentInitError] = useState<string | null>(null);
+  const [paymentRetryKey, setPaymentRetryKey] = useState(0);
 
-  const requestClose = useCallback(() => {
-    if (!releasing && status === 'idle') setShowCloseConfirm(true);
-  }, [releasing, status]);
-  useModalAccessibility(true, releasing, requestClose, modalRef);
-  useModalAccessibility(showCloseConfirm, releasing, () => setShowCloseConfirm(false), closeConfirmRef);
-
-  useEffect(() => () => {
-    if (simulateTimerRef.current) clearTimeout(simulateTimerRef.current);
-  }, []);
-
-  // Helper to compute remaining seconds from server expiresAt
-  const calculateRemaining = useCallback((expiryStr?: string) => {
-    if (!expiryStr) return 300;
-    const expiryTime = new Date(expiryStr).getTime();
-    const diff = Math.floor((expiryTime - Date.now()) / 1000);
+  const calculateRemaining = useCallback((target: string | null | undefined) => {
+    if (!target) return 0;
+    const diff = Math.floor((new Date(target).getTime() - Date.now()) / 1000);
     return diff > 0 ? diff : 0;
   }, []);
 
-  const [timeLeft, setTimeLeft] = useState<number>(() => calculateRemaining(expiresAt));
+  const [timeLeft, setTimeLeft] = useState(() => calculateRemaining(expiresAt));
+  const [status, setStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle');
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [releasing, setReleasing] = useState(false);
+  const [releaseError, setReleaseError] = useState('');
 
-  // Sync remaining time when expiresAt changes
+  const modalRef = useRef<HTMLDivElement>(null);
+  const simulateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync timeLeft when expiresAt changes
   useEffect(() => {
     setTimeLeft(calculateRemaining(expiresAt));
   }, [expiresAt, calculateRemaining]);
 
-  // Load payment link / VietQR data upon opening
+  // Fetch payment link from backend
   useEffect(() => {
-    const controller = new AbortController();
+    if (!isOpen || !ticketId) return;
     let isMounted = true;
+    const controller = new AbortController();
+
     const initPayment = async () => {
-      if (!ticketId) return;
       try {
         setLoadingPayment(true);
+        setPaymentInitError(null);
         const returnUrl = `${window.location.origin}/payment/result`;
         const cancelUrl = `${window.location.origin}/payment/result`;
         
         const response = await api.post('/api/payments/create-link', {
-          ticketId: ticketId,
-          returnUrl: returnUrl,
-          cancelUrl: cancelUrl
+          ticketId,
+          returnUrl,
+          cancelUrl,
         }, { signal: controller.signal });
 
         if (isMounted && response.data.success) {
@@ -86,23 +77,25 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
         if (!isMounted) return;
         const apiErr = err as { response?: { data?: { message?: string } } };
         if ((err as { code?: string })?.code !== 'ERR_CANCELED') {
-          toast.error(apiErr.response?.data?.message || 'Không thể tạo mã thanh toán');
+          const msg = apiErr.response?.data?.message || 'Không thể tạo mã thanh toán lúc này. Vui lòng thử lại.';
+          setPaymentInitError(msg);
+          toast.error(msg);
         }
       } finally {
         if (isMounted) setLoadingPayment(false);
       }
     };
 
-    initPayment();
+    void initPayment();
     return () => {
       isMounted = false;
       controller.abort();
     };
-  }, [ticketId]);
+  }, [isOpen, ticketId, paymentRetryKey]);
 
-  // Wall-clock synchronized countdown timer
+  // Countdown timer
   useEffect(() => {
-    if (status !== 'idle') return;
+    if (!isOpen || status !== 'idle') return;
     
     const timer = setInterval(() => {
       const remaining = calculateRemaining(expiresAt);
@@ -116,7 +109,14 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [status, expiresAt, calculateRemaining]);
+  }, [isOpen, status, expiresAt, calculateRemaining]);
+
+  // Cleanup simulation timer
+  useEffect(() => {
+    return () => {
+      if (simulateTimerRef.current) clearTimeout(simulateTimerRef.current);
+    };
+  }, []);
 
   const copyToClipboard = (text: string, fieldName: string) => {
     if (!navigator.clipboard?.writeText) {
@@ -138,7 +138,7 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
   };
 
   const handleReleaseAndClose = async () => {
-    if (releasing || status !== 'idle') return;
+    if (releasing || status !== 'idle' || !ticketId) return;
     setReleasing(true);
     setReleaseError('');
     try {
@@ -168,254 +168,109 @@ export default function CheckoutModal({ seat, event, ticketId, expiresAt, onClos
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const orderCode = paymentData?.orderCode;
-  const transferContent = `TICKEX ${orderCode}`;
-  const qrUrl = paymentData?.qrCodeUrl;
-  const hasBankDetails = Boolean(
-    paymentData?.bankName?.trim() &&
-    paymentData?.accountNumber?.trim() &&
-    paymentData?.accountName?.trim()
-  );
-
-  const getTierName = (tier: number, row: string) => {
-    if (tier === 1 || row === 'A' || row === 'B') return 'VIP';
-    if (tier === 2 || row === 'E') return 'Economy';
-    return 'Standard';
-  };
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <button
-        type="button"
-        className="absolute inset-0 bg-surface-1/95 animate-in fade-in duration-200"
-        aria-label="Đóng cửa sổ thanh toán"
-        onClick={requestClose}
-      />
-      
-      {/* Modal Content */}
-      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="checkout-title" tabIndex={-1} className="surface-panel w-full max-w-xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200 z-10 max-h-[90vh] overflow-y-auto overscroll-contain">
-        
-        {/* Ambient Glows */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="checkout-modal-title">
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setShowCloseConfirm(true)} />
 
+      <div ref={modalRef} className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-surface-1 border border-border-subtle shadow-2xl p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-200 text-text-primary z-10 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-border-subtle">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 id="checkout-modal-title" className="text-lg font-bold text-white leading-tight">Thanh Toán Giữ Chỗ</h2>
+              <p className="text-[11px] text-text-secondary">Xác nhận chuyển khoản VietQR hoặc cổng PayOS</p>
+            </div>
+          </div>
+          <button onClick={() => setShowCloseConfirm(true)} className="p-1.5 rounded-xl hover:bg-surface-2 text-text-secondary hover:text-white transition-colors cursor-pointer" aria-label="Đóng thanh toán">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content Body */}
         {status === 'idle' && (
-          <div className="relative z-10 space-y-5">
-            {/* Header with Server-Synchronized Timer */}
-            <div className="flex justify-between items-start border-b border-border-subtle pb-4">
-              <div>
-                <h2 id="checkout-title" className="text-xl md:text-2xl font-display font-bold text-white mb-1 flex items-center gap-2">
-                  <CreditCard className="w-6 h-6 text-brand-primary" />
-                  Thanh Toán Vé Sự Kiện
-                </h2>
-                <p className="text-text-secondary text-xs flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-warning" />
-                  Thời gian giữ chỗ còn lại:{' '}
-                  <span className="text-warning font-mono font-bold text-sm">
-                    {formatTime(timeLeft)}
-                  </span>
-                </p>
-              </div>
-              <button 
-                onClick={requestClose}
-                data-release-close
-                className="p-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-text-tertiary hover:text-white transition-colors"
-                aria-label="Đóng"
-              >
-                ✕
-              </button>
-            </div>
+          <div className="space-y-4">
+            <CheckoutInvoice
+              event={event}
+              seat={seat}
+              timeLeft={timeLeft}
+              formatTime={formatTime}
+              status={status}
+            />
 
-            {/* Itemized Invoice Breakdown */}
-            <div className="rounded-2xl bg-surface-2/60 border border-border-subtle p-4 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-border-subtle/60">
-                <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                  <Receipt className="w-3.5 h-3.5 text-brand-primary" />
-                  Chi tiết hóa đơn đặt vé
-                </div>
-                <span className="text-[11px] font-mono text-text-tertiary">Mã vé: #{ticketId.substring(0, 8)}</span>
-              </div>
+            <CheckoutVietQrView
+              loadingPayment={loadingPayment}
+              paymentInitError={paymentInitError}
+              paymentData={paymentData}
+              onRetryPayment={() => setPaymentRetryKey(k => k + 1)}
+              onProceedPayOS={handleProceedPayOS}
+              copyToClipboard={copyToClipboard}
+            />
 
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between items-center text-text-secondary">
-                  <span>Sự kiện:</span>
-                  <span className="text-white font-medium truncate max-w-[260px] text-right">{event.title}</span>
-                </div>
-                <div className="flex justify-between items-center text-text-secondary">
-                  <span>Địa điểm:</span>
-                  <span className="text-white font-medium truncate max-w-[260px] text-right">{event.venueName || event.location}</span>
-                </div>
-                <div className="flex justify-between items-center text-text-secondary">
-                  <span>Vị trí ghế:</span>
-                  <span className="text-white font-semibold">
-                    Hàng {seat.row} - Ghế {seat.number} ({getTierName(seat.tier, seat.row)})
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-text-secondary">
-                  <span>Giá vé niêm yết:</span>
-                  <span className="text-white font-mono">{formatCurrency(seat.price)}</span>
-                </div>
-                <div className="flex justify-between items-center text-text-secondary">
-                  <span>Phí dịch vụ & xuất vé điện tử:</span>
-                  <span className="text-success font-medium">0đ (Miễn phí)</span>
-                </div>
-                <div className="flex justify-between items-center text-text-secondary">
-                  <span>Thuế VAT:</span>
-                  <span className="text-text-tertiary">Đã bao gồm trong giá vé</span>
-                </div>
-              </div>
-
-              <div className="pt-2.5 border-t border-border-subtle/60 flex justify-between items-baseline">
-                <span className="text-xs font-bold text-white uppercase tracking-wider">Tổng tiền thanh toán</span>
-                <span className="text-2xl font-black text-success font-display">
-                  {formatCurrency(seat.price)}
-                </span>
-              </div>
-            </div>
-
-            {/* VietQR Scanner / PayOS Section */}
-            {loadingPayment ? (
-              <div className="p-8 rounded-2xl bg-surface-2/40 border border-border-subtle flex flex-col items-center justify-center space-y-3">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
-                <p className="text-text-secondary text-xs">Đang khởi tạo mã QR thanh toán...</p>
-              </div>
-            ) : (
-              <div className="p-5 rounded-2xl bg-surface-2/40 border border-border-subtle flex flex-col md:flex-row items-center gap-5">
-                <div className="w-36 h-36 bg-white p-2 rounded-2xl shadow-xl shrink-0 flex items-center justify-center border-4 border-surface-3">
-                  {qrUrl ? <img src={qrUrl} alt="Mã VietQR thanh toán" width="128" height="128" className="w-full h-full object-contain" /> : <span className="text-xs text-slate-500 text-center">Thanh toán qua PayOS</span>}
-                </div>
-
-                <div className="flex-1 w-full space-y-2 text-xs">
-                  {hasBankDetails && (
-                    <>
-                      <div className="flex justify-between items-center p-2 rounded-xl bg-surface-3/60 border border-border-subtle">
-                        <span className="text-text-secondary">Ngân hàng:</span>
-                        <span className="font-bold text-white">{paymentData?.bankName}</span>
-                      </div>
-
-                      <div className="flex justify-between items-center p-2 rounded-xl bg-surface-3/60 border border-border-subtle">
-                        <span className="text-text-secondary">Số tài khoản:</span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-bold text-white">{paymentData?.accountNumber}</span>
-                          <button
-                            onClick={() => paymentData?.accountNumber && copyToClipboard(paymentData.accountNumber, 'Số tài khoản')}
-                            className="p-1 hover:text-brand-primary text-text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary rounded"
-                            title="Sao chép số tài khoản"
-                            aria-label="Sao chép số tài khoản"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between items-center p-2 rounded-xl bg-surface-3/60 border border-border-subtle">
-                        <span className="text-text-secondary">Chủ tài khoản:</span>
-                        <span className="font-bold text-white uppercase">{paymentData?.accountName}</span>
-                      </div>
-                    </>
-                  )}
-
-                  {hasBankDetails && (
-                    <div className="flex justify-between items-center p-2 rounded-xl bg-brand-primary/10 border border-brand-primary/30">
-                      <span className="text-brand-primary font-semibold">Nội dung CK:</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-black text-brand-primary">{transferContent}</span>
-                        <button
-                          onClick={() => copyToClipboard(transferContent, 'Nội dung chuyển khoản')}
-                          className="p-1 hover:text-white text-brand-primary transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary rounded"
-                          title="Sao chép nội dung chuyển khoản"
-                          aria-label="Sao chép nội dung chuyển khoản"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="space-y-2.5 pt-1">
-              {paymentData?.checkoutUrl && paymentData.checkoutUrl.startsWith('http') && (
-                <button 
-                  onClick={handleProceedPayOS}
-                  className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-2 group text-sm active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
-                >
-                  <span>Chuyển Đến Cổng Thanh Toán PayOS</span>
-                  <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                </button>
-              )}
-
+            {/* Dev Simulate & Cancel Actions */}
+            <div className="space-y-2 pt-1">
               {import.meta.env.DEV && paymentData?.checkoutUrl && (
                 <button 
                   onClick={handleSimulatePayment}
-                  className="w-full py-3 bg-success hover:bg-success/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-2 text-xs active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
+                  className="w-full py-2 bg-warning/10 hover:bg-warning/20 border border-warning/30 text-warning text-xs font-bold rounded-lg transition-colors cursor-pointer"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Mô Phỏng Chuyển Khoản Thành Công (Môi trường Dev)</span>
+                  ⚡ [DEV] Giả lập Thanh Toán Thành Công
                 </button>
               )}
 
               <button 
-                onClick={requestClose}
+                onClick={() => setShowCloseConfirm(true)}
                 disabled={releasing}
-                className="w-full py-2.5 bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white text-xs font-semibold rounded-xl transition-colors border border-border-subtle"
+                className="w-full py-2.5 bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white text-xs font-semibold rounded-xl transition-colors border border-border-subtle cursor-pointer"
               >
                 {releasing ? 'Đang trả ghế…' : 'Trả Ghế & Quay Lại'}
               </button>
-              {releaseError && <p role="alert" aria-live="polite" className="text-center text-xs text-danger">{releaseError}</p>}
             </div>
           </div>
         )}
 
         {status === 'verifying' && (
-          <div className="flex flex-col items-center justify-center py-16 relative z-10 space-y-4">
-            <div className="relative">
-              <div className="w-16 h-16 bg-surface-2 rounded-2xl flex items-center justify-center border border-brand-primary/30 relative z-10">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
-              </div>
+          <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
+            <div className="w-16 h-16 bg-surface-2 rounded-2xl flex items-center justify-center border border-brand-primary/30">
+              <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
             </div>
             <h3 className="text-xl font-bold text-white">Đang Xác Nhận Giao Dịch</h3>
-            <p className="text-text-secondary text-center text-xs max-w-xs">
+            <p className="text-text-secondary text-xs max-w-xs">
               Hệ thống đang đối soát mã đơn hàng và ký chữ ký số mã QR cho vé của bạn...
             </p>
           </div>
         )}
 
         {status === 'error' && (
-          <div className="flex flex-col items-center justify-center py-12 relative z-10 space-y-4 text-center">
+          <div className="flex flex-col items-center justify-center py-12 space-y-4 text-center">
             <div className="w-16 h-16 bg-danger/10 rounded-2xl flex items-center justify-center border border-danger/30 text-danger">
               <XCircle className="w-8 h-8" />
             </div>
             <h3 className="text-xl font-bold text-white">Hết Thời Gian Giữ Chỗ</h3>
             <p className="text-text-secondary text-xs max-w-xs leading-relaxed">
-              {timeLeft <= 0 
-                ? "Thời gian giữ chỗ trên hệ thống đã kết thúc. Ghế đã được giải phóng tự động để đảm bảo công bằng cho khán giả khác." 
-                : "Không thể hoàn tất giao dịch lúc này. Vui lòng thử lại hoặc chọn ghế khác."}
+              Thời gian giữ chỗ trên hệ thống đã kết thúc. Ghế đã được giải phóng tự động để đảm bảo công bằng cho khán giả khác.
             </p>
             <button 
               onClick={onClose}
-              className="px-6 py-3 bg-surface-2 hover:bg-surface-3 text-white text-xs font-bold rounded-xl transition-colors border border-border-subtle mt-2"
+              className="px-6 py-3 bg-surface-2 hover:bg-surface-3 text-white text-xs font-bold rounded-xl transition-colors border border-border-subtle cursor-pointer"
             >
               Đóng & Quay Lại Sơ Đồ Ghế
             </button>
           </div>
         )}
 
-        {showCloseConfirm && status === 'idle' && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-surface-1/95 p-5" role="alertdialog" aria-modal="true" aria-labelledby="release-confirm-title">
-            <div ref={closeConfirmRef} className="w-full max-w-sm rounded-2xl border border-border-subtle bg-surface-2 p-5 shadow-2xl">
-              <h3 id="release-confirm-title" className="text-base font-bold text-white">Rời phiên thanh toán?</h3>
-              <p className="mt-2 text-xs leading-relaxed text-text-secondary">Ghế sẽ được trả lại và liên kết thanh toán hiện tại có thể không còn sử dụng được.</p>
-              {releaseError && <p role="alert" aria-live="polite" className="mt-3 text-xs text-danger">{releaseError}</p>}
-              <div className="mt-5 flex justify-end gap-2">
-                <button type="button" onClick={() => setShowCloseConfirm(false)} disabled={releasing} className="rounded-xl border border-border-subtle bg-surface-3 px-4 py-2 text-xs font-bold text-text-secondary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">Tiếp tục thanh toán</button>
-                <button type="button" onClick={handleReleaseAndClose} disabled={releasing} className="rounded-xl bg-danger px-4 py-2 text-xs font-bold text-white hover:bg-danger/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger">{releasing ? 'Đang trả ghế…' : 'Trả ghế & đóng'}</button>
-              </div>
-            </div>
-          </div>
-        )}
-
+        {/* Release Confirmation Dialog */}
+        <CheckoutReleaseDialog
+          isOpen={showCloseConfirm && status === 'idle'}
+          releasing={releasing}
+          releaseError={releaseError}
+          onCancel={() => setShowCloseConfirm(false)}
+          onConfirm={handleReleaseAndClose}
+        />
       </div>
     </div>
   );

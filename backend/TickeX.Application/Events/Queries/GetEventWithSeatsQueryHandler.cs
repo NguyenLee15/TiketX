@@ -29,26 +29,30 @@ public class GetEventWithSeatsQueryHandler : IRequestHandler<GetEventWithSeatsQu
 
         if (e == null || e.IsDeleted || e.Status != EventStatus.Published || e.Date <= _time.UtcNow) return null;
 
+        // Treat stale locks as available immediately; the background job is only cleanup.
+        var lockExpiry = _time.UtcNow.Subtract(_holdDuration);
+
         var seats = e.Seats
             .OrderBy(s => s.Row)
             .ThenBy(s => s.Number)
-            .Select(s => new SeatDto(
-                s.Id, 
-                s.EventId, 
-                s.Row, 
-                s.Number, 
-                s.Tier, 
-                s.Status, 
-                s.Price, 
-                Convert.ToBase64String(s.Version),
-                s.LockedByUserId.HasValue && request.CurrentUserId.HasValue && s.LockedByUserId.Value == request.CurrentUserId.Value))
-            .ToList();
+            .Select(s => 
+            {
+                var isExpiredLock = s.Status == SeatStatus.Locked && s.LockedAt <= lockExpiry;
+                var effectiveStatus = isExpiredLock ? SeatStatus.Available : s.Status;
+                var isLockedByCurrent = !isExpiredLock && request.CurrentUserId.HasValue && s.LockedByUserId == request.CurrentUserId;
 
-        // Treat stale locks as available immediately; the background job is only cleanup.
-        var lockExpiry = _time.UtcNow.Subtract(_holdDuration);
-        seats = seats.Select(s => s.Status == SeatStatus.Locked && e.Seats.First(raw => raw.Id == s.Id).LockedAt <= lockExpiry
-            ? s with { Status = SeatStatus.Available, IsLockedByCurrentUser = false }
-            : s).ToList();
+                return new SeatDto(
+                    s.Id, 
+                    s.EventId, 
+                    s.Row, 
+                    s.Number, 
+                    s.Tier, 
+                    effectiveStatus, 
+                    s.Price, 
+                    Convert.ToBase64String(s.Version),
+                    isLockedByCurrent);
+            })
+            .ToList();
 
         var availableCount = seats.Count(s => s.Status == SeatStatus.Available);
         var minPrice = seats.Any() ? seats.Min(s => s.Price) : e.BasePrice;

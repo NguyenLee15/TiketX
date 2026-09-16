@@ -7,5 +7,5 @@ namespace TickeX.Application.Interfaces;
 /// </summary>
 public interface ICustomerTicketReadModel
 {
-    Task<IReadOnlyList<TicketDto>> GetForUserAsync(Guid userId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<TicketDto>> GetForUserAsync(Guid userId, int? page = null, int? pageSize = null, CancellationToken cancellationToken = default);
 }

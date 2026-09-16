@@ -9,5 +9,8 @@ public class LockSeatCommandValidator : AbstractValidator<LockSeatCommand>
         RuleFor(x => x.EventId).NotEmpty();
         RuleFor(x => x.SeatId).NotEmpty();
         RuleFor(x => x.UserId).NotEmpty();
+        RuleFor(x => x.Version)
+            .NotNull().WithMessage("Version is required.")
+            .Must(v => v != null && v.Length == 16).WithMessage("Version must be a 16-byte concurrency token.");
     }
 }

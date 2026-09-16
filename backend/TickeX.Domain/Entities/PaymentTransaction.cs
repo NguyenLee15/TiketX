@@ -73,4 +73,13 @@ public class PaymentTransaction : BaseEntity
         ProcessedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void MarkOrphaned(string reason, string providerTxId, string rawPayload = "")
+    {
+        Status = "OrphanedPaid";
+        ProviderTransactionId = providerTxId;
+        RawWebhookPayload = $"{reason} | {rawPayload}";
+        ProcessedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

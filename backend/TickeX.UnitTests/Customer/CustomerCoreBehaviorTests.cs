@@ -240,6 +240,64 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         result.Code.Should().Be("REFUND_TICKET_NOT_FOUND");
     }
 
+    [Fact]
+    public async Task Ticket_UniqueFilteredIndex_PreventsDoubleBookingOnSameSeat()
+    {
+        var user1 = new User("Customer1", "c1@test.local", "hash");
+        var user2 = new User("Customer2", "c2@test.local", "hash");
+        var @event = CreateEvent("Concert", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user1, user2, @event);
+        await _context.SaveChangesAsync();
+
+        var seat = await _context.Seats.SingleAsync();
+
+        // First ticket: Pending (active)
+        var ticket1 = new Ticket(@event.Id, seat.Id, user1.Id, seat.Price);
+        _context.Tickets.Add(ticket1);
+        await _context.SaveChangesAsync();
+
+        // Second concurrent ticket on the same seat: Also Pending
+        var ticket2 = new Ticket(@event.Id, seat.Id, user2.Id, seat.Price);
+        _context.Tickets.Add(ticket2);
+
+        // Act & Assert: Must throw DbUpdateException due to UNIQUE filtered index
+        var act = async () => await _context.SaveChangesAsync();
+        await act.Should().ThrowAsync<DbUpdateException>();
+    }
+
+    [Fact]
+    public async Task GetForUserAsync_WithPagination_ReturnsClampedPageItems()
+    {
+        var user = new User("Customer", "pager@test.local", "hash");
+        var @event = CreateEvent("Concert", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(2, 3); // 6 seats
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+
+        var seats = await _context.Seats.ToListAsync();
+        foreach (var s in seats)
+        {
+            var t = new Ticket(@event.Id, s.Id, user.Id, s.Price);
+            t.Cancel();
+            _context.Tickets.Add(t);
+        }
+        await _context.SaveChangesAsync();
+
+        var adapter = new CustomerTicketReadModelAdapter(_context, new UtcTimePolicy());
+
+        // Page 1 with pageSize 2 -> 2 items
+        var page1 = await adapter.GetForUserAsync(user.Id, page: 1, pageSize: 2);
+        page1.Should().HaveCount(2);
+
+        // Page 2 with pageSize 2 -> 2 items
+        var page2 = await adapter.GetForUserAsync(user.Id, page: 2, pageSize: 2);
+        page2.Should().HaveCount(2);
+
+        // Page 1 and Page 2 items must not overlap
+        page1.Select(x => x.Id).Should().NotIntersectWith(page2.Select(x => x.Id));
+    }
+
     private static Event CreateEvent(string title, DateTime date) =>
         new(title, "Description", date, date.AddHours(2), "HCM", "Venue", 1);
 

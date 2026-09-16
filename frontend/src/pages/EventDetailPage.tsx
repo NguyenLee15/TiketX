@@ -12,6 +12,7 @@ import { SeatMap } from './EventDetail/SeatMap';
 import { SkeletonSeatMap } from '../components/Skeletons/SkeletonSeatMap';
 import { formatCurrency } from '../utils/formatters';
 import { clearCheckoutState, shouldPreserveSeatSelection } from '../utils/customerState';
+import { useReservationCountdown } from '../hooks/useReservationCountdown';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -25,9 +26,6 @@ export default function EventDetailPage() {
   const [locking, setLocking] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [lockExpiresAt, setLockExpiresAt] = useState<string | null>(null);
-
-  // Lock timer synchronized with server expiresAt
-  const [lockTimeLeft, setLockTimeLeft] = useState<number | null>(null);
 
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
@@ -50,6 +48,23 @@ export default function EventDetailPage() {
     }
   }, [id]);
 
+  // Lock expiration callback
+  const handleLockExpire = useCallback(() => {
+    toast.error('Hạn giữ chỗ 5 phút đã hết. Ghế đã được tự động mở khóa!', { duration: 5000 });
+    setSelectedSeat(null);
+    setIsCheckoutOpen(false);
+    const cleared = clearCheckoutState();
+    setTicketId(cleared.ticketId);
+    setLockExpiresAt(cleared.lockExpiresAt);
+    void fetchEvent();
+  }, [fetchEvent]);
+
+  // Lock timer synchronized with server expiresAt
+  const { timeLeft: lockTimeLeft, setTimeLeft: setLockTimeLeft } = useReservationCountdown({
+    lockExpiresAt,
+    onExpire: handleLockExpire
+  });
+
   useEffect(() => {
     if (!id) return;
     const controller = new AbortController();
@@ -61,12 +76,13 @@ export default function EventDetailPage() {
   const handleSeatStatusChanged = useCallback((payload: SeatStatusChangedPayload & { seatId: string; status: SeatStatus }) => {
     setEvent((prev) => {
       if (!prev) return prev;
-      const currentSeat = prev.seats.find(seat => seat.id === payload.seatId);
+      const seats = prev.seats ?? [];
+      const currentSeat = seats.find(seat => seat.id === payload.seatId);
       if (payload.version && currentSeat?.version && payload.version !== currentSeat.version) {
         void fetchEvent();
         return prev;
       }
-      const newSeats = prev.seats.map(seat => 
+      const newSeats = seats.map(seat => 
         seat.id === payload.seatId ? { ...seat, status: payload.status, version: payload.version ?? seat.version, isLockedByMe: payload.isLockedByCurrentUser ?? payload.isLockedByMe } : seat
       );
       return { ...prev, seats: newSeats };
@@ -75,7 +91,6 @@ export default function EventDetailPage() {
     // If our currently selected seat was locked or bought by someone else
     setSelectedSeat(prev => {
       if (prev?.id === payload.seatId && !shouldPreserveSeatSelection(prev.id, payload)) {
-        toast.error(`Ghế ${prev.row}${prev.number} vừa được người khác giữ chỗ!`);
         return null;
       }
       return prev;
@@ -83,30 +98,6 @@ export default function EventDetailPage() {
   }, [fetchEvent]);
 
   const { status: seatConnectionStatus, retry: retrySeatConnection } = useSeatSignalR(id, handleSeatStatusChanged);
-
-  // Lock timer countdown effect
-  useEffect(() => {
-    if (lockTimeLeft === null || lockTimeLeft <= 0) return;
-
-    const timer = setInterval(() => {
-      setLockTimeLeft(prev => {
-        if (prev === null || prev <= 1) {
-          clearInterval(timer);
-          toast.error('Hạn giữ chỗ 5 phút đã hết. Ghế đã được tự động mở khóa!', { duration: 5000 });
-          setSelectedSeat(null);
-          setIsCheckoutOpen(false);
-          const cleared = clearCheckoutState();
-          setTicketId(cleared.ticketId);
-          setLockExpiresAt(cleared.lockExpiresAt);
-          fetchEvent(); // Refresh seats status
-          return null;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [lockTimeLeft]);
 
   const handleSeatClick = (seat: Seat) => {
     if (seat.status !== 0) return; // Only allow Available seats

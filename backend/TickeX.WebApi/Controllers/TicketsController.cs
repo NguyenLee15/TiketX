@@ -24,15 +24,15 @@ public class TicketsController : ControllerBase
     }
 
     [HttpGet("my-tickets")]
-    public async Task<IActionResult> GetMyTickets()
+    public async Task<IActionResult> GetMyTickets([FromQuery] int? page = null, [FromQuery] int? pageSize = null)
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
         {
-            return Unauthorized();
+            return Unauthorized(new { success = false, code = "UNAUTHORIZED", message = "User is not authenticated", error = new { code = "UNAUTHORIZED", message = "User is not authenticated" } });
         }
 
-        var result = await _mediator.Send(new GetMyTicketsQuery(userId));
+        var result = await _mediator.Send(new GetMyTicketsQuery(userId, page, pageSize));
         return Ok(new { success = true, data = result });
     }
 
