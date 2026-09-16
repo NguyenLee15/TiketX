@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TickeX.Application.Admin;
 using TickeX.Application.Common.Models;
 using TickeX.Application.Interfaces;
 using TickeX.Domain.Entities;
@@ -25,7 +26,8 @@ public record UpdateEventCommand(
     int RefundCutoffHours = 24,
     Guid? AdminUserId = null,
     string AdminEmail = "admin@tickex.com",
-    string? IpAddress = null
+    string? IpAddress = null,
+    string? ExpectedVersion = null
 ) : IRequest<AdminOperationResult>;
 
 public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, AdminOperationResult>
@@ -48,6 +50,25 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
 
         if (ev.IsDeleted)
             return AdminOperationResult.BadRequest("Không thể cập nhật sự kiện đã bị xóa.", "EVENT_DELETED");
+
+        if (!string.IsNullOrWhiteSpace(request.ExpectedVersion))
+        {
+            if (AdminMutationVersionPolicy.TryDecodeRequiredVersion(request.ExpectedVersion, out var expectedBytes))
+            {
+                if (!ev.Version.SequenceEqual(expectedBytes))
+                {
+                    return AdminOperationResult.Conflict(
+                        "Sự kiện vừa được cập nhật bởi quản trị viên khác. Vui lòng tải lại dữ liệu mới nhất.",
+                        "EVENT_CONCURRENCY_CONFLICT");
+                }
+            }
+            else
+            {
+                return AdminOperationResult.BadRequest(
+                    "Phiên bản dữ liệu sự kiện không hợp lệ.",
+                    "INVALID_VERSION");
+            }
+        }
 
         // Invariant check: any ticket/reservation history freezes financial and seat geometry fields.
         var hasSoldTickets = await _context.Tickets

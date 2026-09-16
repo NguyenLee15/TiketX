@@ -47,3 +47,4 @@ describe('useReservationCountdown', () => {
     expect(onExpire).toHaveBeenCalledTimes(1);
   });
 });
+

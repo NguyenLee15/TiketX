@@ -11,3 +11,4 @@ public class RefundTicketCommandValidator : AbstractValidator<RefundTicketComman
         RuleFor(x => x.Reason).MaximumLength(500).WithMessage("Lý do hoàn vé không được vượt quá 500 ký tự.");
     }
 }
+

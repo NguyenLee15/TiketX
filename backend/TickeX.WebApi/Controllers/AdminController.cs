@@ -2,16 +2,18 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TickeX.Application.Admin;
 using TickeX.Application.Admin.Commands;
 using TickeX.Application.Admin.Queries;
 using TickeX.Application.Interfaces;
-using TickeX.Application.Admin;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace TickeX.WebApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "Admin")]
+[EnableRateLimiting("AdminPolicy")]
 public class AdminController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -43,9 +45,9 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> ChangeUserRole(Guid id, [FromBody] ChangeRoleRequest? request)
     {
         if (request is null)
-            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu vai trò mới." });
+            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu vai trò mới.", error = new { code = "INVALID_REQUEST", message = "Thiếu vai trò mới." } });
         if (!AdminMutationVersionPolicy.TryDecodeRequiredVersion(request.ExpectedVersion, out var expectedVersion))
-            return BadRequest(new { success = false, code = "INVALID_VERSION", message = "Phiên bản dữ liệu người dùng không hợp lệ." });
+            return BadRequest(new { success = false, code = "INVALID_VERSION", message = "Phiên bản dữ liệu người dùng không hợp lệ.", error = new { code = "INVALID_VERSION", message = "Phiên bản dữ liệu người dùng không hợp lệ." } });
         var currentAdminIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         Guid.TryParse(currentAdminIdStr, out var currentAdminId);
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
@@ -61,7 +63,7 @@ public class AdminController : ControllerBase
         ), HttpContext.RequestAborted);
 
         if (!result.Success)
-            return StatusCode(result.StatusCode, new { success = false, message = result.Message, code = result.ErrorCode });
+            return StatusCode(result.StatusCode, new { success = false, code = result.ErrorCode, message = result.Message, error = new { code = result.ErrorCode, message = result.Message } });
 
         return Ok(new { success = true, code = "OK", message = result.Message, data = (object?)null });
     }
@@ -72,9 +74,9 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> BlockUser(Guid id, [FromBody] BlockUserRequest? request)
     {
         if (request is null)
-            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu trạng thái tài khoản." });
+            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu trạng thái tài khoản.", error = new { code = "INVALID_REQUEST", message = "Thiếu trạng thái tài khoản." } });
         if (!AdminMutationVersionPolicy.TryDecodeRequiredVersion(request.ExpectedVersion, out var expectedVersion))
-            return BadRequest(new { success = false, code = "INVALID_VERSION", message = "Phiên bản dữ liệu người dùng không hợp lệ." });
+            return BadRequest(new { success = false, code = "INVALID_VERSION", message = "Phiên bản dữ liệu người dùng không hợp lệ.", error = new { code = "INVALID_VERSION", message = "Phiên bản dữ liệu người dùng không hợp lệ." } });
         var currentAdminIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         Guid.TryParse(currentAdminIdStr, out var currentAdminId);
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
@@ -90,7 +92,7 @@ public class AdminController : ControllerBase
         ), HttpContext.RequestAborted);
 
         if (!result.Success)
-            return StatusCode(result.StatusCode, new { success = false, message = result.Message, code = result.ErrorCode });
+            return StatusCode(result.StatusCode, new { success = false, code = result.ErrorCode, message = result.Message, error = new { code = result.ErrorCode, message = result.Message } });
 
         return Ok(new { success = true, code = "OK", message = result.Message, data = (object?)null });
     }

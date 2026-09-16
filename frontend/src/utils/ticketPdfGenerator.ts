@@ -177,3 +177,4 @@ export async function generateTicketPdf(ticket: TicketPdfData): Promise<void> {
     toast.error('Lỗi khi tạo file PDF', { id: 'pdf-toast' });
   }
 }
+

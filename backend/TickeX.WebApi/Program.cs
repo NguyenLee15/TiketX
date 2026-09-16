@@ -104,6 +104,21 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0
         });
     });
+
+    // 3. Admin policy partitioned by authenticated admin user + trusted client identity.
+    options.AddPolicy("AdminPolicy", httpContext =>
+    {
+        var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString();
+        var partitionKey = httpContext.RequestServices.GetRequiredService<TickeX.Application.Interfaces.IClientIdentityResolver>()
+            .Resolve(userId, clientIp);
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 60,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
 });
 
 var hangfireConnection = builder.Configuration.GetConnectionString("HangfireConnection");

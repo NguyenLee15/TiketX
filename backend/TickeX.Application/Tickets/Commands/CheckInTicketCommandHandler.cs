@@ -146,7 +146,8 @@ public class CheckInTicketCommandHandler : IRequestHandler<CheckInTicketCommand,
             await _context.SaveChangesAsync(cancellationToken);
 
             var attendeeName = ticket.User?.Name ?? "Khách hàng TickeX";
-            var attendeeEmail = ticket.User?.Email ?? "N/A";
+            var rawEmail = ticket.User?.Email ?? "N/A";
+            var attendeeEmail = MaskEmail(rawEmail);
             var eventTitle = ticket.Event?.Title ?? "Sự kiện TickeX";
             var row = ticket.Seat?.Row ?? "A";
             var number = ticket.Seat?.Number ?? 1;
@@ -161,7 +162,7 @@ public class CheckInTicketCommandHandler : IRequestHandler<CheckInTicketCommand,
                 row,
                 number,
                 tier,
-                ticket.Price,
+                0m, // Price omitted for gate PII minimization
                 ticket.OrderCode,
                 ticket.CheckedInAt ?? _time.UtcNow
             );
@@ -180,5 +181,13 @@ public class CheckInTicketCommandHandler : IRequestHandler<CheckInTicketCommand,
                 StatusCode: 409,
                 Code: "CHECKIN_CONCURRENCY_CONFLICT");
         }
+    }
+
+    private static string MaskEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return "N/A";
+        var atIndex = email.IndexOf('@');
+        if (atIndex <= 1) return "***" + email[Math.Max(0, atIndex)..];
+        return $"{email[0]}***{email[atIndex..]}";
     }
 }

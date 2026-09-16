@@ -91,24 +91,28 @@ Never declare completion or push without executing and passing these local verif
 ## 4. DUAL-ENGINE COLLABORATION PROTOCOL
 
 When working across Antigravity (Gemini) and Codex (GPT-5.6):
-1. **Source of Truth**:
+1. **Hierarchy of Labor (Codex Primary, Gemini Secondary)**:
+   - **OpenAI Codex CLI is the PRIMARY WORKFORCE**: Handles all heavy codebase audits, reading/inspecting multiple files, TDD unit test creation, algorithmic implementation, refactoring, and compiler/test execution using Codex quota.
+   - **Gemini (Antigravity) is the SECONDARY ORCHESTRATOR**: Handles user interaction, task routing, dispatching heavy workloads to Codex CLI via `run_command` (`$null | codex exec ...`), and concise synthesis to strictly conserve Gemini quota.
+   - **Strict Token Conservation**: Gemini MUST NOT spawn wasteful Gemini subagents (`invoke_subagent`) or sequentially read dozens of source files into Gemini context when Codex CLI can run the audit or task locally.
+2. **Source of Truth**:
    - Technical plans are documented in `implementation_plan.md`.
    - Task breakdown is tracked in `task.md`.
    - Verification logs and debts are recorded in `walkthrough.md`.
-2. **Principal vs Implementer**:
+3. **Principal vs Implementer**:
    - If Antigravity generated the plan/architecture, Codex executes implementation and unit tests strictly respecting the plan scope (Scope In vs. Scope Out).
    - If Codex executed backend domain logic, Antigravity verifies frontend integration and UI/UX friction.
-3. **Commit Standard**:
+4. **Commit Standard**:
    - Every commit must follow the Sleek Senior Git Commit standard (Subject line strictly <= 50-60 chars to prevent GitHub truncation + 1-3 dense sentences of Why/What + Issue reference). Never make lazy one-liners. Exhaustive verification logs stay in `walkthrough.md`.
-4. **Critic Agent & Tri-Part Context Routing**:
+5. **Critic Agent & Tri-Part Context Routing**:
    - For all non-trivial reviews or test/build failures, activate a Critic phase that **strictly reads logs and execution output without modifying code**, posing sharp Socratic questions grounded in factual evidence.
    - **The 4-Role Strict Boundary & Zero-Confusion Separation of Powers**:
-     * **Role 1: Principal Architect & Orchestrator (Antigravity)**: Owns scope fencing, `implementation_plan.md`, phase gates, API contract & UI taste review. Coordinates agents, never writes complex backend business logic.
-     * **Role 2: Senior Implementer (OpenAI Codex CLI)**: Owns TDD unit tests, algorithmic implementation, refactoring, and build/test execution. Strictly banned from self-certifying its own high-risk plans.
+     * **Role 1: Principal Orchestrator & UI Bridge (Antigravity/Gemini - SECONDARY)**: Routes heavy work to Codex CLI, owns scope fencing and user communication, synthesizes plans, strictly conserves Gemini quota. Does NOT read dozens of source files or write complex backend code.
+     * **Role 2: Senior Implementer & Heavy Engine (OpenAI Codex CLI - PRIMARY)**: Primary workforce for codebase audits, reading/inspecting files, TDD unit tests, algorithmic implementation, refactoring, and build/test execution. Strictly banned from self-certifying its own high-risk plans.
      * **Role 3: Senior Critic / Advisor (Read-Only)**: Inspects logs, execution traces, and compiler output only. Poses Socratic questions on race conditions, BOLA, N+1, resource leaks. Never writes or proposes code changes.
-     * **Role 4: FE/BE Researchers (Subagents)**: Time-boxed read-only evidence gathering (file links, AST, dependencies) in Turn 1. No planning or code editing authority.
+     * **Role 4: Local Research & Verification (Codex CLI / Ripgrep)**: Codex CLI handles local code evidence gathering. Strictly ban wasteful Gemini subagent token burns.
    - Orchestrator routes cleanly: Architecture/Schema questions -> Antigravity (Architect); Code/Logic bugs -> Codex (Implementer); Boundary/Edge-case gaps -> Reviewer (Negative Tests). Bounded to max 2 debate rounds before escalating with logs to user.
-5. **The 10 Accountability Gate Questions (Pre-Commit / Pre-Defense Verification)**:
+6. **The 10 Accountability Gate Questions (Pre-Commit / Pre-Defense Verification)**:
    - Critic Agent and Implementer must verify before finalizing sensitive backend endpoints:
      1. *Idempotency*: Idempotency keys on payment/reservation mutations (`POST /reservations`, `POST /orders`).
      2. *Transaction Boundary*: Explicit transactions at Application layer, never on Controllers.

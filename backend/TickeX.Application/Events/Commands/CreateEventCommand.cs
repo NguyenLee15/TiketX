@@ -21,7 +21,10 @@ public record CreateEventCommand(
     int RefundCutoffHours = 24,
     int RowCount = 5,
     int SeatsPerRow = 12,
-    EventStatus Status = EventStatus.Published) : IRequest<Guid>;
+    EventStatus Status = EventStatus.Published,
+    Guid? AdminUserId = null,
+    string AdminEmail = "admin@tickex.com",
+    string? IpAddress = null) : IRequest<Guid>;
 
 public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
 {
@@ -55,6 +58,19 @@ public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Gui
             request.SeatsPerRow);
 
         _context.Events.Add(newEvent);
+
+        var audit = new AuditLog(
+            userId: request.AdminUserId,
+            userEmail: request.AdminEmail,
+            action: "CREATE_EVENT",
+            entityName: "Event",
+            entityId: newEvent.Id.ToString(),
+            beforeState: null,
+            afterState: $"Title={newEvent.Title},Date={newEvent.Date:O},TotalSeats={newEvent.TotalSeats},BasePrice={newEvent.BasePrice}",
+            ipAddress: request.IpAddress
+        );
+        _context.AuditLogs.Add(audit);
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return newEvent.Id;

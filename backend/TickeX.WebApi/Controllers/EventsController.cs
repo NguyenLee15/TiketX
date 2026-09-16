@@ -2,6 +2,7 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TickeX.Application.Events.Queries;
 using TickeX.Application.Events.Commands;
 using TickeX.Application.Interfaces;
@@ -55,10 +56,17 @@ public class EventsController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Admin")]
+    [EnableRateLimiting("AdminPolicy")]
     public async Task<IActionResult> CreateEvent([FromBody] CreateEventRequest? request)
     {
         if (request is null)
-            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu dữ liệu sự kiện." });
+            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu dữ liệu sự kiện.", error = new { code = "INVALID_REQUEST", message = "Thiếu dữ liệu sự kiện." } });
+
+        var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        Guid.TryParse(adminUserIdStr, out var adminUserId);
+        var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
         var command = new CreateEventCommand(
             request.Title,
             request.Description,
@@ -75,9 +83,12 @@ public class EventsController : ControllerBase
             request.RefundCutoffHours,
             request.RowCount,
             request.SeatsPerRow,
-            request.Status);
+            request.Status,
+            adminUserId == Guid.Empty ? null : adminUserId,
+            adminEmail,
+            ipAddress);
         var id = await _adminEventOperations.CreateAsync(command, HttpContext.RequestAborted);
-        return Ok(new { success = true, code = "CREATED", message = "Tạo sự kiện thành công.", data = new { id } });
+        return CreatedAtAction(nameof(GetEvent), new { id }, new { success = true, code = "CREATED", message = "Tạo sự kiện thành công.", data = new { id } });
     }
 
     public record CreateEventRequest(
@@ -113,16 +124,18 @@ public class EventsController : ControllerBase
         string OrganizerName = "TickeX Live",
         decimal BasePrice = 200000m,
         TickeX.Domain.Enums.EventStatus Status = TickeX.Domain.Enums.EventStatus.Published,
-        int RefundCutoffHours = 24);
+        int RefundCutoffHours = 24,
+        string? ExpectedVersion = null);
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin")]
+    [EnableRateLimiting("AdminPolicy")]
     public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] UpdateEventRequest? request)
     {
         if (request is null)
-            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu dữ liệu cập nhật sự kiện." });
+            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu dữ liệu cập nhật sự kiện.", error = new { code = "INVALID_REQUEST", message = "Thiếu dữ liệu cập nhật sự kiện." } });
         if (request.Id.HasValue && id != request.Id.Value)
-            return BadRequest(new { success = false, message = "ID mismatch" });
+            return BadRequest(new { success = false, code = "ID_MISMATCH", message = "Định danh sự kiện không trùng khớp.", error = new { code = "ID_MISMATCH", message = "Định danh sự kiện không trùng khớp." } });
 
         var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         Guid.TryParse(adminUserIdStr, out var adminUserId);
@@ -147,10 +160,11 @@ public class EventsController : ControllerBase
             request.RefundCutoffHours,
             adminUserId == Guid.Empty ? null : adminUserId,
             adminEmail,
-            ipAddress), HttpContext.RequestAborted);
+            ipAddress,
+            request.ExpectedVersion), HttpContext.RequestAborted);
 
         if (!result.Success)
-            return StatusCode(result.StatusCode, new { success = false, message = result.Message, code = result.ErrorCode });
+            return StatusCode(result.StatusCode, new { success = false, code = result.ErrorCode, message = result.Message, error = new { code = result.ErrorCode, message = result.Message } });
 
         return Ok(new { success = true, code = "OK", message = result.Message, data = (object?)null });
     }
@@ -159,10 +173,11 @@ public class EventsController : ControllerBase
 
     [HttpPost("{id}/cancel")]
     [Authorize(Roles = "Admin")]
+    [EnableRateLimiting("AdminPolicy")]
     public async Task<IActionResult> CancelEvent(Guid id, [FromBody] CancelEventRequest? request)
     {
         if (request is null)
-            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu lý do hủy sự kiện." });
+            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu lý do hủy sự kiện.", error = new { code = "INVALID_REQUEST", message = "Thiếu lý do hủy sự kiện." } });
         var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         Guid.TryParse(adminUserIdStr, out var adminUserId);
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
@@ -170,13 +185,14 @@ public class EventsController : ControllerBase
 
         var result = await _adminEventOperations.CancelAsync(new CancelEventCommand(id, request.Reason, adminUserId, adminEmail, ipAddress), HttpContext.RequestAborted);
         if (!result.Success)
-            return StatusCode(result.StatusCode, new { success = false, message = result.Message, code = result.ErrorCode });
+            return StatusCode(result.StatusCode, new { success = false, code = result.ErrorCode, message = result.Message, error = new { code = result.ErrorCode, message = result.Message } });
 
         return Ok(new { success = true, code = "OK", message = result.Message, data = (object?)null });
     }
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
+    [EnableRateLimiting("AdminPolicy")]
     public async Task<IActionResult> DeleteEvent(Guid id)
     {
         var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -186,7 +202,7 @@ public class EventsController : ControllerBase
 
         var result = await _adminEventOperations.DeleteAsync(new DeleteEventCommand(id, adminUserId, adminEmail, ipAddress), HttpContext.RequestAborted);
         if (!result.Success)
-            return StatusCode(result.StatusCode, new { success = false, message = result.Message, code = result.ErrorCode });
+            return StatusCode(result.StatusCode, new { success = false, code = result.ErrorCode, message = result.Message, error = new { code = result.ErrorCode, message = result.Message } });
 
         return Ok(new { success = true, code = "OK", message = result.Message, data = (object?)null });
     }

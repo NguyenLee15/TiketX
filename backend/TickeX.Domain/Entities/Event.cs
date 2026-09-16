@@ -19,6 +19,9 @@ public class Event : BaseEntity
     public EventStatus Status { get; private set; } = EventStatus.Published;
     public int RefundCutoffHours { get; private set; } = 24;
     public bool IsDeleted { get; private set; } = false;
+
+    // Optimistic concurrency token for admin event mutations
+    public byte[] Version { get; private set; } = Guid.NewGuid().ToByteArray();
     
     private readonly List<Seat> _seats = new();
     public IReadOnlyCollection<Seat> Seats => _seats.AsReadOnly();
@@ -87,18 +90,21 @@ public class Event : BaseEntity
         BasePrice = basePrice;
         Status = status;
         RefundCutoffHours = refundCutoffHours;
+        Version = Guid.NewGuid().ToByteArray();
         UpdatedAt = DateTime.UtcNow;
     }
 
     public void SoftDelete()
     {
         IsDeleted = true;
+        Version = Guid.NewGuid().ToByteArray();
         UpdatedAt = DateTime.UtcNow;
     }
 
     public void Cancel()
     {
         Status = EventStatus.Cancelled;
+        Version = Guid.NewGuid().ToByteArray();
         UpdatedAt = DateTime.UtcNow;
     }
 

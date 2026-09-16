@@ -28,29 +28,36 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
         var paidStates = new[] { TicketStatus.Paid, TicketStatus.Used };
 
         var totalTicketsSold = await operationalTickets.CountAsync(t => paidStates.Contains(t.Status), cancellationToken);
-        var totalRevenue = (decimal)(await operationalTickets
+        var totalRevenue = (await operationalTickets
             .Where(t => t.PaidAt.HasValue && (paidStates.Contains(t.Status) || t.Status == TicketStatus.RefundPending || t.Status == TicketStatus.Cancelled))
-            .SumAsync(t => (double?)t.Price, cancellationToken) ?? 0d);
-        var totalRefunded = (decimal)(await operationalTickets
+            .Select(t => t.Price)
+            .ToListAsync(cancellationToken)).Sum();
+        var totalRefunded = (await operationalTickets
             .Where(t => t.Status == TicketStatus.Cancelled && t.RefundAmount.HasValue)
-            .SumAsync(t => (double?)t.RefundAmount, cancellationToken) ?? 0d);
-        var totalRefundPending = (decimal)(await operationalTickets
+            .Select(t => t.RefundAmount!.Value)
+            .ToListAsync(cancellationToken)).Sum();
+        var totalRefundPending = (await operationalTickets
             .Where(t => t.Status == TicketStatus.RefundPending)
-            .SumAsync(t => (double?)t.Price, cancellationToken) ?? 0d);
+            .Select(t => t.Price)
+            .ToListAsync(cancellationToken)).Sum();
         var totalCheckedIn = await operationalTickets.CountAsync(t => t.Status == TicketStatus.Used, cancellationToken);
 
-        var topAggregates = await operationalTickets
+        var paidTickets = await operationalTickets
             .Where(t => paidStates.Contains(t.Status))
+            .Select(t => new { t.EventId, t.Price })
+            .ToListAsync(cancellationToken);
+
+        var topAggregates = paidTickets
             .GroupBy(t => t.EventId)
-            .Select(g => new { EventId = g.Key, TicketsSold = g.Count(), Revenue = g.Sum(t => (double)t.Price) })
-            .OrderByDescending(x => x.Revenue).Take(5).ToListAsync(cancellationToken);
+            .Select(g => new { EventId = g.Key, TicketsSold = g.Count(), Revenue = g.Sum(t => t.Price) })
+            .OrderByDescending(x => x.Revenue).Take(5).ToList();
         var eventIds = topAggregates.Select(x => x.EventId).ToList();
         var eventDetails = await _context.Events.Where(e => eventIds.Contains(e.Id))
             .Select(e => new { e.Id, e.Title, e.Category, e.TotalSeats }).ToListAsync(cancellationToken);
         var topEvents = topAggregates.Select(x =>
         {
             var ev = eventDetails.FirstOrDefault(e => e.Id == x.EventId);
-            return new TopEventStat(x.EventId, ev?.Title ?? "N/A", ev?.Category ?? "N/A", x.TicketsSold, (decimal)x.Revenue, ev?.TotalSeats ?? 0);
+            return new TopEventStat(x.EventId, ev?.Title ?? "N/A", ev?.Category ?? "N/A", x.TicketsSold, x.Revenue, ev?.TotalSeats ?? 0);
         }).ToList();
 
         var localToday = _time.LocalNow.Date;

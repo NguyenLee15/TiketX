@@ -80,3 +80,4 @@ export function useMyTicketsQuery(page?: number, pageSize?: number) {
     staleTime: 2 * 60 * 1000,
   });
 }
+

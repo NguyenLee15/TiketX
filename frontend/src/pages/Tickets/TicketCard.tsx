@@ -208,3 +208,4 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
     </div>
   );
 });
+

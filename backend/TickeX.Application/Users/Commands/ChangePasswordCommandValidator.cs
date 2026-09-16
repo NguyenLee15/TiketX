@@ -14,3 +14,4 @@ public class ChangePasswordCommandValidator : AbstractValidator<ChangePasswordCo
             .MaximumLength(128).WithMessage("Mật khẩu không được vượt quá 128 ký tự.");
     }
 }
+

@@ -12,3 +12,4 @@ public class UpdateProfileCommandValidator : AbstractValidator<UpdateProfileComm
         RuleFor(x => x.AvatarUrl).MaximumLength(500);
     }
 }
+

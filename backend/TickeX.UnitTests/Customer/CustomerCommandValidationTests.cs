@@ -59,3 +59,4 @@ public class CustomerCommandValidationTests
         result.Errors.Should().Contain(e => e.PropertyName == "TicketId");
     }
 }
+
