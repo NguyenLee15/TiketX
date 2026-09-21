@@ -1,7 +1,38 @@
 import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 import api from '../services/api';
 import { Event, EventDetail } from '../types';
 import { TicketItemData } from '../pages/Tickets/TicketCard';
+
+const catalogResponseSchema = z.object({
+  items: z.array(z.record(z.string(), z.unknown())).default([]),
+  totalPages: z.number().default(1),
+  totalCount: z.number().default(0),
+}).passthrough();
+
+const eventDetailSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  date: z.string(),
+  venue: z.string(),
+  price: z.number(),
+  totalSeats: z.number(),
+  availableSeats: z.number(),
+  status: z.string(),
+}).passthrough();
+
+const ticketItemSchema = z.object({
+  id: z.string(),
+  orderCode: z.number(),
+  price: z.number(),
+  status: z.string(),
+  eventId: z.string(),
+  eventName: z.string(),
+  eventDate: z.string(),
+  seatCode: z.string(),
+}).passthrough();
+
+const ticketsResponseSchema = z.array(ticketItemSchema);
 
 export interface CatalogQueryOptions {
   page: number;
@@ -36,10 +67,13 @@ export function useEventsCatalogQuery(options: CatalogQueryOptions) {
         throw new Error(response.data.message || 'Không thể tải danh sách sự kiện');
       }
 
+      const parsed = catalogResponseSchema.safeParse(response.data.data);
+      const data = parsed.success ? parsed.data : response.data.data;
+
       return {
-        items: response.data.data.items || [],
-        totalPages: response.data.data.totalPages || 1,
-        totalCount: response.data.data.totalCount || 0,
+        items: (data?.items || []) as unknown as Event[],
+        totalPages: data?.totalPages ?? 1,
+        totalCount: data?.totalCount ?? 0,
       };
     },
     staleTime: 3 * 60 * 1000,
@@ -55,7 +89,9 @@ export function useEventDetailQuery(eventId: string | undefined) {
       if (!response.data.success) {
         throw new Error(response.data.message || 'Không thể tải thông tin sự kiện');
       }
-      return response.data.data;
+
+      const parsed = eventDetailSchema.safeParse(response.data.data);
+      return (parsed.success ? parsed.data : response.data.data) as EventDetail;
     },
     enabled: Boolean(eventId),
     staleTime: 1 * 60 * 1000,
@@ -75,7 +111,9 @@ export function useMyTicketsQuery(page?: number, pageSize?: number) {
       if (!response.data.success) {
         throw new Error(response.data.message || 'Không thể tải danh sách vé');
       }
-      return response.data.data || [];
+
+      const parsed = ticketsResponseSchema.safeParse(response.data.data);
+      return (parsed.success ? parsed.data : response.data.data || []) as TicketItemData[];
     },
     staleTime: 2 * 60 * 1000,
   });

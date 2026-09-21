@@ -79,7 +79,7 @@ public class TicketPaidEventConsumer : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("RabbitMQ not ready yet, retrying in 5 seconds... ({Message})", ex.Message);
+                _logger.LogWarning("RabbitMQ not ready yet, retrying in 5 seconds... ({ErrorType})", ex.GetType().Name);
                 await Task.Delay(5000, stoppingToken);
             }
         }

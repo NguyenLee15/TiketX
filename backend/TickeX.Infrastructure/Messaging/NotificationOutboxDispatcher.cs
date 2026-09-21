@@ -27,12 +27,37 @@ public sealed class NotificationOutboxDispatcher : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var publisher = scope.ServiceProvider.GetRequiredService<IMessagePublisher>();
-        var pending = await context.NotificationOutbox.Where(x => x.Status == "Pending" && (x.NextAttemptAt == null || x.NextAttemptAt <= DateTime.UtcNow)).OrderBy(x => x.CreatedAt).Take(20).ToListAsync(cancellationToken);
-        foreach (var item in pending)
+
+        var utcNow = DateTime.UtcNow;
+        var candidates = await context.NotificationOutbox
+            .Where(x => (x.Status == "Pending" && (x.NextAttemptAt == null || x.NextAttemptAt <= utcNow))
+                     || (x.Status == "Processing" && x.NextAttemptAt <= utcNow))
+            .OrderBy(x => x.CreatedAt)
+            .Take(20)
+            .ToListAsync(cancellationToken);
+
+        if (candidates.Count == 0) return;
+
+        // Atomically claim candidates with a 2-minute lease to prevent duplicate publishing
+        foreach (var item in candidates)
         {
-            try { await publisher.PublishAsync(new TicketPaidEvent(item.TicketId, item.UserId, item.EventId), cancellationToken); item.MarkCompleted(); }
-            catch (Exception ex) { item.MarkFailed(ex.Message, TimeSpan.FromMinutes(1)); _logger.LogWarning(ex, "Retrying notification outbox item {OutboxId}", item.Id); }
+            item.MarkProcessing(TimeSpan.FromMinutes(2));
         }
-        if (pending.Count > 0) await context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
+
+        foreach (var item in candidates)
+        {
+            try
+            {
+                await publisher.PublishAsync(new TicketPaidEvent(item.TicketId, item.UserId, item.EventId), cancellationToken);
+                item.MarkCompleted();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Retrying notification outbox item {OutboxId}", item.Id);
+                item.MarkFailed($"PublishFailed: {ex.GetType().Name}", TimeSpan.FromMinutes(1));
+            }
+        }
+        await context.SaveChangesAsync(cancellationToken);
     }
 }

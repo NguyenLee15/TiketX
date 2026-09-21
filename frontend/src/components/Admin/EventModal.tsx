@@ -1,52 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { X, Loader2, Image as ImageIcon, Grid3X3, AlertCircle } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { Event } from '../../types';
 import { useModalAccessibility } from './useModalAccessibility';
 import { eventStatusToFormValue } from '../../utils/adminEventState';
+import { 
+  eventSchema, 
+  EventFormValues, 
+  CATEGORIES, 
+  toLocalDatetimeInput, 
+  toUtcIsoString 
+} from './EventModal/eventModalSchemas';
+import { EventSeatMatrixSection } from './EventModal/EventSeatMatrixSection';
+import { EventImagePreviewSection } from './EventModal/EventImagePreviewSection';
 
-// Timezone conversion helpers
-export function toLocalDatetimeInput(isoOrDateString?: string | null): string {
-  if (!isoOrDateString) return '';
-  const d = new Date(isoOrDateString);
-  if (isNaN(d.getTime())) return '';
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const year = d.getFullYear();
-  const month = pad(d.getMonth() + 1);
-  const day = pad(d.getDate());
-  const hours = pad(d.getHours());
-  const minutes = pad(d.getMinutes());
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-export function toUtcIsoString(localDatetimeStr: string): string {
-  if (!localDatetimeStr) return '';
-  const d = new Date(localDatetimeStr);
-  if (isNaN(d.getTime())) return '';
-  return d.toISOString();
-}
-
-const eventSchema = z.object({
-  title: z.string().min(3, "Tên sự kiện phải từ 3 ký tự trở lên"),
-  description: z.string().min(10, "Mô tả phải từ 10 ký tự trở lên"),
-  location: z.string().min(3, "Địa điểm là bắt buộc"),
-  venueName: z.string().optional(),
-  date: z.string().min(1, "Thời gian bắt đầu là bắt buộc"),
-  endDate: z.string().optional(),
-  imageUrl: z.union([z.literal(''), z.string().url("URL hình ảnh không hợp lệ")]),
-  category: z.string().min(1, "Danh mục là bắt buộc"),
-  status: z.enum(['Draft', 'Published', 'Completed', 'Cancelled']),
-  rowCount: z.number().min(1, "Tối thiểu 1 hàng").max(50, "Tối đa 50 hàng"),
-  seatsPerRow: z.number().min(1, "Tối thiểu 1 ghế/hàng").max(50, "Tối đa 50 ghế/hàng"),
-  basePrice: z.number().positive("Giá vé cơ sở phải lớn hơn 0"),
-}).refine(data => !data.endDate || new Date(data.endDate).getTime() > new Date(data.date).getTime(), {
-  path: ['endDate'],
-  message: 'Thời gian kết thúc phải sau thời gian bắt đầu',
-});
-
-export type EventFormValues = z.infer<typeof eventSchema>;
+export { toLocalDatetimeInput, toUtcIsoString, eventSchema, CATEGORIES };
+export type { EventFormValues };
 
 interface EventModalProps {
   isOpen: boolean;
@@ -56,10 +26,7 @@ interface EventModalProps {
   isLoading?: boolean;
 }
 
-const CATEGORIES = ['Concert', 'Music', 'Sports', 'Tech', 'Conference', 'Entertainment', 'Arts', 'Workshop', 'General'];
-
 export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading }: EventModalProps) {
-  const [imageError, setImageError] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   useModalAccessibility(isOpen, Boolean(isLoading), onClose, modalRef);
 
@@ -89,10 +56,8 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
   const hasTicketHistory = Boolean(event?.hasTicketHistory);
 
   useEffect(() => {
-    setImageError(false);
     if (event) {
       const statusStr = eventStatusToFormValue(event.status);
-
       const defaultEndDate = event.date 
         ? new Date(new Date(event.date).getTime() + 3 * 3600 * 1000).toISOString() 
         : '';
@@ -132,7 +97,6 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
   if (!isOpen) return null;
 
   const onFormSubmit = async (data: EventFormValues) => {
-    // Convert local datetime to UTC ISO string
     const transformed: EventFormValues = {
       ...data,
       date: toUtcIsoString(data.date),
@@ -166,7 +130,6 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
         </h2>
 
         <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
-          {/* Main Info */}
           <div className="space-y-3.5">
             <div>
               <label htmlFor="event-title" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1">
@@ -248,6 +211,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                 />
                 {errors.location && <p className="text-danger text-xs mt-1">{errors.location.message}</p>}
               </div>
+
               <div>
                 <label htmlFor="event-venue" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1">Tên hội trường / Khán đài (Tùy chọn)</label>
                 <input 
@@ -291,101 +255,20 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
               </div>
             </div>
 
-            {/* Matrix Seat Setup */}
-            <div className="p-3.5 bg-surface-2/40 border border-border-subtle rounded-xl space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Grid3X3 className="w-4 h-4 text-brand-primary" />
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Cấu hình Sơ Đồ Ma Trận Ghế</h4>
-                </div>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-brand-primary/15 text-brand-primary border border-brand-primary/30">
-                  {event ? `${event.totalSeats} Ghế đã tạo` : `${totalMatrixSeats} Ghế dự kiến`}
-                </span>
-              </div>
+            {/* Matrix Seat Setup Section */}
+            <EventSeatMatrixSection
+              event={event}
+              totalMatrixSeats={totalMatrixSeats}
+              register={register}
+              errors={errors}
+            />
 
-              {event ? (
-                <div className="flex items-center gap-2 text-xs text-text-secondary bg-surface-2/50 p-2.5 rounded-lg border border-border-subtle">
-                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span id="event-history-lock">Ma trận ghế đã được khởi tạo ({event.totalSeats} ghế). Sự kiện đã có lịch sử vé/đặt chỗ nên ngày, giá và ma trận được khóa để bảo đảm toàn vẹn dữ liệu.</span>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div>
-                    <label htmlFor="event-row-count" className="block text-[11px] font-bold text-text-secondary uppercase mb-1">
-                      Số hàng ghế (Rows A, B, C...)
-                    </label>
-                    <input 
-                      id="event-row-count"
-                      type="number"
-                      min={1}
-                      max={50}
-                      {...register('rowCount', { valueAsNumber: true })}
-                      className="w-full bg-surface-2 border border-border-subtle rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary"
-                    />
-                    {errors.rowCount && <p className="text-danger text-[10px] mt-0.5">{errors.rowCount.message}</p>}
-                  </div>
-
-                  <div>
-                    <label htmlFor="event-seats-per-row" className="block text-[11px] font-bold text-text-secondary uppercase mb-1">
-                      Số ghế mỗi hàng (Seats per row)
-                    </label>
-                    <input 
-                      id="event-seats-per-row"
-                      type="number"
-                      min={1}
-                      max={50}
-                      {...register('seatsPerRow', { valueAsNumber: true })}
-                      className="w-full bg-surface-2 border border-border-subtle rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary"
-                    />
-                    {errors.seatsPerRow && <p className="text-danger text-[10px] mt-0.5">{errors.seatsPerRow.message}</p>}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Cover Image & Live Preview */}
-            <div>
-              <label htmlFor="event-image-url" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1">
-                URL Hình ảnh bìa <span className="text-danger">*</span>
-              </label>
-                <input 
-                  id="event-image-url"
-                  {...register('imageUrl')}
-                aria-label="URL hình ảnh bìa"
-                aria-invalid={Boolean(errors.imageUrl)}
-                className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors"
-                placeholder="https://images.unsplash.com/photo-..."
-              />
-              {errors.imageUrl && <p className="text-danger text-xs mt-1">{errors.imageUrl.message}</p>}
-              
-              {/* Image Preview Box */}
-              {watchedImageUrl && (
-                <div className="mt-2 p-2.5 bg-surface-2/40 border border-border-subtle rounded-xl flex items-center gap-3">
-                  <div className="w-20 h-14 rounded-lg overflow-hidden bg-surface-3 shrink-0 border border-border-subtle relative">
-                    {!imageError ? (
-                      <img 
-                        src={watchedImageUrl} 
-                        alt="Xem trước" 
-                        width="80"
-                        height="56"
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                        onError={() => setImageError(true)}
-                        onLoad={() => setImageError(false)}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-text-secondary">
-                        <ImageIcon className="w-5 h-5" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="truncate">
-                    <p className="text-xs font-bold text-text-primary">Xem trước ảnh bìa</p>
-                    <p className="text-[11px] text-text-secondary truncate">{imageError ? 'Đường dẫn ảnh không hợp lệ' : watchedImageUrl}</p>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Cover Image & Live Preview Section */}
+            <EventImagePreviewSection
+              register={register}
+              errors={errors}
+              watchedImageUrl={watchedImageUrl}
+            />
           </div>
 
           <div className="pt-3 border-t border-border-subtle space-y-2">
@@ -394,7 +277,6 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
             {errors.basePrice && <p role="alert" className="text-danger text-xs">{errors.basePrice.message}</p>}
             <p className="text-[11px] text-text-secondary">Giá ghế được tạo tự động theo hạng: VIP 1,75×, Standard 1×, Economy 0,75×.</p>
           </div>
-
 
           <div className="pt-3 flex justify-end gap-2.5 border-t border-border-subtle">
             <button 

@@ -26,11 +26,11 @@ public sealed class CustomerTicketReadModelAdapter : ICustomerTicketReadModel
             .Where(t => t.UserId == userId)
             .OrderByDescending(t => t.CreatedAt);
 
-        if (page.HasValue && page.Value > 0)
-        {
-            var clampedSize = Math.Clamp(pageSize ?? 10, 1, 50);
-            query = query.Skip((page.Value - 1) * clampedSize).Take(clampedSize);
-        }
+        var effectivePage = page is > 0 ? page.Value : 1;
+        var effectivePageSize = pageSize is > 0 ? Math.Min(pageSize.Value, 50) : 10;
+        query = query
+            .Skip((effectivePage - 1) * effectivePageSize)
+            .Take(effectivePageSize);
 
         var tickets = await query.ToListAsync(cancellationToken);
 

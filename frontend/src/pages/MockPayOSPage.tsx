@@ -25,7 +25,7 @@ export default function MockPayOSPage() {
   }
   
   useEffect(() => {
-    if (orderCode) api.get(`/api/payments/status/${encodeURIComponent(orderCode)}`).then(res => setAmount(res.data?.data?.price || 0));
+    if (orderCode) api.get(`/api/payments/status/${encodeURIComponent(orderCode)}`).then(res => setAmount(res.data?.data?.amount ?? res.data?.data?.price ?? 0));
   }, [orderCode]);
 
   const handleSimulatePayment = async (isSuccess: boolean) => {

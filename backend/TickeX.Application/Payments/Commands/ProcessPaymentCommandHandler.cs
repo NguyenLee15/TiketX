@@ -176,11 +176,14 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 {
                     existingTx.MarkSuccess(providerTxId, auditSummary);
                 }
+                // Stage notification outbox item into the same unit of work
+                if (!await _context.NotificationOutbox.AnyAsync(x => x.TicketId == ticket.Id, cancellationToken))
+                {
+                    _context.NotificationOutbox.Add(new NotificationOutboxItem(ticket.Id, ticket.UserId, ticket.EventId));
+                }
 
-                // Explicitly commit financial and seat state into database
+                // Explicitly commit financial, seat state, and outbox atomically into database
                 await _context.SaveChangesAsync(cancellationToken);
-
-                await _notificationOutbox.QueueTicketPaidAsync(ticket.Id, ticket.UserId, ticket.EventId, cancellationToken);
 
                 if (ticket.Seat != null)
                 {

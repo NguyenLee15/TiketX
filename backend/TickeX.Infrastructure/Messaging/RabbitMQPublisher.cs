@@ -6,7 +6,7 @@ using TickeX.Application.Interfaces;
 
 namespace TickeX.Infrastructure.Messaging;
 
-public class RabbitMQPublisher : IMessagePublisher
+public class RabbitMQPublisher : IMessagePublisher, IAsyncDisposable
 {
     private readonly string _hostname;
     private readonly string _queueName;
@@ -14,6 +14,9 @@ public class RabbitMQPublisher : IMessagePublisher
     private readonly string _password;
     private readonly int _port;
     private readonly bool _useTls;
+
+    private IConnection? _connection;
+    private readonly SemaphoreSlim _connectionLock = new(1, 1);
 
     public RabbitMQPublisher(IConfiguration configuration)
     {
@@ -25,15 +28,48 @@ public class RabbitMQPublisher : IMessagePublisher
         _useTls = configuration.GetValue("RabbitMQ:UseTls", false);
     }
 
+    private async Task<IConnection> GetConnectionAsync(CancellationToken cancellationToken)
+    {
+        if (_connection != null && _connection.IsOpen)
+        {
+            return _connection;
+        }
+
+        await _connectionLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_connection != null && _connection.IsOpen)
+            {
+                return _connection;
+            }
+
+            if (_connection != null)
+            {
+                await _connection.DisposeAsync();
+            }
+
+            var factory = new ConnectionFactory
+            {
+                HostName = _hostname,
+                UserName = _username,
+                Password = _password,
+                Port = _port,
+                Ssl = new SslOption { Enabled = _useTls }
+            };
+
+            _connection = await factory.CreateConnectionAsync(cancellationToken);
+            return _connection;
+        }
+        finally
+        {
+            _connectionLock.Release();
+        }
+    }
+
     public async Task PublishAsync<T>(T message, CancellationToken cancellationToken = default)
     {
-        var factory = new ConnectionFactory
-        {
-            HostName = _hostname, UserName = _username, Password = _password, Port = _port,
-            Ssl = new SslOption { Enabled = _useTls }
-        };
-        using var connection = await factory.CreateConnectionAsync(cancellationToken);
-        using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
+        var connection = await GetConnectionAsync(cancellationToken);
+        await using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
 
         await channel.QueueDeclareAsync(queue: _queueName,
                              durable: true,
@@ -49,5 +85,15 @@ public class RabbitMQPublisher : IMessagePublisher
                              routingKey: _queueName,
                              body: body,
                              cancellationToken: cancellationToken);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_connection != null)
+        {
+            await _connection.DisposeAsync();
+        }
+        _connectionLock.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

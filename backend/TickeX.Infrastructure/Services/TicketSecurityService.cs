@@ -19,7 +19,11 @@ public class TicketSecurityService : ITicketSecurityService
         var primarySecret = configuration[$"TicketSecurity:SecretKeys:{_activeKeyId}"]
             ?? configuration["TicketSecurity:Secret"]
             ?? throw new InvalidOperationException($"TicketSecurity secret for active key '{_activeKeyId}' is not configured.");
-        _keyRotationMap["k1"] = primarySecret;
+        _keyRotationMap[_activeKeyId] = primarySecret;
+        if (!_keyRotationMap.ContainsKey("k1"))
+        {
+            _keyRotationMap["k1"] = primarySecret;
+        }
 
         // Load rotation keys if configured
         var secondarySecret = configuration["TicketSecurity:Secret_k2"];
@@ -31,7 +35,7 @@ public class TicketSecurityService : ITicketSecurityService
 
     public string GenerateSignedQrToken(Guid ticketId, Guid eventId, long orderCode, DateTime expiresAt, string keyId = "k1")
     {
-        var targetKid = string.IsNullOrEmpty(keyId) ? _activeKeyId : keyId;
+        var targetKid = (string.IsNullOrEmpty(keyId) || keyId == "k1") ? _activeKeyId : keyId;
         if (!_keyRotationMap.TryGetValue(targetKid, out var secret))
         {
             secret = _keyRotationMap[_activeKeyId];
