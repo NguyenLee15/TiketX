@@ -105,4 +105,24 @@ public class DashboardStatsTests : IDisposable
         zeroDays.Should().HaveCount(6);
         zeroDays.Should().OnlyContain(s => s.Revenue == 0m && s.TicketsSold == 0);
     }
+
+    [Fact]
+    public async Task GetDashboardStats_WhenDatabaseHasNoTickets_ReturnsZeroWithoutNullPointer()
+    {
+        var readModel = new DashboardReadModelAdapter(_context, new VietnamTimePolicy());
+
+        var result = await readModel.GetAsync(CancellationToken.None);
+
+        result.TotalUsers.Should().Be(0);
+        result.TotalEvents.Should().Be(0);
+        result.TotalTicketsSold.Should().Be(0);
+        result.TotalRevenue.Should().Be(0m);
+        result.TotalRefunded.Should().Be(0m);
+        result.TotalRefundPending.Should().Be(0m);
+        result.TotalNetRevenue.Should().Be(0m);
+        result.TotalCheckedIn.Should().Be(0);
+        result.TopEvents.Should().BeEmpty();
+        result.DailyStats.Should().HaveCount(7);
+        result.RecentTransactions.Should().BeEmpty();
+    }
 }

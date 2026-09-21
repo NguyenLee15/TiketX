@@ -28,29 +28,50 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
         var paidStates = new[] { TicketStatus.Paid, TicketStatus.Used };
 
         var totalTicketsSold = await operationalTickets.CountAsync(t => paidStates.Contains(t.Status), cancellationToken);
-        var totalRevenue = (await operationalTickets
-            .Where(t => t.PaidAt.HasValue && (paidStates.Contains(t.Status) || t.Status == TicketStatus.RefundPending || t.Status == TicketStatus.Cancelled))
-            .Select(t => t.Price)
-            .ToListAsync(cancellationToken)).Sum();
-        var totalRefunded = (await operationalTickets
-            .Where(t => t.Status == TicketStatus.Cancelled && t.RefundAmount.HasValue)
-            .Select(t => t.RefundAmount!.Value)
-            .ToListAsync(cancellationToken)).Sum();
-        var totalRefundPending = (await operationalTickets
-            .Where(t => t.Status == TicketStatus.RefundPending)
-            .Select(t => t.Price)
-            .ToListAsync(cancellationToken)).Sum();
+        var totalRevenue = await SumAmountAsync(
+            operationalTickets
+                .Where(t => t.PaidAt.HasValue && (paidStates.Contains(t.Status) || t.Status == TicketStatus.RefundPending || t.Status == TicketStatus.Cancelled))
+                .Select(t => (decimal?)t.Price),
+            cancellationToken);
+        var totalRefunded = await SumAmountAsync(
+            operationalTickets
+                .Where(t => t.Status == TicketStatus.Cancelled && t.RefundAmount.HasValue)
+                .Select(t => t.RefundAmount),
+            cancellationToken);
+        var totalRefundPending = await SumAmountAsync(
+            operationalTickets
+                .Where(t => t.Status == TicketStatus.RefundPending)
+                .Select(t => (decimal?)t.Price),
+            cancellationToken);
         var totalCheckedIn = await operationalTickets.CountAsync(t => t.Status == TicketStatus.Used, cancellationToken);
 
-        var paidTickets = await operationalTickets
-            .Where(t => paidStates.Contains(t.Status))
-            .Select(t => new { t.EventId, t.Price })
-            .ToListAsync(cancellationToken);
+        var isSqlite = (_context as DbContext)?.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true;
+        List<TopEventAggregate> topAggregates;
 
-        var topAggregates = paidTickets
-            .GroupBy(t => t.EventId)
-            .Select(g => new { EventId = g.Key, TicketsSold = g.Count(), Revenue = g.Sum(t => t.Price) })
-            .OrderByDescending(x => x.Revenue).Take(5).ToList();
+        if (isSqlite)
+        {
+            var paidTickets = await operationalTickets
+                .Where(t => paidStates.Contains(t.Status))
+                .Select(t => new { t.EventId, t.Price })
+                .ToListAsync(cancellationToken);
+
+            topAggregates = paidTickets
+                .GroupBy(t => t.EventId)
+                .Select(g => new TopEventAggregate(g.Key, g.Count(), g.Sum(t => t.Price)))
+                .OrderByDescending(x => x.Revenue)
+                .Take(5)
+                .ToList();
+        }
+        else
+        {
+            topAggregates = await operationalTickets
+                .Where(t => paidStates.Contains(t.Status))
+                .GroupBy(t => t.EventId)
+                .Select(g => new TopEventAggregate(g.Key, g.Count(), g.Sum(t => t.Price)))
+                .OrderByDescending(x => x.Revenue)
+                .Take(5)
+                .ToListAsync(cancellationToken);
+        }
         var eventIds = topAggregates.Select(x => x.EventId).ToList();
         var eventDetails = await _context.Events.Where(e => eventIds.Contains(e.Id))
             .Select(e => new { e.Id, e.Title, e.Category, e.TotalSeats }).ToListAsync(cancellationToken);
@@ -86,4 +107,18 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
             totalCheckedIn, topEvents, recentTransactions, dailyStats, totalRefundPending,
             totalRevenue - totalRefunded - totalRefundPending);
     }
+
+    private async Task<decimal> SumAmountAsync(IQueryable<decimal?> query, CancellationToken cancellationToken)
+    {
+        var isSqlite = (_context as DbContext)?.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true;
+        if (isSqlite)
+        {
+            var list = await query.Where(p => p.HasValue).Select(p => p!.Value).ToListAsync(cancellationToken);
+            return list.Sum();
+        }
+
+        return await query.SumAsync(cancellationToken) ?? 0m;
+    }
+
+    private sealed record TopEventAggregate(Guid EventId, int TicketsSold, decimal Revenue);
 }
