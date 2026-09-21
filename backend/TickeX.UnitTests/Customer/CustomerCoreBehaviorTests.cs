@@ -298,6 +298,48 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         page1.Select(x => x.Id).Should().NotIntersectWith(page2.Select(x => x.Id));
     }
 
+    [Fact]
+    public async Task LockSeat_WhenUserHasExpiredPendingTickets_DoesNotCountAgainstHoldLimit_ShouldSucceed()
+    {
+        var user = new User("Customer", "limit_expired@test.local", "hash");
+        var userId = user.Id;
+        var @event = CreateEvent("Concert", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 5); // 5 seats
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+
+        var seats = await _context.Seats.OrderBy(s => s.Row).ThenBy(s => s.Number).ToListAsync();
+
+        // Add 4 expired pending tickets for this user (Max pending limit is 4)
+        for (var i = 0; i < 4; i++)
+        {
+            var oldTicket = new Ticket(@event.Id, seats[i].Id, userId, seats[i].Price);
+            _context.Tickets.Add(oldTicket);
+            _context.Entry(oldTicket).Property(nameof(BaseEntity.CreatedAt)).CurrentValue = DateTime.UtcNow.AddMinutes(-30);
+        }
+        await _context.SaveChangesAsync();
+
+        var lockService = new Mock<IDistributedLockService>();
+        lockService.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var notifications = new Mock<ISeatNotificationService>();
+        var scheduler = new Mock<IReservationExpiryScheduler>();
+        var options = new ReservationOptions { HoldMinutes = 5, MaximumPendingSeatsPerEvent = 4 };
+        var handler = new LockSeatCommandHandler(new ReservationOperations(
+            _context, lockService.Object, notifications.Object, scheduler.Object,
+            Options.Create(options), NullLogger<ReservationOperations>.Instance));
+
+        var targetSeat = seats[4];
+        var result = await handler.Handle(
+            new LockSeatCommand(@event.Id, targetSeat.Id, userId, targetSeat.Version),
+            CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        var updatedSeat = await _context.Seats.AsNoTracking().SingleAsync(s => s.Id == targetSeat.Id);
+        updatedSeat.Status.Should().Be(SeatStatus.Locked);
+        updatedSeat.LockedByUserId.Should().Be(userId);
+    }
+
     private static Event CreateEvent(string title, DateTime date) =>
         new(title, "Description", date, date.AddHours(2), "HCM", "Venue", 1);
 

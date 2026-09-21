@@ -44,8 +44,9 @@ public sealed class ReservationOperations : IReservationOperations
 
         try
         {
+            var holdThreshold = _time.UtcNow.AddMinutes(-_options.HoldMinutes);
             var pendingCount = await _context.Tickets.CountAsync(
-                t => t.UserId == userId && t.EventId == eventId && t.Status == TicketStatus.Pending,
+                t => t.UserId == userId && t.EventId == eventId && t.Status == TicketStatus.Pending && t.CreatedAt > holdThreshold,
                 cancellationToken);
             if (pendingCount >= _options.MaximumPendingSeatsPerEvent)
                 return Fail("RESERVATION_LIMIT_REACHED", $"Mỗi khách chỉ được giữ tối đa {_options.MaximumPendingSeatsPerEvent} ghế cho một sự kiện.");

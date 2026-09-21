@@ -6,6 +6,9 @@ import api from '../../services/api';
 import { TicketCard, TicketItemData } from './TicketCard';
 import { TicketFilterTabs, allowedTicketTabs, TicketTabType } from './TicketFilterTabs';
 import { TicketRefundModal } from './TicketRefundModal';
+import { TicketPagination } from './TicketPagination';
+
+const PAGE_SIZE = 10;
 
 export default function MyTicketsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -21,6 +24,9 @@ export default function MyTicketsPage() {
     ? (requestedTab as TicketTabType) 
     : 'All';
 
+  const rawPage = parseInt(searchParams.get('page') || '1', 10);
+  const currentPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+
   const handleTabChange = useCallback((tab: TicketTabType) => {
     const next = new URLSearchParams(searchParams);
     if (tab === 'All') {
@@ -28,14 +34,28 @@ export default function MyTicketsPage() {
     } else {
       next.set('status', tab);
     }
+    next.delete('page');
     setSearchParams(next);
   }, [searchParams, setSearchParams]);
 
-  const fetchTickets = useCallback(async (signal?: AbortSignal) => {
+  const handlePageChange = useCallback((page: number) => {
+    const next = new URLSearchParams(searchParams);
+    if (page <= 1) {
+      next.delete('page');
+    } else {
+      next.set('page', String(page));
+    }
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
+
+  const fetchTickets = useCallback(async (page: number, signal?: AbortSignal) => {
     try {
       setIsLoading(true);
       setLoadError(false);
-      const response = await api.get('/api/tickets/my-tickets', { signal });
+      const response = await api.get('/api/tickets/my-tickets', {
+        params: { page, pageSize: PAGE_SIZE },
+        signal,
+      });
       if (response.data.success) {
         setTickets(response.data.data || []);
       } else {
@@ -52,9 +72,9 @@ export default function MyTicketsPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetchTickets(controller.signal);
+    void fetchTickets(currentPage, controller.signal);
     return () => controller.abort();
-  }, [fetchTickets]);
+  }, [fetchTickets, currentPage]);
 
   const handleRefund = useCallback(async (ticket: TicketItemData) => {
     setRefundingId(ticket.id);
@@ -99,7 +119,7 @@ export default function MyTicketsPage() {
         <XCircle className="w-10 h-10 text-danger" aria-hidden="true" />
         <h1 className="text-xl font-bold text-white">Không thể tải danh sách vé</h1>
         <p className="text-sm text-text-secondary">Kiểm tra kết nối và thử lại.</p>
-        <button onClick={() => void fetchTickets()} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">
+        <button onClick={() => void fetchTickets(currentPage)} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">
           Thử lại
         </button>
       </div>
@@ -147,6 +167,14 @@ export default function MyTicketsPage() {
           ))}
         </div>
       )}
+
+      {/* Pagination Controls */}
+      <TicketPagination
+        currentPage={currentPage}
+        hasNextPage={tickets.length >= PAGE_SIZE}
+        onPageChange={handlePageChange}
+        isLoading={isLoading}
+      />
 
       {/* Refund Confirmation Modal */}
       <TicketRefundModal
