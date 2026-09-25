@@ -57,7 +57,8 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         if (ticket.UserId != userId) return Fail("PAYMENT_FORBIDDEN", "Bạn không có quyền thanh toán vé này.");
         if (ticket.Status != TicketStatus.Pending)
             return Fail(ticket.Status == TicketStatus.Paid ? "PAYMENT_ALREADY_PAID" : "PAYMENT_NOT_PENDING", "Vé không còn chờ thanh toán.");
-        var holdThreshold = _time.UtcNow.AddMinutes(-10);
+        var holdMinutes = _configuration.GetValue<int>("Reservation:HoldMinutes", 10);
+        var holdThreshold = _time.UtcNow.AddMinutes(-holdMinutes);
         if (ticket.CreatedAt <= holdThreshold)
             return Fail("RESERVATION_EXPIRED", "Thời gian giữ vé đã hết hạn. Vui lòng chọn lại ghế.");
         if (ticket.Event is null || ticket.Event.IsDeleted || ticket.Event.Status != EventStatus.Published || ticket.Event.Date <= _time.UtcNow)
@@ -140,7 +141,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         }
 
         // Re-validate that the ticket hold has not expired during external PayOS I/O
-        if (ticket.CreatedAt <= _time.UtcNow.AddMinutes(-10) || ticket.Status != TicketStatus.Pending)
+        if (ticket.CreatedAt <= _time.UtcNow.AddMinutes(-holdMinutes) || ticket.Status != TicketStatus.Pending)
         {
             if (isNew)
             {

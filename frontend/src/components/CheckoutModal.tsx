@@ -91,6 +91,10 @@ export default function CheckoutModal({
             setPaymentInitError(msg);
             toast.error(msg);
           }
+        } else if (isMounted) {
+          const msg = response.data?.message || 'Không thể tạo liên kết thanh toán.';
+          setPaymentInitError(msg);
+          toast.error(msg);
         }
       } catch (err: unknown) {
         if (!isMounted) return;
@@ -172,13 +176,20 @@ export default function CheckoutModal({
     }
   };
 
-  const handleSimulatePayment = () => {
+  const handleSimulatePayment = async () => {
     if (!paymentData?.orderCode) return;
     setStatus('verifying');
-    toast.success('Mô phỏng thanh toán thành công!');
-    simulateTimerRef.current = setTimeout(() => {
-      navigate(`/payment/result?orderCode=${paymentData.orderCode}&status=PAID`);
-    }, 700);
+    try {
+      await api.post(`/api/payments/simulate-success/${paymentData.orderCode}`);
+      toast.success('Mô phỏng thanh toán thành công!');
+      simulateTimerRef.current = setTimeout(() => {
+        navigate(`/payment/result?orderCode=${paymentData.orderCode}&status=PAID`);
+      }, 700);
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      toast.error(apiErr.response?.data?.message || 'Mô phỏng thanh toán thất bại.');
+      setStatus('idle');
+    }
   };
 
   const formatTime = (seconds: number) => {

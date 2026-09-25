@@ -103,7 +103,7 @@ public sealed class ReservationOperations : IReservationOperations
                 try
                 {
                     var versionToken = Convert.ToBase64String(seat.Version);
-                    await _notifications.NotifySeatStatusChanged(eventId, seatId, seat.Status.ToString(), versionToken, expiresAt);
+                    await _notifications.NotifySeatStatusChanged(eventId, seatId, seat.Status.ToString(), versionToken, expiresAt, userId);
                 }
                 catch (Exception ex)
                 {

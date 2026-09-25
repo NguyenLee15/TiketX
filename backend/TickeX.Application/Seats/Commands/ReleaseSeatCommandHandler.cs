@@ -8,6 +8,13 @@ public sealed class ReleaseSeatCommandHandler : IRequestHandler<ReleaseSeatComma
     private readonly IReservationOperations _operations;
     public ReleaseSeatCommandHandler(IReservationOperations operations) => _operations = operations;
 
-    public async Task<bool> Handle(ReleaseSeatCommand request, CancellationToken cancellationToken) =>
-        (await _operations.ExpireAsync(request.TicketId, cancellationToken)).Success;
+    public async Task<bool> Handle(ReleaseSeatCommand request, CancellationToken cancellationToken)
+    {
+        var result = await _operations.ExpireAsync(request.TicketId, cancellationToken);
+        if (!result.Success && result.Code == "RESERVATION_LOCK_UNAVAILABLE")
+        {
+            throw new InvalidOperationException($"Transient lock failure expiring ticket {request.TicketId}: {result.Message}");
+        }
+        return result.Success;
+    }
 }

@@ -34,7 +34,7 @@ export default function EventDetailPage() {
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [lockExpiresAt, setLockExpiresAt] = useState<string | null>(null);
 
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const navigate = useNavigate();
 
   // Reset seat selection & checkout states when switching between event routes
@@ -81,12 +81,12 @@ export default function EventDetailPage() {
 
     // If our currently selected seat was locked or bought by someone else
     setSelectedSeat(prev => {
-      if (prev?.id === payload.seatId && !shouldPreserveSeatSelection(prev.id, payload)) {
+      if (prev?.id === payload.seatId && !shouldPreserveSeatSelection(prev.id, payload, user?.id)) {
         return null;
       }
       return prev;
     });
-  }, [id, queryClient, refetchEvent]);
+  }, [id, queryClient, refetchEvent, user?.id]);
 
   const { status: seatConnectionStatus, retry: retrySeatConnection } = useSeatSignalR(id, handleSeatStatusChanged);
 

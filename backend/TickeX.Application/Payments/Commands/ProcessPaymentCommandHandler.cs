@@ -138,6 +138,19 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                     );
                     _context.AuditLogs.Add(audit);
 
+                    var hasRefundRequest = await _context.RefundRequests
+                        .AnyAsync(r => r.TicketId == ticket.Id, cancellationToken);
+                    if (!hasRefundRequest)
+                    {
+                        var refundReq = new RefundRequest(
+                            ticket.EventId,
+                            ticket.Id,
+                            data.Amount,
+                            $"orphaned-comp-{data.OrderCode}"
+                        );
+                        _context.RefundRequests.Add(refundReq);
+                    }
+
                     await _context.SaveChangesAsync(cancellationToken);
                     return true; // Acknowledge webhook to avoid endless retries while preserving compensation state
                 }

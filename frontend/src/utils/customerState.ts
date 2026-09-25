@@ -13,8 +13,19 @@ export const normalizePaymentStatus = (value: unknown): PaymentStatus => {
   return 'Unknown';
 };
 
-export const shouldPreserveSeatSelection = (selectedSeatId: string, payload: SeatStatusChangedPayload) =>
-  payload.seatId !== selectedSeatId || payload.status === 0 || payload.isLockedByCurrentUser === true || payload.isLockedByMe === true;
+export const shouldPreserveSeatSelection = (
+  selectedSeatId: string,
+  payload: SeatStatusChangedPayload,
+  currentUserId?: string
+) =>
+  payload.seatId !== selectedSeatId ||
+  payload.status === 0 ||
+  payload.isLockedByCurrentUser === true ||
+  payload.isLockedByMe === true ||
+  (Boolean(currentUserId) && (
+    payload.reservationOwnerId === currentUserId ||
+    (payload as Record<string, unknown>).ReservationOwnerId === currentUserId
+  ));
 
 export const clearCheckoutState = () => ({
   ticketId: null as string | null,

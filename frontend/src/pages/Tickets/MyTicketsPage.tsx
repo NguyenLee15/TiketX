@@ -65,6 +65,7 @@ export default function MyTicketsPage() {
       });
       if (response.data.success) {
         toast.success(response.data.message || 'Yêu cầu hoàn vé đã được gửi và đang chờ xử lý.');
+        setRefundCandidate(null);
         await queryClient.invalidateQueries({ queryKey: ['tickets'] });
       } else {
         toast.error(response.data.message || 'Không thể gửi yêu cầu hoàn vé.');

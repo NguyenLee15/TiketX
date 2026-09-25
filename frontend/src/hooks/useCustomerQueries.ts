@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import api from '../services/api';
+import { useAuthStore } from '../stores/useAuthStore';
 import { Event, EventDetail } from '../types';
 import { TicketItemData } from '../pages/Tickets/TicketCard';
 
@@ -210,8 +211,12 @@ export function useEventDetailQuery(eventId: string | undefined) {
 }
 
 export function useMyTicketsQuery(page?: number, pageSize?: number, status?: string) {
+  const user = useAuthStore(state => state.user);
+  const userId = user?.id ?? '';
+
   return useQuery<TicketItemData[]>({
-    queryKey: ['tickets', 'my-tickets', { page, pageSize, status }],
+    queryKey: ['tickets', 'my-tickets', userId, { page, pageSize, status }],
+    enabled: Boolean(userId),
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams();
       if (page) params.append('page', page.toString());

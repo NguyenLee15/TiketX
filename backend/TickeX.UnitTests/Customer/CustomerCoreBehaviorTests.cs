@@ -15,6 +15,7 @@ using TickeX.Domain.Enums;
 using TickeX.Infrastructure.Persistence;
 using TickeX.Infrastructure.Services;
 using TickeX.Application.Seats;
+using TickeX.Application.Payments.Commands;
 using Xunit;
 
 namespace TickeX.UnitTests.Customer;
@@ -391,6 +392,56 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         hash.Should().StartWith("$2a$12$");
         hasher.Verify(rawPassword, hash).Should().BeTrue();
         hasher.Verify("WrongPassword", hash).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ProcessPayment_OrphanedPaid_CreatesRefundRequestAndAuditLog()
+    {
+        var user = new User("Customer", "orphan@test.local", "hash");
+        var @event = CreateEvent("Concert", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        // Expire the ticket to simulate orphaned state (Cancelled, not Pending)
+        ticket.Cancel();
+        seat.Release();
+        await _context.SaveChangesAsync();
+
+        var lockService = new Mock<IDistributedLockService>();
+        lockService.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var notifications = new Mock<ISeatNotificationService>();
+        var outbox = new Mock<INotificationOutboxPort>();
+        var ticketSecurity = new Mock<ITicketSecurityService>();
+
+        var handler = new ProcessPaymentCommandHandler(
+            _context, outbox.Object, notifications.Object, lockService.Object,
+            ticketSecurity.Object, NullLogger<ProcessPaymentCommandHandler>.Instance);
+
+        var webhookData = new PayOSWebhookData
+        {
+            OrderCode = ticket.OrderCode,
+            Amount = ticket.Price,
+            Success = true,
+            Reference = "payos-ref-123",
+            Code = "00"
+        };
+
+        var result = await handler.Handle(new ProcessPaymentCommand(webhookData), CancellationToken.None);
+
+        result.Should().BeTrue("orphaned payment should be acknowledged to stop webhook retries");
+        (await _context.RefundRequests.CountAsync()).Should().Be(1);
+        var refundReq = await _context.RefundRequests.SingleAsync();
+        refundReq.TicketId.Should().Be(ticket.Id);
+        refundReq.Amount.Should().Be(ticket.Price);
+        (await _context.AuditLogs.AnyAsync(a => a.Action == "ORPHANED_PAYMENT_DETECTED")).Should().BeTrue();
     }
 
     private static Event CreateEvent(string title, DateTime date) =>

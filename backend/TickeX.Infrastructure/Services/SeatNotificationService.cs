@@ -25,6 +25,19 @@ public class SeatNotificationService : ISeatNotificationService
         });
     }
 
+    public async Task NotifySeatStatusChanged(Guid eventId, Guid seatId, string status, string? version, DateTime? expiresAt, Guid? reservationOwnerId)
+    {
+        await _hubContext.Clients.Group(eventId.ToString()).SendAsync("SeatStatusChanged", new
+        {
+            EventId = eventId,
+            SeatId = seatId,
+            Status = status,
+            Version = version,
+            ExpiresAt = expiresAt,
+            ReservationOwnerId = reservationOwnerId
+        });
+    }
+
     public Task NotifyOwnSeatLockChanged(Guid userId, Guid eventId, Guid seatId, string status, string version, DateTime expiresAt) =>
         _hubContext.Clients.User(userId.ToString()).SendAsync("OwnSeatLockChanged", new
         {

@@ -54,7 +54,15 @@ export const useSeatSignalR = (
     };
 
     connection.onreconnecting(() => active && setStatus('reconnecting'));
-    connection.onreconnected(() => active && setStatus('connected'));
+    connection.onreconnected(async () => {
+      if (!active || !connection) return;
+      setStatus('connected');
+      try {
+        await connection.invoke('JoinEventGroup', eventId);
+      } catch (err) {
+        console.error('Failed to rejoin event group after SignalR reconnect', err);
+      }
+    });
     connection.onclose(() => active && setStatus('disconnected'));
     connection.on('SeatStatusChanged', handleSeatStatusChanged);
     setStatus('connecting');

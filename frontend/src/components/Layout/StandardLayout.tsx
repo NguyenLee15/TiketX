@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { LogOut, ShieldCheck, Zap, Ticket, Calendar, Menu, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -6,6 +7,7 @@ import api from '../../services/api';
 import { ResilientImage } from '../ResilientImage';
 
 export default function StandardLayout() {
+  const queryClient = useQueryClient();
   const { isAuthenticated, isAdmin, logout, user } = useAuthStore();
   const isAuth = isAuthenticated();
   const { pathname } = useLocation();
@@ -14,6 +16,7 @@ export default function StandardLayout() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const handleLogout = async () => {
     try { await api.post('/api/auth/logout', {}); } catch { /* server may already have expired the session */ }
+    queryClient.clear();
     logout();
   };
 
