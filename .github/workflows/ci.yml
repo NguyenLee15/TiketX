@@ -94,7 +94,7 @@ jobs:
         exit 1
 
     - name: Scan production images (Frontend)
-      uses: aquasecurity/trivy-action@v0.33.1
+      uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: tickex-frontend:latest
         format: table
@@ -102,7 +102,7 @@ jobs:
         severity: CRITICAL,HIGH
 
     - name: Scan production images (Backend)
-      uses: aquasecurity/trivy-action@v0.33.1
+      uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: tickex-backend:latest
         format: table
