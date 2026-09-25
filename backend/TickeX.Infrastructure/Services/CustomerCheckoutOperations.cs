@@ -169,7 +169,11 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
     private static CustomerCheckoutResult Fail(string code, string message) => new(false, code, message);
     private static string ToPublicStatus(TicketStatus status) => status switch
     {
-        TicketStatus.Pending => "Pending", TicketStatus.Paid => "Paid", TicketStatus.Cancelled => "Cancelled",
-        TicketStatus.RefundPending => "RefundPending", _ => "Paid"
+        TicketStatus.Pending => "Pending",
+        TicketStatus.Paid => "Paid",
+        TicketStatus.Cancelled => "Cancelled",
+        TicketStatus.Used => "Used",
+        TicketStatus.RefundPending => "RefundPending",
+        _ => "Unknown"
     };
 }

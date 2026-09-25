@@ -4,6 +4,7 @@ import {
   eventDetailSchema,
   ticketsResponseSchema,
   ticketItemSchema,
+  seatSchema,
 } from './useCustomerQueries';
 
 describe('Zod Schema Contract Synchronization Tests', () => {
@@ -141,5 +142,57 @@ describe('Zod Schema Contract Synchronization Tests', () => {
 
     const parsed = eventDetailSchema.safeParse(corruptPayload);
     expect(parsed.success).toBe(false);
+  });
+
+  it('should reject seat with invalid or unknown status in Fail-Closed mode', () => {
+    const badSeat = {
+      id: 'seat-1',
+      eventId: 'event-1',
+      row: 'A',
+      number: 1,
+      tier: 0,
+      status: 'CorruptedStatus', // Unknown status string
+      price: 100000,
+      version: 'v1',
+    };
+
+    const parsed = seatSchema.safeParse(badSeat);
+    expect(parsed.success).toBe(false);
+  });
+
+  it('should accept valid seat status strings and numbers', () => {
+    const validSeat1 = {
+      id: 'seat-1',
+      eventId: 'event-1',
+      row: 'A',
+      number: 1,
+      tier: 'Standard',
+      status: 'Available',
+      price: 100000,
+      version: 'v1',
+    };
+    const parsed1 = seatSchema.safeParse(validSeat1);
+    expect(parsed1.success).toBe(true);
+    if (parsed1.success) {
+      expect(parsed1.data.status).toBe(0);
+      expect(parsed1.data.tier).toBe(0);
+    }
+
+    const validSeat2 = {
+      id: 'seat-2',
+      eventId: 'event-1',
+      row: 'B',
+      number: 2,
+      tier: 'VIP',
+      status: 'Sold',
+      price: 200000,
+      version: 'v1',
+    };
+    const parsed2 = seatSchema.safeParse(validSeat2);
+    expect(parsed2.success).toBe(true);
+    if (parsed2.success) {
+      expect(parsed2.data.status).toBe(2);
+      expect(parsed2.data.tier).toBe(1);
+    }
   });
 });

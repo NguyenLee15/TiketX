@@ -93,9 +93,11 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
                   return (
                     <button
                       key={seat.id}
+                      type="button"
                       onClick={() => onSeatClick(seat)}
                       disabled={seat.status !== 0}
-                      aria-label={`Hàng ${seat.row}, ghế ${seat.number}, ${seat.status === 0 ? 'còn trống' : seat.status === 1 ? 'đang được giữ' : 'đã bán'}, giá ${formatVND(seat.price)}`}
+                      aria-pressed={isSelected}
+                      aria-label={`Hàng ${seat.row}, ghế ${seat.number}, hạng ${tierInfo.name}, ${seat.status === 0 ? (isSelected ? 'đang chọn' : 'còn trống') : seat.status === 1 ? 'đang được giữ' : 'đã bán'}, giá ${formatVND(seat.price)}`}
                       className={`w-11 h-11 sm:w-10 sm:h-10 md:w-9 md:h-9 rounded-lg border-2 flex items-center justify-center text-xs font-bold transition-[opacity,background-color,border-color] duration-150 ease-out relative group/seat focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 ${getSeatColor(seat, isSelected)}`}
                       style={{ animationDelay: `${(sortedRowKeys.indexOf(rowName) * 0.04) + (index * 0.015)}s` }}
                     >

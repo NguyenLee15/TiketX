@@ -10,9 +10,9 @@ const BACKOFF_MS = [1500, 2500, 4000, 6000, 8000, 10000];
 
 export type PaymentPhase =
   | { state: 'checking'; status: PaymentStatus; notice?: string }
-  | { state: 'success'; status: 'Paid' | 'Used' }
+  | { state: 'success'; status: 'Paid' }
   | { state: 'pending'; status: 'Pending' | 'RefundPending'; notice?: string }
-  | { state: 'failed'; status: 'Failed' | 'Cancelled' | 'Expired'; message: string }
+  | { state: 'failed'; status: 'Failed' | 'Cancelled' | 'Expired' | 'Used'; message: string }
   | { state: 'unknown'; status: 'Unknown'; message: string };
 
 export default function PaymentResultPage() {
@@ -22,13 +22,24 @@ export default function PaymentResultPage() {
   const [phase, setPhase] = useState<PaymentPhase>({ state: 'checking', status: 'Pending' });
   const attemptRef = useRef(0);
   const mountedRef = useRef(true);
+  const timerRef = useRef<number | null>(null);
+  const inFlightControllerRef = useRef<AbortController | null>(null);
+  const isCheckingRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      inFlightControllerRef.current?.abort();
+    };
   }, []);
 
   const checkStatus = useCallback(async (signal?: AbortSignal): Promise<boolean> => {
+    if (isCheckingRef.current) return false;
     if (!orderCode) {
       if (!signal?.aborted && mountedRef.current) {
         setPhase({
@@ -40,6 +51,7 @@ export default function PaymentResultPage() {
       return true;
     }
 
+    isCheckingRef.current = true;
     try {
       if (!signal?.aborted && mountedRef.current) {
         setPhase(prev => (prev.state === 'success' ? prev : { state: 'checking', status: prev.status }));
@@ -49,11 +61,17 @@ export default function PaymentResultPage() {
       const next = normalizePaymentStatus(response.data?.data?.status);
 
       if (!signal?.aborted && mountedRef.current) {
-        if (next === 'Paid' || next === 'Used') {
-          setPhase({ state: 'success', status: next });
+        if (next === 'Paid') {
+          setPhase({ state: 'success', status: 'Paid' });
           if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
           }
+        } else if (next === 'Used') {
+          setPhase({
+            state: 'failed',
+            status: 'Used',
+            message: 'Vé này đã được sử dụng (đã check-in vào sự kiện).',
+          });
         } else if (next === 'Failed' || next === 'Cancelled' || next === 'Expired') {
           setPhase({
             state: 'failed',
@@ -76,45 +94,79 @@ export default function PaymentResultPage() {
       if ((requestError as { code?: string })?.code !== 'ERR_CANCELED' && mountedRef.current) {
         setPhase(prev => ({
           state: prev.state === 'success' ? 'success' : 'pending',
-          status: prev.status === 'Paid' || prev.status === 'Used' ? prev.status : 'Pending',
+          status: prev.status === 'Paid' ? prev.status : 'Pending',
           notice: 'Chưa thể kiểm tra giao dịch. Hệ thống sẽ tự động thử lại.',
         } as PaymentPhase));
       }
       return false;
+    } finally {
+      isCheckingRef.current = false;
     }
   }, [orderCode]);
 
+  const schedulePoll = useCallback((attempt: number) => {
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
+    if (attempt >= BACKOFF_MS.length) {
+      if (mountedRef.current) {
+        setPhase(prev => ({
+          ...prev,
+          notice: 'Giao dịch vẫn đang được xử lý. Bạn có thể kiểm tra lại hoặc xem danh sách vé.',
+        } as PaymentPhase));
+      }
+      return;
+    }
+
+    timerRef.current = window.setTimeout(async () => {
+      if (!mountedRef.current) return;
+      inFlightControllerRef.current = new AbortController();
+      const done = await checkStatus(inFlightControllerRef.current.signal);
+      if (!done && mountedRef.current) {
+        attemptRef.current++;
+        schedulePoll(attemptRef.current);
+      }
+    }, BACKOFF_MS[attempt]);
+  }, [checkStatus]);
+
+  const handleManualRetry = useCallback(async () => {
+    if (isCheckingRef.current) return;
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    inFlightControllerRef.current?.abort();
+    inFlightControllerRef.current = new AbortController();
+    attemptRef.current = 0;
+    const done = await checkStatus(inFlightControllerRef.current.signal);
+    if (!done && mountedRef.current) {
+      schedulePoll(0);
+    }
+  }, [checkStatus, schedulePoll]);
+
   useEffect(() => {
-    let cancelled = false;
-    let timer: number | undefined;
-    const controller = new AbortController();
+    inFlightControllerRef.current = new AbortController();
     attemptRef.current = 0;
 
-    const poll = async () => {
-      const done = await checkStatus(controller.signal);
-      if (cancelled || done) return;
-
-      const attempt = attemptRef.current++;
-      if (attempt >= BACKOFF_MS.length) {
-        if (mountedRef.current) {
-          setPhase(prev => ({
-            ...prev,
-            notice: 'Giao dịch vẫn đang được xử lý. Bạn có thể kiểm tra lại hoặc xem danh sách vé.',
-          } as PaymentPhase));
-        }
-        return;
+    const startInitialCheck = async () => {
+      const done = await checkStatus(inFlightControllerRef.current?.signal);
+      if (!done && mountedRef.current) {
+        schedulePoll(0);
       }
-
-      timer = window.setTimeout(poll, BACKOFF_MS[attempt]);
     };
 
-    void poll();
+    void startInitialCheck();
+
     return () => {
-      cancelled = true;
-      controller.abort();
-      if (timer) window.clearTimeout(timer);
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      inFlightControllerRef.current?.abort();
     };
-  }, [checkStatus]);
+  }, [checkStatus, schedulePoll]);
 
   const isChecking = phase.state === 'checking';
   const isSuccess = phase.state === 'success';
@@ -185,10 +237,7 @@ export default function PaymentResultPage() {
           {(isPending || isChecking || isUnknown) && (
             <button
               type="button"
-              onClick={() => {
-                attemptRef.current = 0;
-                void checkStatus();
-              }}
+              onClick={() => void handleManualRetry()}
               disabled={isChecking}
               className="w-full py-3 bg-brand-primary hover:opacity-90 disabled:opacity-50 text-white font-bold rounded-xl transition-opacity focus-visible:ring-2 focus-visible:ring-white flex justify-center items-center gap-2 cursor-pointer"
             >

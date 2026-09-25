@@ -194,6 +194,7 @@ public sealed class ReservationOperations : IReservationOperations
     private async Task<bool> TryAcquireAsync(string key, TimeSpan duration, CancellationToken cancellationToken)
     {
         try { return await _locks.AcquireLockAsync(key, duration, cancellationToken); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex) { _logger.LogWarning(ex, "Required reservation lock {LockKey} is unavailable", key); return false; }
     }
 

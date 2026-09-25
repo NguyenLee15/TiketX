@@ -5,10 +5,10 @@ import { Event, EventDetail } from '../types';
 import { TicketItemData } from '../pages/Tickets/TicketCard';
 
 export const eventItemSchema = z.object({
-  id: z.string(),
-  title: z.string(),
+  id: z.string().min(1),
+  title: z.string().min(1),
   description: z.string().optional().default(''),
-  date: z.string(),
+  date: z.string().min(1),
   endDate: z.string().optional().nullable(),
   location: z.string().default(''),
   venueName: z.string().optional().default(''),
@@ -16,42 +16,68 @@ export const eventItemSchema = z.object({
   imageUrl: z.string().default(''),
   bannerUrl: z.string().optional().default(''),
   organizerName: z.string().optional().default(''),
-  totalSeats: z.number().default(0),
-  availableSeatsCount: z.number().optional().default(0),
-  basePrice: z.number().default(0),
-  minPrice: z.number().optional().default(0),
-  maxPrice: z.number().optional().default(0),
+  totalSeats: z.number().int().nonnegative(),
+  availableSeatsCount: z.number().int().nonnegative().optional().default(0),
+  basePrice: z.number().nonnegative(),
+  minPrice: z.number().nonnegative().optional().default(0),
+  maxPrice: z.number().nonnegative().optional().default(0),
   status: z.union([z.number(), z.string()]),
-  refundCutoffHours: z.number().optional().default(24),
+  refundCutoffHours: z.number().int().nonnegative().optional().default(24),
   isDeleted: z.boolean().optional().default(false),
   hasTicketHistory: z.boolean().optional().default(false),
 }).passthrough();
 
 export const catalogResponseSchema = z.object({
-  items: z.array(eventItemSchema).default([]),
-  totalPages: z.number().default(1),
-  totalCount: z.number().default(0),
-  page: z.number().optional().default(1),
-  pageSize: z.number().optional().default(10),
+  items: z.array(eventItemSchema),
+  totalPages: z.number().int(),
+  totalCount: z.number().int().nonnegative(),
+  page: z.number().int().positive().optional().default(1),
+  pageSize: z.number().int().positive().optional().default(10),
 }).passthrough();
 
 export const seatSchema = z.object({
-  id: z.string(),
-  eventId: z.string(),
-  row: z.string(),
-  number: z.number(),
-  tier: z.union([z.number(), z.string()]).transform(v => typeof v === 'string' ? Number(v) || 0 : v),
-  status: z.union([z.number(), z.string()]).transform(v => typeof v === 'string' ? Number(v) || 0 : v),
-  price: z.number(),
+  id: z.string().min(1),
+  eventId: z.string().min(1),
+  row: z.string().min(1),
+  number: z.number().int().positive(),
+  tier: z.union([z.number(), z.string()]).transform((v, ctx) => {
+    if (typeof v === 'number' && (v === 0 || v === 1 || v === 2)) return v;
+    if (typeof v === 'string') {
+      const lower = v.toLowerCase();
+      if (lower === 'standard' || lower === '0') return 0;
+      if (lower === 'vip' || lower === '1') return 1;
+      if (lower === 'economy' || lower === '2') return 2;
+    }
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Invalid seat tier: ${v}`,
+    });
+    return z.NEVER;
+  }),
+  status: z.union([z.number(), z.string()]).transform((v, ctx) => {
+    if (typeof v === 'number' && (v === 0 || v === 1 || v === 2)) return v;
+    if (typeof v === 'string') {
+      const lower = v.toLowerCase();
+      if (lower === 'available' || lower === '0') return 0;
+      if (lower === 'locked' || lower === '1') return 1;
+      if (lower === 'sold' || lower === '2') return 2;
+    }
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Invalid seat status: ${v}`,
+    });
+    return z.NEVER;
+  }),
+  price: z.number().nonnegative(),
   version: z.string(),
   isLockedByCurrentUser: z.boolean().optional().default(false),
 }).passthrough();
 
 export const eventDetailSchema = z.object({
-  id: z.string(),
-  title: z.string(),
+  id: z.string().min(1),
+  title: z.string().min(1),
   description: z.string().optional().default(''),
-  date: z.string(),
+  date: z.string().min(1),
   endDate: z.string().optional().nullable(),
   location: z.string().default(''),
   venueName: z.string().optional().default(''),
@@ -59,40 +85,53 @@ export const eventDetailSchema = z.object({
   imageUrl: z.string().default(''),
   bannerUrl: z.string().optional().default(''),
   organizerName: z.string().optional().default(''),
-  totalSeats: z.number().default(0),
-  availableSeatsCount: z.number().optional().default(0),
-  basePrice: z.number().default(0),
-  minPrice: z.number().optional().default(0),
-  maxPrice: z.number().optional().default(0),
+  totalSeats: z.number().int().nonnegative(),
+  availableSeatsCount: z.number().int().nonnegative().optional().default(0),
+  basePrice: z.number().nonnegative(),
+  minPrice: z.number().nonnegative().optional().default(0),
+  maxPrice: z.number().nonnegative().optional().default(0),
   status: z.union([z.number(), z.string()]),
-  refundCutoffHours: z.number().optional().default(24),
-  seats: z.array(seatSchema).default([]),
+  refundCutoffHours: z.number().int().nonnegative().optional().default(24),
+  seats: z.array(seatSchema),
 }).passthrough();
 
 export const ticketItemSchema = z.object({
-  id: z.string(),
-  eventId: z.string(),
-  seatId: z.string(),
-  eventTitle: z.string(),
+  id: z.string().min(1),
+  eventId: z.string().min(1),
+  seatId: z.string().min(1),
+  eventTitle: z.string().min(1),
   eventDescription: z.string().optional().default(''),
-  eventDate: z.string(),
+  eventDate: z.string().min(1),
   endDate: z.string().optional().default(''),
   location: z.string().default(''),
   venueName: z.string().optional().default(''),
   category: z.string().optional().default(''),
   imageUrl: z.string().optional().default(''),
-  row: z.string(),
-  number: z.number(),
-  tier: z.union([z.number(), z.string()]).transform(v => typeof v === 'string' ? Number(v) || 0 : v),
-  price: z.number(),
-  status: z.string(),
-  orderCode: z.union([z.string(), z.number()]).transform(v => String(v)),
+  row: z.string().min(1),
+  number: z.number().int().positive(),
+  tier: z.union([z.number(), z.string()]).transform((v, ctx) => {
+    if (typeof v === 'number' && (v === 0 || v === 1 || v === 2)) return v;
+    if (typeof v === 'string') {
+      const lower = v.toLowerCase();
+      if (lower === 'standard' || lower === '0') return 0;
+      if (lower === 'vip' || lower === '1') return 1;
+      if (lower === 'economy' || lower === '2') return 2;
+    }
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Invalid seat tier: ${v}`,
+    });
+    return z.NEVER;
+  }),
+  price: z.number().nonnegative(),
+  status: z.string().min(1),
+  orderCode: z.union([z.string().min(1), z.number()]).transform(v => String(v)),
   qrCodeSignature: z.string().optional().default(''),
   paidAt: z.string().optional().nullable(),
   checkedInAt: z.string().optional().nullable(),
   refundAmount: z.number().optional().nullable(),
   refundedAt: z.string().optional().nullable(),
-  refundCutoffHours: z.number().optional().default(24),
+  refundCutoffHours: z.number().int().nonnegative().optional().default(24),
   canRefund: z.boolean().optional().default(false),
 }).passthrough();
 
@@ -185,9 +224,20 @@ export function useMyTicketsQuery(page?: number, pageSize?: number, status?: str
         throw new Error(response.data.message || 'Không thể tải danh sách vé');
       }
 
-      const rawItems = Array.isArray(response.data.data)
-        ? response.data.data
-        : (response.data.data?.items ?? []);
+      const rawData = response.data?.data;
+      if (!rawData) {
+        throw new Error('Dữ liệu danh sách vé rỗng hoặc không hợp lệ từ máy chủ');
+      }
+
+      const rawItems = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData?.items)
+          ? rawData.items
+          : null;
+
+      if (!rawItems) {
+        throw new Error('Định dạng danh sách vé từ máy chủ không hợp lệ');
+      }
 
       const parsed = ticketsResponseSchema.safeParse(rawItems);
       if (!parsed.success) {

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Loader2, ArrowLeft, Info, Check, Zap, ArrowRight, Clock, ShieldAlert } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { EventDetail, Seat, SeatStatus, SeatStatusChangedPayload } from '../types';
 import CheckoutModal from '../components/CheckoutModal';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -18,15 +19,15 @@ import { useEventDetailQuery } from '../hooks/useCustomerQueries';
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const queryClient = useQueryClient();
 
   const {
-    data: fetchedEvent,
+    data: event,
     isLoading: loading,
     isError: loadError,
     refetch: refetchEvent,
   } = useEventDetailQuery(id);
 
-  const [event, setEvent] = useState<EventDetail | null>(null);
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [locking, setLocking] = useState(false);
@@ -36,12 +37,14 @@ export default function EventDetailPage() {
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
-  // Sync fetchedEvent to local mutable event (for SignalR real-time updates)
+  // Reset seat selection & checkout states when switching between event routes
   useEffect(() => {
-    if (fetchedEvent) {
-      setEvent(fetchedEvent);
-    }
-  }, [fetchedEvent]);
+    setSelectedSeat(null);
+    setIsCheckoutOpen(false);
+    const cleared = clearCheckoutState();
+    setTicketId(cleared.ticketId);
+    setLockExpiresAt(cleared.lockExpiresAt);
+  }, [id]);
 
   // Lock expiration callback
   const handleLockExpire = useCallback(() => {
@@ -62,7 +65,7 @@ export default function EventDetailPage() {
 
   // Handle Real-time Seat Status Updates from SignalR
   const handleSeatStatusChanged = useCallback((payload: SeatStatusChangedPayload & { seatId: string; status: SeatStatus }) => {
-    setEvent((prev) => {
+    queryClient.setQueryData<EventDetail>(['events', 'detail', id], (prev) => {
       if (!prev) return prev;
       const seats = prev.seats ?? [];
       const currentSeat = seats.find(seat => seat.id === payload.seatId);
@@ -83,7 +86,7 @@ export default function EventDetailPage() {
       }
       return prev;
     });
-  }, [refetchEvent]);
+  }, [id, queryClient, refetchEvent]);
 
   const { status: seatConnectionStatus, retry: retrySeatConnection } = useSeatSignalR(id, handleSeatStatusChanged);
 

@@ -61,13 +61,15 @@ export default function ProfilePage() {
       setLoading(true);
       setLoadError(false);
       const res = await api.get('/api/users/me', { signal });
-      if (res.data.success) {
+      if (res.data?.success && res.data?.data) {
         setEmail(res.data.data.email || '');
         resetProfile({
           name: res.data.data.name || '',
           phone: res.data.data.phone || '',
           avatarUrl: res.data.data.avatarUrl || ''
         });
+      } else {
+        setLoadError(true);
       }
     } catch (error: unknown) {
       if ((error as { code?: string })?.code === 'ERR_CANCELED') return;
@@ -90,11 +92,13 @@ export default function ProfilePage() {
         phone: values.phone.trim(),
         avatarUrl: values.avatarUrl.trim()
       });
-      if (res.data.success) {
+      if (res.data?.success) {
         toast.success('Cập nhật hồ sơ thành công!');
         if (user) {
           setAuth({ ...user, name: values.name.trim(), avatarUrl: values.avatarUrl.trim() }, token);
         }
+      } else {
+        toast.error(res.data?.message || 'Không thể cập nhật hồ sơ');
       }
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { message?: string } } };
@@ -108,9 +112,11 @@ export default function ProfilePage() {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword
       });
-      if (res.data.success) {
+      if (res.data?.success) {
         toast.success('Đổi mật khẩu thành công!');
         resetPassword({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        toast.error(res.data?.message || 'Không thể đổi mật khẩu');
       }
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { message?: string } } };

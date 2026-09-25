@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Ticket, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { TicketCard, TicketItemData } from './TicketCard';
 import { TicketFilterTabs, allowedTicketTabs, TicketTabType } from './TicketFilterTabs';
@@ -13,6 +14,7 @@ const PAGE_SIZE = 10;
 
 export default function MyTicketsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [refundCandidate, setRefundCandidate] = useState<TicketItemData | null>(null);
 
@@ -32,13 +34,7 @@ export default function MyTicketsPage() {
     refetch: refetchTickets,
   } = useMyTicketsQuery(currentPage, PAGE_SIZE, filterTab === 'All' ? undefined : filterTab);
 
-  const [tickets, setTickets] = useState<TicketItemData[]>([]);
-
-  useEffect(() => {
-    if (fetchedTickets) {
-      setTickets(fetchedTickets);
-    }
-  }, [fetchedTickets]);
+  const tickets = useMemo(() => fetchedTickets ?? [], [fetchedTickets]);
 
   const handleTabChange = useCallback((tab: TicketTabType) => {
     const next = new URLSearchParams(searchParams);
@@ -69,7 +65,7 @@ export default function MyTicketsPage() {
       });
       if (response.data.success) {
         toast.success(response.data.message || 'Yêu cầu hoàn vé đã được gửi và đang chờ xử lý.');
-        setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, status: 'RefundPending', canRefund: false } : t));
+        await queryClient.invalidateQueries({ queryKey: ['tickets'] });
       } else {
         toast.error(response.data.message || 'Không thể gửi yêu cầu hoàn vé.');
       }
@@ -79,7 +75,7 @@ export default function MyTicketsPage() {
     } finally {
       setRefundingId(null);
     }
-  }, []);
+  }, [queryClient]);
 
   const filteredTickets = useMemo(() => {
     return tickets.filter(t => {
@@ -138,7 +134,20 @@ export default function MyTicketsPage() {
             <Ticket className="w-6 h-6" />
           </div>
           <h3 className="text-lg font-bold text-white mb-0.5">Không tìm thấy vé nào</h3>
-          <p className="text-text-secondary text-xs">Bạn chưa có vé nào thuộc danh mục này.</p>
+          <p className="text-text-secondary text-xs">
+            {currentPage > 1 
+              ? `Không có vé nào trên trang ${currentPage}.` 
+              : 'Bạn chưa có vé nào thuộc danh mục này.'}
+          </p>
+          {currentPage > 1 && (
+            <button
+              type="button"
+              onClick={() => handlePageChange(1)}
+              className="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-brand-primary text-xs font-bold text-white hover:bg-brand-primary/90 transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer"
+            >
+              Quay lại trang 1
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-5">
