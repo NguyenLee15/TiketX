@@ -22,7 +22,12 @@ api.interceptors.request.use((config) => {
     const csrfToken = readCsrfToken();
     if (csrfToken) config.headers['X-CSRF-TOKEN'] = csrfToken;
 
-    if (!config.headers['Idempotency-Key']) {
+    const existingKey =
+      config.headers['Idempotency-Key'] ||
+      config.headers['idempotency-key'] ||
+      (typeof config.headers.get === 'function' ? config.headers.get('Idempotency-Key') : undefined);
+
+    if (!existingKey) {
       config.headers['Idempotency-Key'] =
         typeof crypto !== 'undefined' && crypto.randomUUID
           ? crypto.randomUUID()

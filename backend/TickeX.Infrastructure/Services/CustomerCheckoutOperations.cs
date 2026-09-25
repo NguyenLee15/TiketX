@@ -57,6 +57,9 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         if (ticket.UserId != userId) return Fail("PAYMENT_FORBIDDEN", "Bạn không có quyền thanh toán vé này.");
         if (ticket.Status != TicketStatus.Pending)
             return Fail(ticket.Status == TicketStatus.Paid ? "PAYMENT_ALREADY_PAID" : "PAYMENT_NOT_PENDING", "Vé không còn chờ thanh toán.");
+        var holdThreshold = _time.UtcNow.AddMinutes(-10);
+        if (ticket.CreatedAt <= holdThreshold)
+            return Fail("RESERVATION_EXPIRED", "Thời gian giữ vé đã hết hạn. Vui lòng chọn lại ghế.");
         if (ticket.Event is null || ticket.Event.IsDeleted || ticket.Event.Status != EventStatus.Published || ticket.Event.Date <= _time.UtcNow)
             return Fail("EVENT_NOT_ON_SALE", "Sự kiện không còn mở bán.");
 
@@ -134,6 +137,17 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
                 if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
                 return Fail("PAYMENT_PROVIDER_ERROR", "Lỗi kết nối cổng thanh toán. Vui lòng thử lại.");
             }
+        }
+
+        // Re-validate that the ticket hold has not expired during external PayOS I/O
+        if (ticket.CreatedAt <= _time.UtcNow.AddMinutes(-10) || ticket.Status != TicketStatus.Pending)
+        {
+            if (isNew)
+            {
+                _context.PaymentTransactions.Remove(transaction);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            return Fail("RESERVATION_EXPIRED", "Thời gian giữ vé đã hết hạn trong lúc khởi tạo thanh toán. Vui lòng chọn lại ghế.");
         }
 
         transaction.SetCheckoutUrl(checkoutUrl);

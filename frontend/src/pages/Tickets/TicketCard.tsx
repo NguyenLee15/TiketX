@@ -20,7 +20,7 @@ export interface TicketItemData {
   tier: number;
   price: number;
   status: string;
-  orderCode: number;
+  orderCode: string | number;
   qrCodeSignature: string;
   paidAt?: string;
   checkedInAt?: string;
@@ -51,7 +51,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
     try {
       setIsDownloadingPdf(true);
       const { generateTicketPdf } = await import('../../utils/ticketPdfGenerator');
-      await generateTicketPdf(ticket);
+      await generateTicketPdf(ticket as unknown as Parameters<typeof generateTicketPdf>[0]);
     } catch (err) {
       console.error('Failed to generate ticket PDF', err);
     } finally {

@@ -29,7 +29,9 @@ public class PayOSService : IPayOSService
         _checksumKey = configuration["PayOS:ChecksumKey"] ?? throw new ArgumentNullException("PayOS:ChecksumKey");
         _logger = logger;
         
-        _httpClient.BaseAddress = new Uri("https://api-merchant.payos.vn/");
+        var baseUrl = configuration["PayOS:BaseUrl"]?.Trim() ?? "https://api-merchant.payos.vn/";
+        if (!baseUrl.EndsWith('/')) baseUrl += "/";
+        _httpClient.BaseAddress = new Uri(baseUrl);
         _httpClient.Timeout = TimeSpan.FromSeconds(15);
         _httpClient.DefaultRequestHeaders.Add("x-client-id", _clientId);
         _httpClient.DefaultRequestHeaders.Add("x-api-key", _apiKey);

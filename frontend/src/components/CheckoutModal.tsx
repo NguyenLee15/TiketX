@@ -7,6 +7,8 @@ import api from '../services/api';
 import { CheckoutInvoice } from './Checkout/CheckoutInvoice';
 import { CheckoutVietQrView, PaymentInfo } from './Checkout/CheckoutVietQrView';
 import { CheckoutReleaseDialog } from './Checkout/CheckoutReleaseDialog';
+import { useModalAccessibility } from './Admin/useModalAccessibility';
+import { checkoutLinkResponseSchema } from '../schemas/customerSchemas';
 
 interface CheckoutModalProps {
   isOpen?: boolean;
@@ -46,6 +48,16 @@ export default function CheckoutModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const simulateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const handleModalClose = useCallback(() => {
+    if (status === 'error') {
+      onClose();
+    } else {
+      setShowCloseConfirm(true);
+    }
+  }, [status, onClose]);
+
+  useModalAccessibility(Boolean(isOpen), releasing || loadingPayment, handleModalClose, modalRef);
+
   // Sync timeLeft when expiresAt changes
   useEffect(() => {
     setTimeLeft(calculateRemaining(expiresAt));
@@ -71,7 +83,14 @@ export default function CheckoutModal({
         }, { signal: controller.signal });
 
         if (isMounted && response.data.success) {
-          setPaymentData(response.data.data);
+          const parsed = checkoutLinkResponseSchema.safeParse(response.data.data);
+          if (parsed.success) {
+            setPaymentData(parsed.data as PaymentInfo);
+          } else {
+            const msg = 'Dữ liệu thông tin thanh toán không hợp lệ.';
+            setPaymentInitError(msg);
+            toast.error(msg);
+          }
         }
       } catch (err: unknown) {
         if (!isMounted) return;

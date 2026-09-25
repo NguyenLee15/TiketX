@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, Clock3, ArrowRight, Home, Ticket, RefreshCw, Ale
 import confetti from 'canvas-confetti';
 import api from '../services/api';
 import { normalizePaymentStatus, type PaymentStatus } from '../utils/customerState';
+import { paymentStatusResponseSchema } from '../schemas/customerSchemas';
 
 const TERMINAL = new Set<PaymentStatus>(['Paid', 'Failed', 'Cancelled', 'Expired', 'Used', 'Unknown']);
 const BACKOFF_MS = [1500, 2500, 4000, 6000, 8000, 10000];
@@ -58,7 +59,18 @@ export default function PaymentResultPage() {
       }
 
       const response = await api.get(`/api/payments/status/${encodeURIComponent(orderCode)}`, { signal });
-      const next = normalizePaymentStatus(response.data?.data?.status);
+      const parsed = paymentStatusResponseSchema.safeParse(response.data?.data);
+      if (!parsed.success) {
+        if (!signal?.aborted && mountedRef.current) {
+          setPhase({
+            state: 'unknown',
+            status: 'Unknown',
+            message: 'Phản hồi từ cổng thanh toán không khớp định dạng hợp lệ. Vui lòng đối soát lại trong danh sách vé.',
+          });
+        }
+        return true;
+      }
+      const next = normalizePaymentStatus(parsed.data.status);
 
       if (!signal?.aborted && mountedRef.current) {
         if (next === 'Paid') {

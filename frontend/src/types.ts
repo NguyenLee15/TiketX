@@ -20,6 +20,7 @@ export interface Seat {
   price: number;
   version: string;
   isLockedByMe?: boolean;
+  isLockedByCurrentUser?: boolean;
 }
 
 export interface Event {
@@ -65,7 +66,7 @@ export interface TicketData {
   tier?: SeatTier | string;
   price: number;
   status: string; // 'Pending' | 'Paid' | 'Cancelled' | 'Used'
-  orderCode: number;
+  orderCode: string | number;
   qrCodeSignature?: string;
   paidAt?: string;
   checkedInAt?: string;

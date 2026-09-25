@@ -5,12 +5,12 @@ namespace TickeX.Infrastructure.Services;
 
 public class BcryptPasswordHasher : IPasswordHasher
 {
-    // Pre-computed BCrypt hash with cost 11 for timing attack resistance
-    private static readonly string DummyHash = BCrypt.Net.BCrypt.HashPassword("TickeX-Dummy-Constant-Password", 11);
+    // Pre-computed BCrypt hash with cost 12 for timing attack resistance
+    private static readonly string DummyHash = BCrypt.Net.BCrypt.HashPassword("TickeX-Dummy-Constant-Password", 12);
 
     public string Hash(string password)
     {
-        return BCrypt.Net.BCrypt.HashPassword(password, 11);
+        return BCrypt.Net.BCrypt.HashPassword(password, 12);
     }
 
     public bool Verify(string password, string hash)

@@ -32,6 +32,7 @@ const MockPayOSPage = import.meta.env.DEV
   : null;
 
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { authRefreshResponseSchema } from './schemas/customerSchemas';
 
 function App() {
   const setAuth = useAuthStore(state => state.setAuth);
@@ -41,12 +42,17 @@ function App() {
     let active = true;
     api.post('/api/auth/refresh', {})
       .then(response => {
-        if (!active || !response.data?.success || !response.data?.data?.userId) return;
-        const data = response.data.data;
+        if (!active || !response.data?.success) return;
+        const parsed = authRefreshResponseSchema.safeParse(response.data.data);
+        if (!parsed.success) {
+          if (active && useAuthStore.getState().user) logout();
+          return;
+        }
+        const data = parsed.data;
         setAuth({
           id: data.userId,
           name: data.name ?? '',
-           email: data.email ?? useAuthStore.getState().user?.email ?? '',
+          email: data.email ?? useAuthStore.getState().user?.email ?? '',
           role: data.role ?? 'Customer',
         }, data.token ?? null);
       })

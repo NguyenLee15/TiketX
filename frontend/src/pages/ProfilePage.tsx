@@ -13,6 +13,7 @@ import {
 } from './Profile/profileSchemas';
 import { ProfileInfoForm } from './Profile/ProfileInfoForm';
 import { ChangePasswordForm } from './Profile/ChangePasswordForm';
+import { userProfileResponseSchema } from '../schemas/customerSchemas';
 
 export default function ProfilePage() {
   const [email, setEmail] = useState('');
@@ -62,12 +63,17 @@ export default function ProfilePage() {
       setLoadError(false);
       const res = await api.get('/api/users/me', { signal });
       if (res.data?.success && res.data?.data) {
-        setEmail(res.data.data.email || '');
-        resetProfile({
-          name: res.data.data.name || '',
-          phone: res.data.data.phone || '',
-          avatarUrl: res.data.data.avatarUrl || ''
-        });
+        const parsed = userProfileResponseSchema.safeParse(res.data.data);
+        if (parsed.success) {
+          setEmail(parsed.data.email || '');
+          resetProfile({
+            name: parsed.data.name || '',
+            phone: parsed.data.phone || '',
+            avatarUrl: parsed.data.avatarUrl || ''
+          });
+        } else {
+          setLoadError(true);
+        }
       } else {
         setLoadError(true);
       }

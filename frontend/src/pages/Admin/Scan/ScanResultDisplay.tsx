@@ -11,7 +11,7 @@ export interface ScanTicketData {
   number: number;
   tier: number | string;
   price?: number;
-  orderCode?: number;
+  orderCode?: string | number;
   checkedInAt?: string;
 }
 

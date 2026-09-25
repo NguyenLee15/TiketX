@@ -16,6 +16,8 @@ namespace TickeX.WebApi.Filters;
 public sealed class IdempotentAttribute : Attribute, IFilterFactory
 {
     public int TtlSeconds { get; set; } = 86400; // 24 hours default
+    public bool Required { get; set; } = true;
+    public bool FailClosed { get; set; } = true;
     public bool IsReusable => true;
 
     public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
@@ -23,7 +25,7 @@ public sealed class IdempotentAttribute : Attribute, IFilterFactory
         var cache = serviceProvider.GetRequiredService<IDistributedCache>();
         var logger = serviceProvider.GetRequiredService<ILogger<IdempotencyFilter>>();
         var redis = serviceProvider.GetService<IConnectionMultiplexer>();
-        return new IdempotencyFilter(cache, logger, redis, TtlSeconds);
+        return new IdempotencyFilter(cache, logger, redis, TtlSeconds, Required, FailClosed);
     }
 }
 
@@ -46,30 +48,91 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
     private readonly ILogger<IdempotencyFilter> _logger;
     private readonly IConnectionMultiplexer? _redis;
     private readonly int _ttlSeconds;
+    private readonly bool _required;
+    private readonly bool _failClosed;
 
     public IdempotencyFilter(
         IDistributedCache cache,
         ILogger<IdempotencyFilter> logger,
         IConnectionMultiplexer? redis = null,
-        int ttlSeconds = 86400)
+        int ttlSeconds = 86400,
+        bool required = true,
+        bool failClosed = true)
     {
         _cache = cache;
         _logger = logger;
         _redis = redis;
         _ttlSeconds = ttlSeconds > 0 ? ttlSeconds : 86400;
+        _required = required;
+        _failClosed = failClosed;
     }
+
+    private static bool IsValidUuidV4(string input, out Guid guid)
+    {
+        if (Guid.TryParseExact(input, "D", out guid) && input.Length == 36)
+        {
+            if (input[14] == '4' && (input[19] is '8' or '9' or 'a' or 'b' or 'A' or 'B'))
+            {
+                return true;
+            }
+        }
+        guid = Guid.Empty;
+        return false;
+    }
+
+    private static ObjectResult CreateServiceUnavailableResult(HttpContext httpContext) =>
+        new(new
+        {
+            type = "https://tools.ietf.org/html/rfc9457",
+            title = "Idempotency Storage Unavailable",
+            status = StatusCodes.Status503ServiceUnavailable,
+            success = false,
+            code = "IDEMPOTENCY_STORAGE_UNAVAILABLE",
+            message = "Hệ thống bảo đảm an toàn giao dịch tạm thời không khả dụng. Vui lòng thử lại sau.",
+            traceId = httpContext.TraceIdentifier,
+            instance = httpContext.Request.Path.Value,
+            error = new
+            {
+                code = "IDEMPOTENCY_STORAGE_UNAVAILABLE",
+                message = "Hệ thống bảo đảm an toàn giao dịch tạm thời không khả dụng. Vui lòng thử lại sau."
+            }
+        })
+        {
+            StatusCode = StatusCodes.Status503ServiceUnavailable
+        };
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         if (!context.HttpContext.Request.Headers.TryGetValue(HeaderName, out var rawValues) ||
             string.IsNullOrWhiteSpace(rawValues.FirstOrDefault()))
         {
+            if (_required)
+            {
+                context.Result = new BadRequestObjectResult(new
+                {
+                    type = "https://tools.ietf.org/html/rfc9457",
+                    title = "Missing Idempotency Key",
+                    status = StatusCodes.Status400BadRequest,
+                    success = false,
+                    code = "MISSING_IDEMPOTENCY_KEY",
+                    message = "Thao tác này yêu cầu header Idempotency-Key (UUIDv4) để đảm bảo an toàn giao dịch.",
+                    traceId = context.HttpContext.TraceIdentifier,
+                    instance = context.HttpContext.Request.Path.Value,
+                    error = new
+                    {
+                        code = "MISSING_IDEMPOTENCY_KEY",
+                        message = "Thao tác này yêu cầu header Idempotency-Key (UUIDv4) để đảm bảo an toàn giao dịch."
+                    }
+                });
+                return;
+            }
+
             await next();
             return;
         }
 
         var keyString = rawValues.First()!.Trim();
-        if (!Guid.TryParse(keyString, out var keyGuid))
+        if (!IsValidUuidV4(keyString, out var keyGuid))
         {
             context.Result = new BadRequestObjectResult(new
             {
@@ -112,7 +175,12 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Failed to read idempotency cache for {CacheKey}", cacheKey);
+            _logger.LogError(ex, "Failed to read idempotency cache for {CacheKey}", cacheKey);
+            if (_failClosed)
+            {
+                context.Result = CreateServiceUnavailableResult(context.HttpContext);
+                return;
+            }
         }
 
         if (existingRecord != null)
@@ -221,7 +289,12 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                _logger.LogWarning(ex, "Failed to acquire Redis lock for key {LockKey}. Proceeding with distributed cache.", lockKey);
+                _logger.LogError(ex, "Failed to acquire Redis lock for key {LockKey}", lockKey);
+                if (_failClosed)
+                {
+                    context.Result = CreateServiceUnavailableResult(context.HttpContext);
+                    return;
+                }
             }
         }
 
@@ -241,7 +314,16 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Failed to record idempotency sentinel in cache for {CacheKey}", cacheKey);
+            _logger.LogError(ex, "Failed to record idempotency sentinel in cache for {CacheKey}", cacheKey);
+            if (_failClosed)
+            {
+                if (lockAcquired && lockToken != null)
+                {
+                    await ReleaseLockSafeAsync(lockKey, lockToken);
+                }
+                context.Result = CreateServiceUnavailableResult(context.HttpContext);
+                return;
+            }
         }
 
         // 4. Execute action pipeline

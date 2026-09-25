@@ -87,7 +87,7 @@ public class SeatsController : ControllerBase
             });
         }
 
-        return Created($"/api/seats/{id}", new 
+        return Created($"/api/tickets/{lockResult.TicketId}", new 
         { 
             success = true, 
             data = new 

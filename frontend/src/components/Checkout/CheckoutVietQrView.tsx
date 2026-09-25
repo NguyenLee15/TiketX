@@ -2,7 +2,7 @@ import React from 'react';
 import { Loader2, Copy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 
 export interface PaymentInfo {
-  orderCode?: number;
+  orderCode?: string | number;
   amount?: number;
   checkoutUrl?: string;
   qrCodeUrl?: string;

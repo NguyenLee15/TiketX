@@ -127,6 +127,17 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                         existingTx.MarkOrphaned($"Hold expired or invalid status: {ticket.Status}", providerTxId, auditSummary);
                     }
 
+                    var audit = new AuditLog(
+                        ticket.UserId,
+                        "system@tickex.internal",
+                        "ORPHANED_PAYMENT_DETECTED",
+                        "PaymentTransaction",
+                        data.OrderCode.ToString(),
+                        $"TicketStatus: {ticket.Status}",
+                        $"ProviderTxId: {providerTxId}; ActionRequired: RefundCompensation"
+                    );
+                    _context.AuditLogs.Add(audit);
+
                     await _context.SaveChangesAsync(cancellationToken);
                     return true; // Acknowledge webhook to avoid endless retries while preserving compensation state
                 }

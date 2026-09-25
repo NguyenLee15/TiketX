@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -338,6 +340,57 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         var updatedSeat = await _context.Seats.AsNoTracking().SingleAsync(s => s.Id == targetSeat.Id);
         updatedSeat.Status.Should().Be(SeatStatus.Locked);
         updatedSeat.LockedByUserId.Should().Be(userId);
+    }
+
+    [Fact]
+    public async Task CreatePaymentLink_WhenHoldHasExpired_RejectsWithReservationExpired()
+    {
+        var user = new User("Customer", "expired_hold@test.local", "hash");
+        var @event = CreateEvent("ExpiredHoldEvent", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        _context.Entry(ticket).Property(nameof(BaseEntity.CreatedAt)).CurrentValue = DateTime.UtcNow.AddMinutes(-15);
+        await _context.SaveChangesAsync();
+
+        var payos = new Mock<IPayOSService>();
+        var mediator = new Mock<MediatR.IMediator>();
+        var environment = new Mock<IHostEnvironment>();
+        environment.SetupGet(x => x.EnvironmentName).Returns(Environments.Production);
+        var settings = new Dictionary<string, string?>
+        {
+            ["PayOS:ReturnUrl"] = "https://tickex.local/payment-result",
+            ["PayOS:CancelUrl"] = "https://tickex.local/my-tickets",
+            ["PayOS:ClientId"] = "configured"
+        };
+        var operations = new CustomerCheckoutOperations(
+            _context, payos.Object, mediator.Object,
+            new ConfigurationBuilder().AddInMemoryCollection(settings).Build(),
+            environment.Object, NullLogger<CustomerCheckoutOperations>.Instance);
+
+        var result = await operations.CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.Code.Should().Be("RESERVATION_EXPIRED");
+        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public void BcryptPasswordHasher_WorkFactor12_ProducesVerifiableHash()
+    {
+        var hasher = new BcryptPasswordHasher();
+        const string rawPassword = "StrongPassword@123!";
+
+        var hash = hasher.Hash(rawPassword);
+
+        hash.Should().StartWith("$2a$12$");
+        hasher.Verify(rawPassword, hash).Should().BeTrue();
+        hasher.Verify("WrongPassword", hash).Should().BeFalse();
     }
 
     private static Event CreateEvent(string title, DateTime date) =>
