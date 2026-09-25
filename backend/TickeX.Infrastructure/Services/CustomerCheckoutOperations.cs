@@ -60,43 +60,84 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         if (ticket.Event is null || ticket.Event.IsDeleted || ticket.Event.Status != EventStatus.Published || ticket.Event.Date <= _time.UtcNow)
             return Fail("EVENT_NOT_ON_SALE", "Sự kiện không còn mở bán.");
 
-        var existing = await _context.PaymentTransactions.AsNoTracking()
+        var existing = await _context.PaymentTransactions
             .SingleOrDefaultAsync(x => x.OrderCode == ticket.OrderCode, cancellationToken);
-        if (existing is not null && existing.Status == "Pending" && !string.IsNullOrWhiteSpace(existing.CheckoutUrl))
-            return Link(ticket, existing.CheckoutUrl);
+
+        if (existing is not null)
+        {
+            if (existing.Status == "Pending" && !string.IsNullOrWhiteSpace(existing.CheckoutUrl))
+                return Link(ticket, existing.CheckoutUrl);
+
+            if (existing.Status == "Pending" && string.IsNullOrWhiteSpace(existing.CheckoutUrl) && existing.CreatedAt > _time.UtcNow.AddSeconds(-30))
+                return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được xử lý. Vui lòng chờ giây lát.");
+        }
+
+        PaymentTransaction transaction;
+        bool isNew = false;
+        if (existing is null)
+        {
+            // Pre-persist local intent to claim atomic ownership at the DB level before external provider I/O
+            transaction = new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price, "VietQR_PayOS");
+            _context.PaymentTransactions.Add(transaction);
+            isNew = true;
+            try
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogInformation(ex, "A competing payment-link request won the intent race for {OrderCode}", ticket.OrderCode);
+                var concurrent = await _context.PaymentTransactions.AsNoTracking()
+                    .SingleOrDefaultAsync(x => x.OrderCode == ticket.OrderCode, cancellationToken);
+                if (concurrent is not null && concurrent.Status == "Pending" && !string.IsNullOrWhiteSpace(concurrent.CheckoutUrl))
+                    return Link(ticket, concurrent.CheckoutUrl);
+                return Fail("PAYMENT_LINK_CONFLICT", "Yêu cầu thanh toán đang được xử lý. Vui lòng thử lại.");
+            }
+        }
+        else
+        {
+            transaction = existing;
+        }
 
         var clientId = _configuration["PayOS:ClientId"];
         var checkoutUrl = string.Empty;
         if (string.IsNullOrWhiteSpace(clientId) || clientId == "YOUR_PAYOS_CLIENT_ID")
         {
             if (!_environment.IsDevelopment())
+            {
+                if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
                 return Fail("PAYMENT_PROVIDER_UNAVAILABLE", "Cổng thanh toán chưa được cấu hình.");
+            }
             checkoutUrl = $"/mock-payos?orderCode={ticket.OrderCode}";
         }
         else
         {
-            var result = await _payOS.CreatePaymentLink(ticket.OrderCode, decimal.ToInt32(ticket.Price),
-                $"TickeX {ticket.OrderCode}", ReturnUrl(ticket.OrderCode), CancelUrl(ticket.OrderCode));
-            if (result is null || string.IsNullOrWhiteSpace(result.CheckoutUrl))
-                return Fail("PAYMENT_PROVIDER_UNAVAILABLE", "Không thể tạo liên kết thanh toán.");
-            checkoutUrl = result.CheckoutUrl;
+            try
+            {
+                var result = await _payOS.CreatePaymentLink(ticket.OrderCode, decimal.ToInt32(ticket.Price),
+                    $"TickeX {ticket.OrderCode}", ReturnUrl(ticket.OrderCode), CancelUrl(ticket.OrderCode), cancellationToken);
+                if (result is null || string.IsNullOrWhiteSpace(result.CheckoutUrl))
+                {
+                    if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
+                    return Fail("PAYMENT_PROVIDER_UNAVAILABLE", "Không thể tạo liên kết thanh toán.");
+                }
+                checkoutUrl = result.CheckoutUrl;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(CancellationToken.None); }
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "PayOS CreatePaymentLink failed for {OrderCode}", ticket.OrderCode);
+                if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
+                return Fail("PAYMENT_PROVIDER_ERROR", "Lỗi kết nối cổng thanh toán. Vui lòng thử lại.");
+            }
         }
 
-        var transaction = new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price, "VietQR_PayOS");
         transaction.SetCheckoutUrl(checkoutUrl);
-        _context.PaymentTransactions.Add(transaction);
-        try
-        {
-            await _context.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException ex)
-        {
-            _logger.LogInformation(ex, "A competing payment-link request completed for {OrderCode}", ticket.OrderCode);
-            var concurrent = await _context.PaymentTransactions.AsNoTracking().SingleOrDefaultAsync(x => x.OrderCode == ticket.OrderCode, cancellationToken);
-            if (concurrent is not null && concurrent.Status == "Pending" && !string.IsNullOrWhiteSpace(concurrent.CheckoutUrl))
-                return Link(ticket, concurrent.CheckoutUrl);
-            return Fail("PAYMENT_LINK_CONFLICT", "Yêu cầu thanh toán đang được xử lý. Vui lòng thử lại.");
-        }
+        await _context.SaveChangesAsync(cancellationToken);
         return Link(ticket, checkoutUrl);
     }
 

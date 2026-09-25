@@ -93,10 +93,18 @@ jobs:
         docker compose --env-file .env.example logs --no-color
         exit 1
 
-    - name: Scan production images
-      uses: aquasecurity/trivy-action@0.33.1
+    - name: Scan production images (Frontend)
+      uses: aquasecurity/trivy-action@v0.33.1
       with:
         image-ref: tickex-frontend:latest
+        format: table
+        exit-code: '1'
+        severity: CRITICAL,HIGH
+
+    - name: Scan production images (Backend)
+      uses: aquasecurity/trivy-action@v0.33.1
+      with:
+        image-ref: tickex-backend:latest
         format: table
         exit-code: '1'
         severity: CRITICAL,HIGH

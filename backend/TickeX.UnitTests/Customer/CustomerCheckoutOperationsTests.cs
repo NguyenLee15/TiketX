@@ -42,7 +42,7 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
         await _context.SaveChangesAsync();
 
         var payos = new Mock<IPayOSService>();
-        payos.Setup(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        payos.Setup(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CreatePaymentResult { CheckoutUrl = "https://pay.example/checkout" });
         var operations = CreateOperations(payos.Object);
 
@@ -51,7 +51,36 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
 
         first.Success.Should().BeTrue();
         second.CheckoutUrl.Should().Be("https://pay.example/checkout");
-        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreatePaymentLink_WhenPendingIntentAlreadyExists_ReturnsInProgressWithoutCallingPayOS()
+    {
+        var user = new User("Customer", "competing@test.local", "hash");
+        var @event = new Event("Future", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(2), "HCM", "Venue", 1);
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        // Simulate an intent pre-persisted by a competing in-flight request (without checkout URL yet)
+        var pendingIntent = new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price, "VietQR_PayOS");
+        _context.PaymentTransactions.Add(pendingIntent);
+        await _context.SaveChangesAsync();
+
+        var payos = new Mock<IPayOSService>();
+        var operations = CreateOperations(payos.Object);
+
+        var result = await operations.CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.Code.Should().Be("PAYMENT_LINK_IN_PROGRESS");
+        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

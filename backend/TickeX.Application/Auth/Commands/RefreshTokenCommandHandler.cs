@@ -32,7 +32,18 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
         var replacementRaw = RefreshTokenCrypto.Generate();
         var replacement = new TickeX.Domain.Entities.RefreshToken(
             user.Id, RefreshTokenCrypto.Hash(replacementRaw), DateTime.UtcNow.AddDays(30));
-        await _tokens.RotateAsync(current, replacement, cancellationToken);
+        try
+        {
+            await _tokens.RotateAsync(current, replacement, cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Another concurrent request rotated this token simultaneously.
+            // Invalidate all sessions for this account to defend against race/reuse.
+            await _tokens.RevokeAllForUserAsync(current.UserId, cancellationToken);
+            return Invalid();
+        }
+
         return new AuthResult(true, _jwt.GenerateToken(user), "Đã làm mới phiên.", user.Id, user.Name, user.Role, replacementRaw, user.Email);
     }
 

@@ -4,35 +4,99 @@ import api from '../services/api';
 import { Event, EventDetail } from '../types';
 import { TicketItemData } from '../pages/Tickets/TicketCard';
 
-const catalogResponseSchema = z.object({
-  items: z.array(z.record(z.string(), z.unknown())).default([]),
+export const eventItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().optional().default(''),
+  date: z.string(),
+  endDate: z.string().optional().nullable(),
+  location: z.string().default(''),
+  venueName: z.string().optional().default(''),
+  category: z.string().default(''),
+  imageUrl: z.string().default(''),
+  bannerUrl: z.string().optional().default(''),
+  organizerName: z.string().optional().default(''),
+  totalSeats: z.number().default(0),
+  availableSeatsCount: z.number().optional().default(0),
+  basePrice: z.number().default(0),
+  minPrice: z.number().optional().default(0),
+  maxPrice: z.number().optional().default(0),
+  status: z.union([z.number(), z.string()]),
+  refundCutoffHours: z.number().optional().default(24),
+  isDeleted: z.boolean().optional().default(false),
+  hasTicketHistory: z.boolean().optional().default(false),
+}).passthrough();
+
+export const catalogResponseSchema = z.object({
+  items: z.array(eventItemSchema).default([]),
   totalPages: z.number().default(1),
   totalCount: z.number().default(0),
+  page: z.number().optional().default(1),
+  pageSize: z.number().optional().default(10),
 }).passthrough();
 
-const eventDetailSchema = z.object({
+export const seatSchema = z.object({
   id: z.string(),
-  name: z.string(),
-  date: z.string(),
-  venue: z.string(),
-  price: z.number(),
-  totalSeats: z.number(),
-  availableSeats: z.number(),
-  status: z.string(),
-}).passthrough();
-
-const ticketItemSchema = z.object({
-  id: z.string(),
-  orderCode: z.number(),
-  price: z.number(),
-  status: z.string(),
   eventId: z.string(),
-  eventName: z.string(),
-  eventDate: z.string(),
-  seatCode: z.string(),
+  row: z.string(),
+  number: z.number(),
+  tier: z.union([z.number(), z.string()]).transform(v => typeof v === 'string' ? Number(v) || 0 : v),
+  status: z.union([z.number(), z.string()]).transform(v => typeof v === 'string' ? Number(v) || 0 : v),
+  price: z.number(),
+  version: z.string(),
+  isLockedByCurrentUser: z.boolean().optional().default(false),
 }).passthrough();
 
-const ticketsResponseSchema = z.array(ticketItemSchema);
+export const eventDetailSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().optional().default(''),
+  date: z.string(),
+  endDate: z.string().optional().nullable(),
+  location: z.string().default(''),
+  venueName: z.string().optional().default(''),
+  category: z.string().default(''),
+  imageUrl: z.string().default(''),
+  bannerUrl: z.string().optional().default(''),
+  organizerName: z.string().optional().default(''),
+  totalSeats: z.number().default(0),
+  availableSeatsCount: z.number().optional().default(0),
+  basePrice: z.number().default(0),
+  minPrice: z.number().optional().default(0),
+  maxPrice: z.number().optional().default(0),
+  status: z.union([z.number(), z.string()]),
+  refundCutoffHours: z.number().optional().default(24),
+  seats: z.array(seatSchema).default([]),
+}).passthrough();
+
+export const ticketItemSchema = z.object({
+  id: z.string(),
+  eventId: z.string(),
+  seatId: z.string(),
+  eventTitle: z.string(),
+  eventDescription: z.string().optional().default(''),
+  eventDate: z.string(),
+  endDate: z.string().optional().default(''),
+  location: z.string().default(''),
+  venueName: z.string().optional().default(''),
+  category: z.string().optional().default(''),
+  imageUrl: z.string().optional().default(''),
+  row: z.string(),
+  number: z.number(),
+  tier: z.union([z.number(), z.string()]).transform(v => typeof v === 'string' ? Number(v) || 0 : v),
+  price: z.number(),
+  status: z.string(),
+  orderCode: z.union([z.string(), z.number()]).transform(v => String(v)),
+  qrCodeSignature: z.string().optional().default(''),
+  paidAt: z.string().optional().nullable(),
+  checkedInAt: z.string().optional().nullable(),
+  refundAmount: z.number().optional().nullable(),
+  refundedAt: z.string().optional().nullable(),
+  refundCutoffHours: z.number().optional().default(24),
+  canRefund: z.boolean().optional().default(false),
+}).passthrough();
+
+export const ticketsResponseSchema = z.array(ticketItemSchema);
 
 export interface CatalogQueryOptions {
   page: number;
@@ -68,12 +132,15 @@ export function useEventsCatalogQuery(options: CatalogQueryOptions) {
       }
 
       const parsed = catalogResponseSchema.safeParse(response.data.data);
-      const data = parsed.success ? parsed.data : response.data.data;
+      if (!parsed.success) {
+        const issues = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+        throw new Error(`Dữ liệu danh mục sự kiện không hợp lệ từ máy chủ: ${issues}`);
+      }
 
       return {
-        items: (data?.items || []) as unknown as Event[],
-        totalPages: data?.totalPages ?? 1,
-        totalCount: data?.totalCount ?? 0,
+        items: parsed.data.items as Event[],
+        totalPages: parsed.data.totalPages,
+        totalCount: parsed.data.totalCount,
       };
     },
     staleTime: 3 * 60 * 1000,
@@ -91,20 +158,26 @@ export function useEventDetailQuery(eventId: string | undefined) {
       }
 
       const parsed = eventDetailSchema.safeParse(response.data.data);
-      return (parsed.success ? parsed.data : response.data.data) as EventDetail;
+      if (!parsed.success) {
+        const issues = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+        throw new Error(`Dữ liệu chi tiết sự kiện không hợp lệ từ máy chủ: ${issues}`);
+      }
+
+      return parsed.data as EventDetail;
     },
     enabled: Boolean(eventId),
     staleTime: 1 * 60 * 1000,
   });
 }
 
-export function useMyTicketsQuery(page?: number, pageSize?: number) {
+export function useMyTicketsQuery(page?: number, pageSize?: number, status?: string) {
   return useQuery<TicketItemData[]>({
-    queryKey: ['tickets', 'my-tickets', { page, pageSize }],
+    queryKey: ['tickets', 'my-tickets', { page, pageSize, status }],
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams();
       if (page) params.append('page', page.toString());
       if (pageSize) params.append('pageSize', pageSize.toString());
+      if (status && status !== 'All') params.append('status', status);
 
       const url = params.toString() ? `/api/tickets/my-tickets?${params.toString()}` : '/api/tickets/my-tickets';
       const response = await api.get(url, { signal });
@@ -112,10 +185,18 @@ export function useMyTicketsQuery(page?: number, pageSize?: number) {
         throw new Error(response.data.message || 'Không thể tải danh sách vé');
       }
 
-      const parsed = ticketsResponseSchema.safeParse(response.data.data);
-      return (parsed.success ? parsed.data : response.data.data || []) as TicketItemData[];
+      const rawItems = Array.isArray(response.data.data)
+        ? response.data.data
+        : (response.data.data?.items ?? []);
+
+      const parsed = ticketsResponseSchema.safeParse(rawItems);
+      if (!parsed.success) {
+        const issues = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+        throw new Error(`Dữ liệu danh sách vé không hợp lệ từ máy chủ: ${issues}`);
+      }
+
+      return parsed.data as unknown as TicketItemData[];
     },
     staleTime: 2 * 60 * 1000,
   });
 }
-

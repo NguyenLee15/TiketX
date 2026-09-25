@@ -13,14 +13,20 @@ import { SkeletonSeatMap } from '../components/Skeletons/SkeletonSeatMap';
 import { formatCurrency } from '../utils/formatters';
 import { clearCheckoutState, shouldPreserveSeatSelection } from '../utils/customerState';
 import { useReservationCountdown } from '../hooks/useReservationCountdown';
+import { useEventDetailQuery } from '../hooks/useCustomerQueries';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+
+  const {
+    data: fetchedEvent,
+    isLoading: loading,
+    isError: loadError,
+    refetch: refetchEvent,
+  } = useEventDetailQuery(id);
+
   const [event, setEvent] = useState<EventDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [retryKey, setRetryKey] = useState(0);
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [locking, setLocking] = useState(false);
@@ -30,23 +36,12 @@ export default function EventDetailPage() {
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
-  // Fetch initial event data
-  const fetchEvent = useCallback(async (signal?: AbortSignal) => {
-    try {
-      setLoading(true);
-      setLoadError(false);
-      const res = await api.get(`/api/events/${id}`, { signal });
-      if (res.data.success) {
-        setEvent(res.data.data);
-      }
-    } catch (err) {
-      if ((err as { code?: string })?.code !== 'ERR_CANCELED') {
-        setLoadError(true);
-      }
-    } finally {
-      setLoading(false);
+  // Sync fetchedEvent to local mutable event (for SignalR real-time updates)
+  useEffect(() => {
+    if (fetchedEvent) {
+      setEvent(fetchedEvent);
     }
-  }, [id]);
+  }, [fetchedEvent]);
 
   // Lock expiration callback
   const handleLockExpire = useCallback(() => {
@@ -56,21 +51,14 @@ export default function EventDetailPage() {
     const cleared = clearCheckoutState();
     setTicketId(cleared.ticketId);
     setLockExpiresAt(cleared.lockExpiresAt);
-    void fetchEvent();
-  }, [fetchEvent]);
+    void refetchEvent();
+  }, [refetchEvent]);
 
   // Lock timer synchronized with server expiresAt
   const { timeLeft: lockTimeLeft, setTimeLeft: setLockTimeLeft } = useReservationCountdown({
     lockExpiresAt,
     onExpire: handleLockExpire
   });
-
-  useEffect(() => {
-    if (!id) return;
-    const controller = new AbortController();
-    void fetchEvent(controller.signal);
-    return () => controller.abort();
-  }, [id, retryKey, fetchEvent]);
 
   // Handle Real-time Seat Status Updates from SignalR
   const handleSeatStatusChanged = useCallback((payload: SeatStatusChangedPayload & { seatId: string; status: SeatStatus }) => {
@@ -79,7 +67,7 @@ export default function EventDetailPage() {
       const seats = prev.seats ?? [];
       const currentSeat = seats.find(seat => seat.id === payload.seatId);
       if (payload.version && currentSeat?.version && payload.version !== currentSeat.version) {
-        void fetchEvent();
+        void refetchEvent();
         return prev;
       }
       const newSeats = seats.map(seat => 
@@ -95,7 +83,7 @@ export default function EventDetailPage() {
       }
       return prev;
     });
-  }, [fetchEvent]);
+  }, [refetchEvent]);
 
   const { status: seatConnectionStatus, retry: retrySeatConnection } = useSeatSignalR(id, handleSeatStatusChanged);
 
@@ -143,13 +131,13 @@ export default function EventDetailPage() {
         toast.success(`Đã giữ ghế ${selectedSeat.row}${selectedSeat.number} thành công!`);
       } else {
         toast.error(res.data.message || 'Không thể giữ ghế này. Vui lòng chọn ghế khác.');
-        fetchEvent();
+        void refetchEvent();
       }
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { message?: string } } };
       const msg = apiErr.response?.data?.message || 'Ghế vừa có người khác đặt trước hoặc đã xảy ra xung đột. Vui lòng chọn ghế khác!';
       toast.error(msg);
-      fetchEvent();
+      void refetchEvent();
     } finally {
       setLocking(false);
     }
@@ -173,7 +161,7 @@ export default function EventDetailPage() {
         </div>
         <h3 className="text-2xl font-display font-bold text-white mb-2">{loadError ? 'Không thể tải sự kiện' : 'Không tìm thấy sự kiện'}</h3>
         <p className="text-text-secondary">Kiểm tra kết nối rồi thử lại.</p>
-        <button type="button" onClick={() => setRetryKey(value => value + 1)} className="inline-flex mt-6 px-6 py-3 bg-brand-primary text-white rounded-xl font-medium focus-visible:ring-2 focus-visible:ring-brand-primary">Thử lại</button>
+        <button type="button" onClick={() => void refetchEvent()} className="inline-flex mt-6 px-6 py-3 bg-brand-primary text-white rounded-xl font-medium focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">Thử lại</button>
         <Link to="/" className="inline-block mt-6 px-6 py-3 bg-surface-3 hover:bg-surface-2 text-white rounded-xl transition-colors font-medium">
           Quay lại danh sách sự kiện
         </Link>
@@ -303,7 +291,7 @@ export default function EventDetailPage() {
             setLockExpiresAt(cleared.lockExpiresAt);
             setLockTimeLeft(cleared.lockTimeLeft);
             setSelectedSeat(null);
-            fetchEvent();
+            void refetchEvent();
           }} 
         />
       )}

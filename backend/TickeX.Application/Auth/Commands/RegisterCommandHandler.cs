@@ -35,17 +35,18 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthResul
         }
 
         string passwordHash = _passwordHasher.Hash(request.Password);
-        
         var user = new User(request.Name?.Trim() ?? string.Empty, normalizedEmail, passwordHash);
         
+        var refreshToken = RefreshTokenCrypto.Generate();
+        var refreshTokenEntity = new TickeX.Domain.Entities.RefreshToken(
+            user.Id, RefreshTokenCrypto.Hash(refreshToken), DateTime.UtcNow.AddDays(30));
+
+        // Persist both user and refresh token in one atomic database operation
         _context.Users.Add(user);
+        _context.RefreshTokens.Add(refreshTokenEntity);
         await _context.SaveChangesAsync(cancellationToken);
 
         string token = _jwtService.GenerateToken(user);
-        var refreshToken = RefreshTokenCrypto.Generate();
-        await _refreshTokens.AddAsync(new TickeX.Domain.Entities.RefreshToken(
-            user.Id, RefreshTokenCrypto.Hash(refreshToken), DateTime.UtcNow.AddDays(30)), cancellationToken);
-        
         return new AuthResult(true, token, "Registered successfully.", user.Id, user.Name, user.Role, refreshToken, user.Email);
     }
 }

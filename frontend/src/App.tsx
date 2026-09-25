@@ -31,6 +31,8 @@ const MockPayOSPage = import.meta.env.DEV
   ? lazy(() => import('./pages/MockPayOSPage'))
   : null;
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 function App() {
   const setAuth = useAuthStore(state => state.setAuth);
   const logout = useAuthStore(state => state.logout);
@@ -56,8 +58,9 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-text-secondary">Đang tải…</div>}>
-      <Routes>
+      <ErrorBoundary>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-text-secondary">Đang tải…</div>}>
+        <Routes>
         {/* Admin & Staff Portal */}
         <Route
           path="/admin"
@@ -131,6 +134,7 @@ function App() {
         </Route>
       </Routes>
       </Suspense>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

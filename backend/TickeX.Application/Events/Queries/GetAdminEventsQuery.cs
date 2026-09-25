@@ -64,6 +64,7 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
 
         var events = await query
             .OrderByDescending(e => e.Date)
+            .ThenBy(e => e.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(e => new EventDto(

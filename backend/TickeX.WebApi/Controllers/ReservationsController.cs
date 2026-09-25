@@ -16,10 +16,17 @@ public sealed class ReservationsController : ControllerBase
     public sealed record ReleaseReservationRequest(string? Reason);
 
     [HttpPost("{ticketId:guid}/release")]
-    public async Task<IActionResult> Release(Guid ticketId, [FromBody] ReleaseReservationRequest? request)
+    public async Task<IActionResult> Release(Guid ticketId, [FromBody] ReleaseReservationRequest? request, CancellationToken cancellationToken = default)
     {
-        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Unauthorized();
-        var result = await _operations.ReleaseAsync(ticketId, userId, request?.Reason ?? "Customer cancelled checkout", HttpContext.RequestAborted);
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+            return Unauthorized(new 
+            { 
+                success = false, 
+                code = "UNAUTHORIZED", 
+                message = "User is not authenticated.",
+                error = new { code = "UNAUTHORIZED", message = "User is not authenticated." }
+            });
+        var result = await _operations.ReleaseAsync(ticketId, userId, request?.Reason ?? "Customer cancelled checkout", cancellationToken);
         if (!result.Success)
         {
             var status = result.Code switch
@@ -29,7 +36,13 @@ public sealed class ReservationsController : ControllerBase
                 "RESERVATION_LOCK_UNAVAILABLE" => StatusCodes.Status503ServiceUnavailable,
                 _ => StatusCodes.Status409Conflict
             };
-            return StatusCode(status, new { success = false, code = result.Code, message = result.Message });
+            return StatusCode(status, new 
+            { 
+                success = false, 
+                code = result.Code, 
+                message = result.Message,
+                error = new { code = result.Code, message = result.Message }
+            });
         }
         return Ok(new { success = true, code = result.Code, message = result.Message });
     }

@@ -26,23 +26,23 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("stats")]
-    public async Task<IActionResult> GetStats()
+    public async Task<IActionResult> GetStats(CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetDashboardStatsQuery());
+        var result = await _mediator.Send(new GetDashboardStatsQuery(), cancellationToken);
         return Ok(new { success = true, data = result });
     }
 
     [HttpGet("users")]
-    public async Task<IActionResult> GetUsers([FromQuery] GetUsersQuery query)
+    public async Task<IActionResult> GetUsers([FromQuery] GetUsersQuery query, CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(query);
+        var result = await _mediator.Send(query, cancellationToken);
         return Ok(new { success = true, data = result });
     }
 
     public record ChangeRoleRequest(string Role, string? ExpectedVersion = null);
 
     [HttpPut("users/{id}/role")]
-    public async Task<IActionResult> ChangeUserRole(Guid id, [FromBody] ChangeRoleRequest? request)
+    public async Task<IActionResult> ChangeUserRole(Guid id, [FromBody] ChangeRoleRequest? request, CancellationToken cancellationToken = default)
     {
         if (request is null)
             return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu vai trò mới.", error = new { code = "INVALID_REQUEST", message = "Thiếu vai trò mới." } });
@@ -60,7 +60,7 @@ public class AdminController : ControllerBase
             adminEmail,
             ipAddress,
             expectedVersion
-        ), HttpContext.RequestAborted);
+        ), cancellationToken);
 
         if (!result.Success)
             return StatusCode(result.StatusCode, new { success = false, code = result.ErrorCode, message = result.Message, error = new { code = result.ErrorCode, message = result.Message } });
@@ -71,7 +71,7 @@ public class AdminController : ControllerBase
     public record BlockUserRequest(bool IsBlocked, string? ExpectedVersion = null);
 
     [HttpPut("users/{id}/block")]
-    public async Task<IActionResult> BlockUser(Guid id, [FromBody] BlockUserRequest? request)
+    public async Task<IActionResult> BlockUser(Guid id, [FromBody] BlockUserRequest? request, CancellationToken cancellationToken = default)
     {
         if (request is null)
             return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu trạng thái tài khoản.", error = new { code = "INVALID_REQUEST", message = "Thiếu trạng thái tài khoản." } });
@@ -89,7 +89,7 @@ public class AdminController : ControllerBase
             adminEmail,
             ipAddress,
             expectedVersion
-        ), HttpContext.RequestAborted);
+        ), cancellationToken);
 
         if (!result.Success)
             return StatusCode(result.StatusCode, new { success = false, code = result.ErrorCode, message = result.Message, error = new { code = result.ErrorCode, message = result.Message } });

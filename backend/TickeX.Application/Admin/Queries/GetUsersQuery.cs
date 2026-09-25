@@ -60,6 +60,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PagedResult<U
 
         var users = await query
             .OrderByDescending(u => u.CreatedAt)
+            .ThenBy(u => u.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(u => new { u.Id, u.Name, u.Email, u.Role, u.IsBlocked, u.CreatedAt, u.Version })

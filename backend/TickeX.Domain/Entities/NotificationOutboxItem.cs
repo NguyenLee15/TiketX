@@ -16,8 +16,13 @@ public sealed class NotificationOutboxItem : BaseEntity
         (TicketId, UserId, EventId) = (ticketId, userId, eventId);
         NextAttemptAt = DateTime.UtcNow;
     }
-    public bool IsDue(DateTime utcNow) => Status == "Pending" && (!NextAttemptAt.HasValue || NextAttemptAt <= utcNow);
-    public void MarkProcessing(TimeSpan leaseDuration) { Status = "Processing"; NextAttemptAt = DateTime.UtcNow.Add(leaseDuration); UpdatedAt = DateTime.UtcNow; }
+    public void MarkProcessing(TimeSpan leaseDuration, string? leaseToken = null)
+    {
+        Status = "Processing";
+        NextAttemptAt = DateTime.UtcNow.Add(leaseDuration);
+        if (leaseToken != null) LastError = leaseToken;
+        UpdatedAt = DateTime.UtcNow;
+    }
     public void MarkCompleted() { Status = "Completed"; ProcessedAt = DateTime.UtcNow; NextAttemptAt = null; LastError = null; UpdatedAt = DateTime.UtcNow; }
     public void MarkFailed(string error, TimeSpan retryAfter) { Status = "Pending"; AttemptCount++; LastError = error; NextAttemptAt = DateTime.UtcNow.Add(retryAfter); UpdatedAt = DateTime.UtcNow; }
 }

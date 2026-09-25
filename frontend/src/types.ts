@@ -118,3 +118,10 @@ export interface UserProfile {
   avatarUrl?: string;
   role: string;
 }
+
+export type AsyncState<T> =
+  | { status: 'idle'; data?: undefined; error?: undefined }
+  | { status: 'loading'; data?: T; error?: undefined }
+  | { status: 'success'; data: T; error?: undefined }
+  | { status: 'error'; error: string; data?: T };
+

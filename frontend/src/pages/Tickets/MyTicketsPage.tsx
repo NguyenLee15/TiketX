@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Ticket, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -7,14 +7,12 @@ import { TicketCard, TicketItemData } from './TicketCard';
 import { TicketFilterTabs, allowedTicketTabs, TicketTabType } from './TicketFilterTabs';
 import { TicketRefundModal } from './TicketRefundModal';
 import { TicketPagination } from './TicketPagination';
+import { useMyTicketsQuery } from '../../hooks/useCustomerQueries';
 
 const PAGE_SIZE = 10;
 
 export default function MyTicketsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tickets, setTickets] = useState<TicketItemData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [refundCandidate, setRefundCandidate] = useState<TicketItemData | null>(null);
 
@@ -26,6 +24,21 @@ export default function MyTicketsPage() {
 
   const rawPage = parseInt(searchParams.get('page') || '1', 10);
   const currentPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+
+  const {
+    data: fetchedTickets,
+    isLoading,
+    isError: loadError,
+    refetch: refetchTickets,
+  } = useMyTicketsQuery(currentPage, PAGE_SIZE, filterTab === 'All' ? undefined : filterTab);
+
+  const [tickets, setTickets] = useState<TicketItemData[]>([]);
+
+  useEffect(() => {
+    if (fetchedTickets) {
+      setTickets(fetchedTickets);
+    }
+  }, [fetchedTickets]);
 
   const handleTabChange = useCallback((tab: TicketTabType) => {
     const next = new URLSearchParams(searchParams);
@@ -47,34 +60,6 @@ export default function MyTicketsPage() {
     }
     setSearchParams(next);
   }, [searchParams, setSearchParams]);
-
-  const fetchTickets = useCallback(async (page: number, signal?: AbortSignal) => {
-    try {
-      setIsLoading(true);
-      setLoadError(false);
-      const response = await api.get('/api/tickets/my-tickets', {
-        params: { page, pageSize: PAGE_SIZE },
-        signal,
-      });
-      if (response.data.success) {
-        setTickets(response.data.data || []);
-      } else {
-        setLoadError(true);
-      }
-    } catch (err) {
-      if ((err as { code?: string })?.code !== 'ERR_CANCELED') {
-        setLoadError(true);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetchTickets(currentPage, controller.signal);
-    return () => controller.abort();
-  }, [fetchTickets, currentPage]);
 
   const handleRefund = useCallback(async (ticket: TicketItemData) => {
     setRefundingId(ticket.id);
@@ -119,7 +104,7 @@ export default function MyTicketsPage() {
         <XCircle className="w-10 h-10 text-danger" aria-hidden="true" />
         <h1 className="text-xl font-bold text-white">Không thể tải danh sách vé</h1>
         <p className="text-sm text-text-secondary">Kiểm tra kết nối và thử lại.</p>
-        <button onClick={() => void fetchTickets(currentPage)} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">
+        <button onClick={() => void refetchTickets()} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">
           Thử lại
         </button>
       </div>

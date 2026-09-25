@@ -20,13 +20,13 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("me")]
-    public async Task<IActionResult> GetProfile()
+    public async Task<IActionResult> GetProfile(CancellationToken cancellationToken = default)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
             return UnauthorizedEnvelope();
 
-        var result = await _mediator.Send(new GetUserProfileQuery(userId));
+        var result = await _mediator.Send(new GetUserProfileQuery(userId), cancellationToken);
 
         if (result == null) 
             return NotFound(new { success = false, code = "USER_NOT_FOUND", message = "User not found", error = new { code = "USER_NOT_FOUND", message = "User not found" } });
@@ -35,14 +35,14 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("profile")]
-    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken cancellationToken = default)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
             return UnauthorizedEnvelope();
 
         var command = new UpdateProfileCommand(userId, request.Name, request.Phone, request.AvatarUrl);
-        var success = await _mediator.Send(command);
+        var success = await _mediator.Send(command, cancellationToken);
 
         if (!success) 
             return NotFound(new { success = false, code = "USER_NOT_FOUND", message = "User not found", error = new { code = "USER_NOT_FOUND", message = "User not found" } });
@@ -51,14 +51,14 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("change-password")]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken = default)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
             return UnauthorizedEnvelope();
 
         var command = new ChangePasswordCommand(userId, request.CurrentPassword, request.NewPassword);
-        var success = await _mediator.Send(command);
+        var success = await _mediator.Send(command, cancellationToken);
 
         if (!success) 
             return BadRequest(new { success = false, code = "PASSWORD_CHANGE_FAILED", message = "Invalid current password or user not found", error = new { code = "PASSWORD_CHANGE_FAILED", message = "Invalid current password or user not found" } });

@@ -19,6 +19,7 @@ static bool IsConfigured(string? value) => !string.IsNullOrWhiteSpace(value)
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 1_048_576);
 
 // Add services to the container.
+builder.Services.AddDistributedMemoryCache();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -336,6 +337,7 @@ if (app.Environment.IsDevelopment())
 
 // Configure the HTTP request pipeline.
 app.UseForwardedHeaders();
+app.UseMiddleware<TickeX.WebApi.Middleware.CorrelationIdMiddleware>();
 
 if (!app.Environment.IsDevelopment())
 {

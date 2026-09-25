@@ -23,35 +23,65 @@ public class GlobalExceptionMiddleware
         }
         catch (ValidationException ex)
         {
-            _logger.LogWarning(ex, "Validation error occurred: {Path}", context.Request.Path);
-            context.Response.ContentType = "application/json";
+            _logger.LogWarning(ex, "Validation error occurred at {Path} (TraceId: {TraceId})", context.Request.Path, context.TraceIdentifier);
+            context.Response.ContentType = "application/problem+json";
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
 
-            var errors = ex.Errors.Select(e => e.ErrorMessage).Distinct().ToList();
+            var fieldErrors = ex.Errors
+                .GroupBy(e => string.IsNullOrWhiteSpace(e.PropertyName) ? "general" : e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).Distinct().ToArray());
+
+            var flatErrors = ex.Errors.Select(e => e.ErrorMessage).Distinct().ToList();
+
             var response = new
             {
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Validation Failed",
+                status = (int)HttpStatusCode.BadRequest,
                 success = false,
                 message = "Dữ liệu đầu vào không hợp lệ.",
                 code = "VALIDATION_FAILED",
-                errors,
-                error = new { code = "VALIDATION_FAILED", message = "Dữ liệu đầu vào không hợp lệ.", details = errors }
+                traceId = context.TraceIdentifier,
+                instance = context.Request.Path.Value,
+                errors = flatErrors,
+                fieldErrors,
+                error = new
+                {
+                    code = "VALIDATION_FAILED",
+                    message = "Dữ liệu đầu vào không hợp lệ.",
+                    traceId = context.TraceIdentifier,
+                    details = flatErrors,
+                    fieldErrors
+                }
             };
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(response));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
-            context.Response.ContentType = "application/json";
+            _logger.LogError(ex, "An unhandled exception occurred at {Path} (TraceId: {TraceId}): {Message}",
+                context.Request.Path, context.TraceIdentifier, ex.Message);
+            context.Response.ContentType = "application/problem+json";
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
             var response = new
             {
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Internal Server Error",
+                status = (int)HttpStatusCode.InternalServerError,
                 success = false,
                 message = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.",
                 code = "INTERNAL_ERROR",
+                traceId = context.TraceIdentifier,
+                instance = context.Request.Path.Value,
                 errors = new[] { "Internal server error." },
-                error = new { code = "INTERNAL_ERROR", message = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.", details = (object?)null }
+                error = new
+                {
+                    code = "INTERNAL_ERROR",
+                    message = "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.",
+                    traceId = context.TraceIdentifier,
+                    details = (object?)null
+                }
             };
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(response));

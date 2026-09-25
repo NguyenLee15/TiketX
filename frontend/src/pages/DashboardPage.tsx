@@ -1,12 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import api from '../services/api';
-import { Event } from '../types';
 import { SkeletonCard } from '../components/Skeletons/SkeletonCard';
 import { DiscoveryHero } from '../components/Discovery/DiscoveryHero';
 import { EventCard } from '../components/Discovery/EventCard';
 import { parseCatalogState, writeCatalogState } from '../utils/customerState';
+import { useEventsCatalogQuery } from '../hooks/useCustomerQueries';
 
 export default function DashboardPage() {
   const [urlParams, setUrlParams] = useSearchParams();
@@ -15,12 +14,6 @@ export default function DashboardPage() {
 
   // Local draft state for search input text
   const [searchInput, setSearchInput] = useState(urlSearch);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const [retryKey, setRetryKey] = useState(0);
 
   // Keep searchInput in sync when URL changes via back/forward navigation
   useEffect(() => {
@@ -37,50 +30,22 @@ export default function DashboardPage() {
     setUrlParams(writeCatalogState(next));
   }, [urlSearch, category, sortBy, setUrlParams]);
 
-  // Fetch events using URL state as single source of truth
-  useEffect(() => {
-    const controller = new AbortController();
-    let cancelled = false;
+  const {
+    data: catalogResult,
+    isLoading: loading,
+    isError: loadError,
+    refetch,
+  } = useEventsCatalogQuery({
+    page,
+    pageSize: 6,
+    search: urlSearch,
+    category,
+    sort: sortBy,
+  });
 
-    const fetchCatalog = async () => {
-      setLoading(true);
-      setLoadError(false);
-
-      try {
-        const params = new URLSearchParams({
-          page: page.toString(),
-          pageSize: '6',
-          sortBy,
-        });
-        if (urlSearch.trim()) params.append('search', urlSearch.trim());
-        if (category && category !== 'All') params.append('category', category);
-
-        const response = await api.get(`/api/events?${params.toString()}`, {
-          signal: controller.signal,
-        });
-
-        if (!cancelled && response.data.success) {
-          setEvents(response.data.data.items || []);
-          setTotalPages(response.data.data.totalPages || 1);
-          setTotalCount(response.data.data.totalCount || 0);
-        } else if (!cancelled) {
-          setLoadError(true);
-        }
-      } catch (error: unknown) {
-        if (!cancelled && (error as { name?: string })?.name !== 'CanceledError' && (error as { code?: string })?.code !== 'ERR_CANCELED') {
-          setLoadError(true);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    void fetchCatalog();
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [urlSearch, category, sortBy, page, retryKey]);
+  const events = catalogResult?.items ?? [];
+  const totalPages = catalogResult?.totalPages ?? 1;
+  const totalCount = catalogResult?.totalCount ?? 0;
 
   const resetFilters = () => {
     setSearchInput('');
@@ -128,7 +93,7 @@ export default function DashboardPage() {
             title="Không thể tải danh sách sự kiện"
             message="Kiểm tra kết nối rồi thử lại."
             actionLabel="Thử lại"
-            onAction={() => setRetryKey((k) => k + 1)}
+            onAction={() => void refetch()}
           />
         ) : events.length === 0 ? (
           <StatePanel

@@ -40,10 +40,10 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
         var totalCount = await query.CountAsync(cancellationToken);
         query = request.SortBy switch
         {
-            "date_desc" => query.OrderByDescending(e => e.Date),
-            "price_asc" => query.OrderBy(e => e.BasePrice),
-            "price_desc" => query.OrderByDescending(e => e.BasePrice),
-            _ => query.OrderBy(e => e.Date)
+            "date_desc" => query.OrderByDescending(e => e.Date).ThenBy(e => e.Id),
+            "price_asc" => query.OrderBy(e => e.BasePrice).ThenBy(e => e.Id),
+            "price_desc" => query.OrderByDescending(e => e.BasePrice).ThenBy(e => e.Id),
+            _ => query.OrderBy(e => e.Date).ThenBy(e => e.Id)
         };
 
         var page = request.Page > 0 ? request.Page : 1;

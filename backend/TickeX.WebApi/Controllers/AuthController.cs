@@ -28,23 +28,35 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterCommand command)
+    public async Task<IActionResult> Register([FromBody] RegisterCommand command, CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command, cancellationToken);
         if (!result.Success)
         {
-            return BadRequest(new { success = false, message = result.Message, code = "REGISTRATION_FAILED" });
+            return BadRequest(new 
+            { 
+                success = false, 
+                code = "REGISTRATION_FAILED", 
+                message = result.Message,
+                error = new { code = "REGISTRATION_FAILED", message = result.Message }
+            });
         }
         return SignIn(result);
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginCommand command)
+    public async Task<IActionResult> Login([FromBody] LoginCommand command, CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command, cancellationToken);
         if (!result.Success)
         {
-            return Unauthorized(new { success = false, message = result.Message, code = "INVALID_CREDENTIALS" });
+            return Unauthorized(new 
+            { 
+                success = false, 
+                code = "INVALID_CREDENTIALS", 
+                message = result.Message,
+                error = new { code = "INVALID_CREDENTIALS", message = result.Message }
+            });
         }
         return SignIn(result);
     }
@@ -66,7 +78,14 @@ public class AuthController : ControllerBase
     {
         var raw = Request.Cookies[_cookieSettings.RefreshCookieName] ?? request?.Token;
         var result = await _mediator.Send(new RefreshTokenCommand(raw ?? string.Empty), cancellationToken);
-        if (!result.Success) return Unauthorized(new { success = false, code = "REFRESH_TOKEN_INVALID", message = result.Message });
+        if (!result.Success) 
+            return Unauthorized(new 
+            { 
+                success = false, 
+                code = "REFRESH_TOKEN_INVALID", 
+                message = result.Message,
+                error = new { code = "REFRESH_TOKEN_INVALID", message = result.Message }
+            });
         return SignIn(result);
     }
 

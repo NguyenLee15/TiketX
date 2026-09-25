@@ -15,8 +15,13 @@ describe('normalizePaymentStatus', () => {
     expect(normalizePaymentStatus(input)).toBe(expected);
   });
 
-  it('keeps an unknown server response pending instead of reporting a false failure', () => {
+  it('keeps a processing server response pending', () => {
     expect(normalizePaymentStatus('Processing')).toBe('Pending');
+  });
+
+  it('maps an unknown/corrupted server response to Unknown', () => {
+    expect(normalizePaymentStatus('UNKNOWN_STATUS_999')).toBe('Unknown');
+    expect(normalizePaymentStatus(null)).toBe('Unknown');
   });
 });
 

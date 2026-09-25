@@ -22,6 +22,6 @@ public class PayOSWebhookData
 
 public interface IPayOSService
 {
-    Task<CreatePaymentResult?> CreatePaymentLink(long orderCode, int amount, string description, string returnUrl, string cancelUrl);
+    Task<CreatePaymentResult?> CreatePaymentLink(long orderCode, int amount, string description, string returnUrl, string cancelUrl, CancellationToken cancellationToken = default);
     PayOSWebhookData? VerifyPaymentWebhookData(string webhookBody, string signature);
 }

@@ -24,7 +24,7 @@ public class TicketsController : ControllerBase
     }
 
     [HttpGet("my-tickets")]
-    public async Task<IActionResult> GetMyTickets([FromQuery] int? page = null, [FromQuery] int? pageSize = null)
+    public async Task<IActionResult> GetMyTickets([FromQuery] int? page = null, [FromQuery] int? pageSize = null, [FromQuery] string? status = null, CancellationToken cancellationToken = default)
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
@@ -32,19 +32,19 @@ public class TicketsController : ControllerBase
             return Unauthorized(new { success = false, code = "UNAUTHORIZED", message = "User is not authenticated", error = new { code = "UNAUTHORIZED", message = "User is not authenticated" } });
         }
 
-        var result = await _mediator.Send(new GetMyTicketsQuery(userId, page, pageSize));
+        var result = await _mediator.Send(new GetMyTicketsQuery(userId, page, pageSize, status), cancellationToken);
         return Ok(new { success = true, data = result });
     }
 
     public record RefundRequest(string? Reason);
 
     [HttpPost("{id}/refund")]
-    public async Task<IActionResult> RefundTicket(Guid id, [FromBody] RefundRequest? request)
+    public async Task<IActionResult> RefundTicket(Guid id, [FromBody] RefundRequest? request, CancellationToken cancellationToken = default)
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
         {
-            return Unauthorized();
+            return Unauthorized(new { success = false, code = "UNAUTHORIZED", message = "User is not authenticated.", error = new { code = "UNAUTHORIZED", message = "User is not authenticated." } });
         }
 
         var command = new RefundTicketCommand(
@@ -53,7 +53,7 @@ public class TicketsController : ControllerBase
             request?.Reason ?? "Customer Request",
             User.FindFirstValue(ClaimTypes.Email) ?? "",
             HttpContext.Connection.RemoteIpAddress?.ToString());
-        var result = await _mediator.Send(command, HttpContext.RequestAborted);
+        var result = await _mediator.Send(command, cancellationToken);
 
         if (!result.Success)
         {
@@ -71,7 +71,8 @@ public class TicketsController : ControllerBase
             {
                 success = false,
                 code = result.Code,
-                message = result.Message
+                message = result.Message,
+                error = new { code = result.Code, message = result.Message }
             });
         }
 
@@ -83,12 +84,18 @@ public class TicketsController : ControllerBase
     [HttpPost("check-in")]
     [Authorize(Roles = "Admin,Staff")]
     [EnableRateLimiting("BookingPolicy")]
-    public async Task<IActionResult> CheckIn([FromBody] CheckInRequest request)
+    public async Task<IActionResult> CheckIn([FromBody] CheckInRequest request, CancellationToken cancellationToken = default)
     {
         var staffUserIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(staffUserIdString) || !Guid.TryParse(staffUserIdString, out var staffUserId))
         {
-            return Unauthorized(new { success = false, message = "Không xác định được danh tính nhân viên từ token." });
+            return Unauthorized(new 
+            { 
+                success = false, 
+                code = "UNAUTHORIZED", 
+                message = "Không xác định được danh tính nhân viên từ token.",
+                error = new { code = "UNAUTHORIZED", message = "Không xác định được danh tính nhân viên từ token." }
+            });
         }
 
         var callerRole = User.FindFirstValue(ClaimTypes.Role) ?? "Staff";
@@ -96,11 +103,17 @@ public class TicketsController : ControllerBase
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
         var command = new CheckInTicketCommand(request.QrToken, staffUserId, callerRole, staffEmail, ipAddress);
-        var result = await _checkInOperations.CheckInAsync(command, HttpContext.RequestAborted);
+        var result = await _checkInOperations.CheckInAsync(command, cancellationToken);
 
         if (!result.Success)
         {
-            return StatusCode(result.StatusCode, new { success = false, code = result.Code, message = result.Message });
+            return StatusCode(result.StatusCode, new 
+            { 
+                success = false, 
+                code = result.Code, 
+                message = result.Message,
+                error = new { code = result.Code, message = result.Message }
+            });
         }
 
         return Ok(new { success = true, message = result.Message, data = result.Ticket });

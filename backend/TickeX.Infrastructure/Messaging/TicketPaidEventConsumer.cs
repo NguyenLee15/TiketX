@@ -86,45 +86,74 @@ public class TicketPaidEventConsumer : BackgroundService
 
         if (_channel == null) return;
 
+        var dlqName = $"{_queueName}.dlq";
+        await _channel.QueueDeclareAsync(queue: dlqName,
+                             durable: true,
+                             exclusive: false,
+                             autoDelete: false,
+                             arguments: null,
+                             cancellationToken: stoppingToken);
+
+        const int maxRetries = 3;
         var consumer = new AsyncEventingBasicConsumer(_channel);
         consumer.ReceivedAsync += async (model, ea) =>
         {
             var body = ea.Body.ToArray();
             var message = Encoding.UTF8.GetString(body);
-            
+            var retryCount = GetRetryCount(ea.BasicProperties);
+
             try
             {
                 var ticketEvent = JsonSerializer.Deserialize<TicketPaidEvent>(message);
-                if (ticketEvent != null)
+                if (ticketEvent == null)
                 {
-                    _logger.LogInformation("Received TicketPaidEvent for Ticket {TicketId}, User {UserId}. Generating QR Code and Email...", ticketEvent.TicketId, ticketEvent.UserId);
-                    
-                    using var scope = _scopeFactory.CreateScope();
-                    var dbContext = scope.ServiceProvider.GetRequiredService<TickeX.Application.Interfaces.IApplicationDbContext>();
-                    var emailService = scope.ServiceProvider.GetRequiredService<TickeX.Application.Interfaces.IEmailService>();
+                    throw new JsonException("Deserialized TicketPaidEvent payload was null.");
+                }
 
-                    var user = await dbContext.Users.FindAsync(new object[] { ticketEvent.UserId }, stoppingToken);
-                    if (user != null)
-                    {
-                        var subject = $"Your TickeX Ticket: {ticketEvent.TicketId}";
-                        var emailBody = $@"
+                _logger.LogInformation("Received TicketPaidEvent for Ticket {TicketId}, User {UserId}. Generating QR Code and Email...", ticketEvent.TicketId, ticketEvent.UserId);
+
+                using var scope = _scopeFactory.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<TickeX.Application.Interfaces.IApplicationDbContext>();
+                var emailService = scope.ServiceProvider.GetRequiredService<TickeX.Application.Interfaces.IEmailService>();
+
+                var user = await dbContext.Users.FindAsync(new object[] { ticketEvent.UserId }, stoppingToken);
+                if (user != null)
+                {
+                    var subject = $"Your TickeX Ticket: {ticketEvent.TicketId}";
+                    var emailBody = $@"
                             <h1>Thank you for your purchase, {user.Name}!</h1>
                             <p>Your ticket (ID: {ticketEvent.TicketId}) is confirmed.</p>
                             <p>Here is your QR Code: [QR_CODE_IMG]</p>
                         ";
-                        
-                        await emailService.SendEmailAsync(user.Email, subject, emailBody);
-                        _logger.LogInformation("Ticket notification sent for User {UserId} and Ticket {TicketId}.", ticketEvent.UserId, ticketEvent.TicketId);
-                    }
+
+                    await emailService.SendEmailAsync(user.Email, subject, emailBody);
+                    _logger.LogInformation("Ticket notification sent for User {UserId} and Ticket {TicketId}.", ticketEvent.UserId, ticketEvent.TicketId);
                 }
 
                 await _channel.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
             }
+            catch (JsonException jsonEx)
+            {
+                _logger.LogError(jsonEx, "Poison message detected (invalid JSON). Routing immediately to DLQ {DlqName}.", dlqName);
+                await ForwardToDlqAsync(_channel, dlqName, ea, "Permanent:InvalidJson", jsonEx.Message, stoppingToken);
+                await _channel.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing message. Requeueing...");
-                // Requeue = true so we don't lose the message if there's a transient failure (e.g. SMTP down)
-                await _channel.BasicNackAsync(deliveryTag: ea.DeliveryTag, multiple: false, requeue: true, cancellationToken: stoppingToken);
+                if (retryCount >= maxRetries)
+                {
+                    _logger.LogError(ex, "Message {DeliveryTag} exceeded max retries ({MaxRetries}). Routing to DLQ {DlqName}.", ea.DeliveryTag, maxRetries, dlqName);
+                    await ForwardToDlqAsync(_channel, dlqName, ea, $"MaxRetriesExceeded:{retryCount}", ex.Message, stoppingToken);
+                    await _channel.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
+                }
+                else
+                {
+                    retryCount++;
+                    _logger.LogWarning(ex, "Transient error processing message {DeliveryTag}. Scheduling bounded retry {Attempt}/{MaxRetries}...", ea.DeliveryTag, retryCount, maxRetries);
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Min(8, Math.Pow(2, retryCount))), stoppingToken);
+                    await RepublishWithRetryAsync(_channel, _queueName, ea, retryCount, stoppingToken);
+                    await _channel.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
+                }
             }
         };
 
@@ -132,6 +161,78 @@ public class TicketPaidEventConsumer : BackgroundService
                              autoAck: false,
                              consumer: consumer,
                              cancellationToken: stoppingToken);
+    }
+
+    private static int GetRetryCount(IReadOnlyBasicProperties? properties)
+    {
+        if (properties?.Headers == null) return 0;
+        if (!properties.Headers.TryGetValue("x-retry-count", out var value) || value == null) return 0;
+
+        if (value is int intVal) return intVal;
+        if (value is long longVal) return (int)longVal;
+        if (value is byte[] bytes && int.TryParse(Encoding.UTF8.GetString(bytes), out var parsed)) return parsed;
+        if (int.TryParse(value.ToString(), out var strParsed)) return strParsed;
+
+        return 0;
+    }
+
+    private static async Task RepublishWithRetryAsync(
+        IChannel channel,
+        string queueName,
+        BasicDeliverEventArgs ea,
+        int retryCount,
+        CancellationToken cancellationToken)
+    {
+        var props = new BasicProperties
+        {
+            DeliveryMode = DeliveryModes.Persistent
+        };
+
+        var headers = ea.BasicProperties?.Headers != null
+            ? new Dictionary<string, object?>(ea.BasicProperties.Headers)
+            : new Dictionary<string, object?>();
+
+        headers["x-retry-count"] = retryCount;
+        props.Headers = headers;
+
+        await channel.BasicPublishAsync(
+            exchange: string.Empty,
+            routingKey: queueName,
+            mandatory: false,
+            basicProperties: props,
+            body: ea.Body,
+            cancellationToken: cancellationToken);
+    }
+
+    private static async Task ForwardToDlqAsync(
+        IChannel channel,
+        string dlqName,
+        BasicDeliverEventArgs ea,
+        string reason,
+        string exceptionMessage,
+        CancellationToken cancellationToken)
+    {
+        var props = new BasicProperties
+        {
+            DeliveryMode = DeliveryModes.Persistent
+        };
+
+        var headers = ea.BasicProperties?.Headers != null
+            ? new Dictionary<string, object?>(ea.BasicProperties.Headers)
+            : new Dictionary<string, object?>();
+
+        headers["x-death-reason"] = reason;
+        headers["x-exception-message"] = exceptionMessage;
+        headers["x-dead-letter-timestamp"] = DateTime.UtcNow.ToString("O");
+        props.Headers = headers;
+
+        await channel.BasicPublishAsync(
+            exchange: string.Empty,
+            routingKey: dlqName,
+            mandatory: false,
+            basicProperties: props,
+            body: ea.Body,
+            cancellationToken: cancellationToken);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)

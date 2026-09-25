@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using TickeX.Application.Interfaces;
+using TickeX.WebApi.Filters;
 
 namespace TickeX.WebApi.Controllers;
 
@@ -25,6 +26,7 @@ public class PaymentsController : ControllerBase
     }
 
     [Authorize]
+    [Idempotent]
     [HttpPost("create-link")]
     public async Task<IActionResult> CreatePaymentLink([FromBody] CreatePaymentLinkRequest request, CancellationToken cancellationToken)
     {
@@ -57,7 +59,9 @@ public class PaymentsController : ControllerBase
     {
         if (!TryGetUserId(out var userId)) return UnauthorizedEnvelope();
         var result = await _checkout.SimulateSuccessAsync(orderCode, userId, cancellationToken);
-        return result.Code == "PAYMENT_SIMULATION_DISABLED" ? NotFound() : Respond(result, notFound: true);
+        return result.Code == "PAYMENT_SIMULATION_DISABLED" 
+            ? NotFound(new { success = false, code = "PAYMENT_SIMULATION_DISABLED", message = "Môi trường mô phỏng thanh toán đã bị vô hiệu hóa.", error = new { code = "PAYMENT_SIMULATION_DISABLED", message = "Môi trường mô phỏng thanh toán đã bị vô hiệu hóa." } }) 
+            : Respond(result, notFound: true);
     }
 
     private bool TryGetUserId(out Guid userId) => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out userId);

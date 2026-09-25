@@ -13,6 +13,6 @@ public class GetMyTicketsQueryHandler : IRequestHandler<GetMyTicketsQuery, List<
 
     public async Task<List<TicketDto>> Handle(GetMyTicketsQuery request, CancellationToken cancellationToken)
     {
-        return (await _readModel.GetForUserAsync(request.UserId, request.Page, request.PageSize, cancellationToken)).ToList();
+        return (await _readModel.GetForUserAsync(request.UserId, request.Page, request.PageSize, request.Status, cancellationToken)).ToList();
     }
 }

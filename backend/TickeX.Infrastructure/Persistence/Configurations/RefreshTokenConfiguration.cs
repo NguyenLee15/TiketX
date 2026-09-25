@@ -14,6 +14,7 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
         builder.Property(x => x.ReplacedByTokenHash).HasMaxLength(128);
         builder.Property(x => x.CreatedAtUtc).IsRequired();
         builder.Property(x => x.ExpiresAtUtc).IsRequired();
+        builder.Property(x => x.RevokedAtUtc).IsConcurrencyToken();
         builder.HasIndex(x => x.TokenHash).IsUnique();
         builder.HasIndex(x => new { x.UserId, x.RevokedAtUtc, x.ExpiresAtUtc });
     }

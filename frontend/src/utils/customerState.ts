@@ -1,6 +1,6 @@
 import type { SeatStatusChangedPayload } from '../types';
 
-export type PaymentStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Expired' | 'RefundPending' | 'Used';
+export type PaymentStatus = 'Pending' | 'Paid' | 'Failed' | 'Cancelled' | 'Expired' | 'RefundPending' | 'Used' | 'Unknown';
 
 export const normalizePaymentStatus = (value: unknown): PaymentStatus => {
   if (value === 1 || String(value).toLowerCase() === 'paid') return 'Paid';
@@ -9,7 +9,8 @@ export const normalizePaymentStatus = (value: unknown): PaymentStatus => {
   if (value === 4 || String(value).toLowerCase() === 'expired') return 'Expired';
   if (String(value).toLowerCase() === 'refundpending' || String(value).toLowerCase() === 'refund_pending') return 'RefundPending';
   if (String(value).toLowerCase() === 'used') return 'Used';
-  return 'Pending';
+  if (value === 0 || String(value).toLowerCase() === 'pending' || String(value).toLowerCase() === 'processing') return 'Pending';
+  return 'Unknown';
 };
 
 export const shouldPreserveSeatSelection = (selectedSeatId: string, payload: SeatStatusChangedPayload) =>

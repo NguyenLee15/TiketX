@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Camera, CameraOff, SwitchCamera, Clipboard, AlertTriangle, Search, RefreshCw, UserCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { Html5Qrcode } from 'html5-qrcode';
+import type { Html5Qrcode } from 'html5-qrcode';
 
 interface ScanCameraPanelProps {
   onScanToken: (rawToken: string) => void;
@@ -43,7 +43,9 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
       setCameraError(null);
 
       try {
-        const scanner = new Html5Qrcode(elementId);
+        const { Html5Qrcode: Html5QrcodeCtor } = await import('html5-qrcode');
+        if (!mounted || startCancelled) return;
+        const scanner = new Html5QrcodeCtor(elementId);
         scannerRef.current = scanner;
 
         await scanner.start(

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using TickeX.Application.Seats.Commands;
+using TickeX.WebApi.Filters;
 
 namespace TickeX.WebApi.Controllers;
 
@@ -22,8 +23,9 @@ public class SeatsController : ControllerBase
     public record LockSeatRequest(Guid EventId, string Version, Guid? UserId = null);
 
     [Authorize]
+    [Idempotent]
     [HttpPost("{id}/lock")]
-    public async Task<IActionResult> LockSeat(Guid id, [FromBody] LockSeatRequest request)
+    public async Task<IActionResult> LockSeat(Guid id, [FromBody] LockSeatRequest request, CancellationToken cancellationToken = default)
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var currentUserId))
@@ -64,15 +66,18 @@ public class SeatsController : ControllerBase
         }
 
         var command = new LockSeatCommand(request.EventId, id, currentUserId, versionBytes);
-        var lockResult = await _mediator.Send(command);
+        var lockResult = await _mediator.Send(command, cancellationToken);
 
         if (!lockResult.Success)
         {
-            var statusCode = lockResult.Code == "SEAT_VERSION_CONFLICT"
-                ? StatusCodes.Status409Conflict
-                : lockResult.Code == "RESERVATION_LOCK_UNAVAILABLE"
-                    ? StatusCodes.Status503ServiceUnavailable
-                    : StatusCodes.Status400BadRequest;
+            var statusCode = lockResult.Code switch
+            {
+                "SEAT_VERSION_CONFLICT" or "SEAT_UNAVAILABLE" or "RESERVATION_LIMIT_REACHED" or "EVENT_NOT_ON_SALE"
+                    => StatusCodes.Status409Conflict,
+                "RESERVATION_LOCK_UNAVAILABLE"
+                    => StatusCodes.Status503ServiceUnavailable,
+                _ => StatusCodes.Status400BadRequest
+            };
             return StatusCode(statusCode, new 
             { 
                 success = false, 
@@ -82,7 +87,7 @@ public class SeatsController : ControllerBase
             });
         }
 
-        return StatusCode(StatusCodes.Status201Created, new 
+        return Created($"/api/seats/{id}", new 
         { 
             success = true, 
             data = new 

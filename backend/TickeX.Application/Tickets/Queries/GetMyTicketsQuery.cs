@@ -30,4 +30,4 @@ public record TicketDto(
     bool CanRefund
 );
 
-public record GetMyTicketsQuery(Guid UserId, int? Page = null, int? PageSize = null) : IRequest<List<TicketDto>>;
+public record GetMyTicketsQuery(Guid UserId, int? Page = null, int? PageSize = null, string? Status = null) : IRequest<List<TicketDto>>;

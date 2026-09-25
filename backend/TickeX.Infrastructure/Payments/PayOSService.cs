@@ -35,7 +35,7 @@ public class PayOSService : IPayOSService
         _httpClient.DefaultRequestHeaders.Add("x-api-key", _apiKey);
     }
 
-    public async Task<CreatePaymentResult?> CreatePaymentLink(long orderCode, int amount, string description, string returnUrl, string cancelUrl)
+    public async Task<CreatePaymentResult?> CreatePaymentLink(long orderCode, int amount, string description, string returnUrl, string cancelUrl, CancellationToken cancellationToken = default)
     {
         var requestData = new
         {
@@ -61,11 +61,11 @@ public class PayOSService : IPayOSService
         };
 
         var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync("v2/payment-requests", content);
+        var response = await _httpClient.PostAsync("v2/payment-requests", content, cancellationToken);
 
         if (response.IsSuccessStatusCode)
         {
-            var responseString = await response.Content.ReadAsStringAsync();
+            var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
             var jsonDoc = JsonDocument.Parse(responseString);
             var dataElement = jsonDoc.RootElement.GetProperty("data");
             string checkoutUrl = dataElement.GetProperty("checkoutUrl").GetString() ?? "";
@@ -73,7 +73,7 @@ public class PayOSService : IPayOSService
             return new CreatePaymentResult { CheckoutUrl = checkoutUrl };
         }
 
-        var error = await response.Content.ReadAsStringAsync();
+        var error = await response.Content.ReadAsStringAsync(cancellationToken);
         _logger.LogWarning("PayOS payment-link request failed with HTTP status {StatusCode}.", (int)response.StatusCode);
         return null;
     }

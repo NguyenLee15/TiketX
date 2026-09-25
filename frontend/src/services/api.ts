@@ -21,6 +21,17 @@ api.interceptors.request.use((config) => {
   if (!['get', 'head', 'options'].includes((config.method || 'get').toLowerCase())) {
     const csrfToken = readCsrfToken();
     if (csrfToken) config.headers['X-CSRF-TOKEN'] = csrfToken;
+
+    if (!config.headers['Idempotency-Key']) {
+      config.headers['Idempotency-Key'] =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+              const r = (Math.random() * 16) | 0;
+              const v = c === 'x' ? r : (r & 0x3) | 0x8;
+              return v.toString(16);
+            });
+    }
   }
   return config;
 });

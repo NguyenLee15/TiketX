@@ -2,7 +2,6 @@ import React from 'react';
 import { Calendar, MapPin, Loader2, Download, RotateCcw, Crown, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
-import { generateTicketPdf } from '../../utils/ticketPdfGenerator';
 
 export interface TicketItemData {
   id: string;
@@ -45,6 +44,20 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
   const isVip = ticket.tier === 1 || ticket.row === 'A' || ticket.row === 'B';
   const hasSignedQr = Boolean(ticket.qrCodeSignature?.trim());
   const canShowQr = hasSignedQr && ['paid', 'used'].includes(ticket.status.toLowerCase());
+  const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false);
+
+  const handleDownloadPdf = React.useCallback(async () => {
+    if (!canShowQr || isDownloadingPdf) return;
+    try {
+      setIsDownloadingPdf(true);
+      const { generateTicketPdf } = await import('../../utils/ticketPdfGenerator');
+      await generateTicketPdf(ticket);
+    } catch (err) {
+      console.error('Failed to generate ticket PDF', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  }, [canShowQr, isDownloadingPdf, ticket]);
 
   const getStatusBadge = (status: string) => {
     const s = status.toLowerCase();
@@ -197,12 +210,16 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
         </div>
 
         <button
-          onClick={() => void generateTicketPdf(ticket)}
-          disabled={!canShowQr}
+          onClick={handleDownloadPdf}
+          disabled={!canShowQr || isDownloadingPdf}
           className="flex items-center justify-center w-full py-2.5 bg-surface-3 hover:bg-surface-2 border border-border-subtle hover:border-brand-primary text-white text-xs font-bold rounded-xl transition-[background-color,border-color,opacity,transform] shadow-md group/btn active:scale-95 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-subtle cursor-pointer"
         >
-          <Download className="w-3.5 h-3.5 mr-1.5 group-hover/btn:-translate-y-0.5 transition-transform text-brand-primary shrink-0" />
-          <span>Tải File Vé PDF Chuẩn</span>
+          {isDownloadingPdf ? (
+            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin text-brand-primary shrink-0" />
+          ) : (
+            <Download className="w-3.5 h-3.5 mr-1.5 group-hover/btn:-translate-y-0.5 transition-transform text-brand-primary shrink-0" />
+          )}
+          <span>{isDownloadingPdf ? 'Đang tạo file PDF...' : 'Tải File Vé PDF Chuẩn'}</span>
         </button>
       </div>
     </div>

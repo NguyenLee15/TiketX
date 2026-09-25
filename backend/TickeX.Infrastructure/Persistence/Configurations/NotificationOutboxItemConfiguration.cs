@@ -7,7 +7,7 @@ public sealed class NotificationOutboxItemConfiguration : IEntityTypeConfigurati
     public void Configure(EntityTypeBuilder<NotificationOutboxItem> builder)
     {
         builder.ToTable("notification_outbox"); builder.HasKey(x => x.Id);
-        builder.Property(x => x.Status).HasMaxLength(30).IsRequired(); builder.Property(x => x.LastError).HasMaxLength(2000);
+        builder.Property(x => x.Status).HasMaxLength(30).IsRequired().IsConcurrencyToken(); builder.Property(x => x.LastError).HasMaxLength(2000);
         builder.HasIndex(x => x.TicketId).IsUnique(); builder.HasIndex(x => new { x.Status, x.NextAttemptAt });
     }
 }

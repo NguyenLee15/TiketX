@@ -40,21 +40,21 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResult>
         if (user == null)
         {
             _passwordHasher.VerifyDummy(request.Password);
-            _logger.LogWarning("Login failed: User with email {Email} not found.", normalizedEmail);
+            _logger.LogWarning("Login failed: Account not found.");
             return new AuthResult(false, string.Empty, GenericErrorMessage);
         }
 
         if (user.IsLockedOut())
         {
             _passwordHasher.VerifyDummy(request.Password);
-            _logger.LogWarning("Login failed: User {Email} is locked out until {LockoutEnd}.", normalizedEmail, user.LockoutEnd);
+            _logger.LogWarning("Login failed: User {UserId} is locked out until {LockoutEnd}.", user.Id, user.LockoutEnd);
             return new AuthResult(false, string.Empty, GenericErrorMessage);
         }
 
         if (user.IsBlocked)
         {
             _passwordHasher.VerifyDummy(request.Password);
-            _logger.LogWarning("Login failed: User {Email} is blocked.", normalizedEmail);
+            _logger.LogWarning("Login failed: User {UserId} is blocked.", user.Id);
             return new AuthResult(false, string.Empty, GenericErrorMessage);
         }
 
@@ -62,19 +62,21 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResult>
         {
             user.RecordFailedLogin(maxFailedAccessAttempts: 5, lockoutMinutes: 15);
             await _context.SaveChangesAsync(cancellationToken);
-            _logger.LogWarning("Login failed: Invalid password for user {Email}. Failed count: {Count}.", normalizedEmail, user.AccessFailedCount);
+            _logger.LogWarning("Login failed: Invalid password for user {UserId}. Failed count: {Count}.", user.Id, user.AccessFailedCount);
             return new AuthResult(false, string.Empty, GenericErrorMessage);
         }
 
-        // Reset failed login counter on successful authentication
+        // Reset failed login counter and persist new session atomically
         user.ResetFailedLogin();
+        var refreshToken = RefreshTokenCrypto.Generate();
+        var refreshTokenEntity = new TickeX.Domain.Entities.RefreshToken(
+            user.Id, RefreshTokenCrypto.Hash(refreshToken), DateTime.UtcNow.AddDays(30));
+
+        _context.RefreshTokens.Add(refreshTokenEntity);
         await _context.SaveChangesAsync(cancellationToken);
 
         string token = _jwtService.GenerateToken(user);
-        var refreshToken = RefreshTokenCrypto.Generate();
-        await _refreshTokens.AddAsync(new TickeX.Domain.Entities.RefreshToken(
-            user.Id, RefreshTokenCrypto.Hash(refreshToken), DateTime.UtcNow.AddDays(30)), cancellationToken);
-        _logger.LogInformation("User {Email} ({UserId}) logged in successfully.", user.Email, user.Id);
+        _logger.LogInformation("User {UserId} logged in successfully.", user.Id);
         
         return new AuthResult(true, token, "Đăng nhập thành công.", user.Id, user.Name, user.Role, refreshToken, user.Email);
     }

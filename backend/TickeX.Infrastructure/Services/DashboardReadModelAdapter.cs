@@ -59,6 +59,7 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
                 .GroupBy(t => t.EventId)
                 .Select(g => new TopEventAggregate(g.Key, g.Count(), g.Sum(t => t.Price)))
                 .OrderByDescending(x => x.Revenue)
+                .ThenBy(x => x.EventId)
                 .Take(5)
                 .ToList();
         }
@@ -69,6 +70,7 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
                 .GroupBy(t => t.EventId)
                 .Select(g => new TopEventAggregate(g.Key, g.Count(), g.Sum(t => t.Price)))
                 .OrderByDescending(x => x.Revenue)
+                .ThenBy(x => x.EventId)
                 .Take(5)
                 .ToListAsync(cancellationToken);
         }
@@ -99,7 +101,9 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
 
         var recentTransactions = await operationalTickets
             .Where(t => paidStates.Contains(t.Status) || t.Status == TicketStatus.Cancelled || t.Status == TicketStatus.RefundPending)
-            .OrderByDescending(t => t.CreatedAt).Take(10)
+            .OrderByDescending(t => t.CreatedAt)
+            .ThenByDescending(t => t.Id)
+            .Take(10)
             .Select(t => new RecentTransactionStat(t.Id, t.OrderCode, t.Event!.Title, t.User != null ? t.User.Name : "N/A", t.Price, t.Status.ToString(), t.CreatedAt))
             .ToListAsync(cancellationToken);
 

@@ -29,23 +29,40 @@ public sealed class NotificationOutboxDispatcher : BackgroundService
         var publisher = scope.ServiceProvider.GetRequiredService<IMessagePublisher>();
 
         var utcNow = DateTime.UtcNow;
-        var candidates = await context.NotificationOutbox
+        var candidateIds = await context.NotificationOutbox
             .Where(x => (x.Status == "Pending" && (x.NextAttemptAt == null || x.NextAttemptAt <= utcNow))
                      || (x.Status == "Processing" && x.NextAttemptAt <= utcNow))
             .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
             .Take(20)
+            .Select(x => x.Id)
             .ToListAsync(cancellationToken);
 
-        if (candidates.Count == 0) return;
+        if (candidateIds.Count == 0) return;
 
-        // Atomically claim candidates with a 2-minute lease to prevent duplicate publishing
-        foreach (var item in candidates)
-        {
-            item.MarkProcessing(TimeSpan.FromMinutes(2));
-        }
-        await context.SaveChangesAsync(cancellationToken);
+        var leaseToken = "lease:" + Guid.NewGuid().ToString("N");
+        var leaseUntil = utcNow.Add(TimeSpan.FromMinutes(2));
 
-        foreach (var item in candidates)
+        // Atomically claim eligible rows in a single DB update to prevent multi-instance races
+        var claimedCount = await context.NotificationOutbox
+            .Where(x => candidateIds.Contains(x.Id) &&
+                       ((x.Status == "Pending" && (x.NextAttemptAt == null || x.NextAttemptAt <= utcNow))
+                     || (x.Status == "Processing" && x.NextAttemptAt <= utcNow)))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(b => b.Status, "Processing")
+                .SetProperty(b => b.NextAttemptAt, leaseUntil)
+                .SetProperty(b => b.LastError, leaseToken)
+                .SetProperty(b => b.UpdatedAt, utcNow),
+                cancellationToken);
+
+        if (claimedCount == 0) return;
+
+        // Fetch only records securely leased by this instance
+        var claimedItems = await context.NotificationOutbox
+            .Where(x => candidateIds.Contains(x.Id) && x.Status == "Processing" && x.LastError == leaseToken)
+            .ToListAsync(cancellationToken);
+
+        foreach (var item in claimedItems)
         {
             try
             {

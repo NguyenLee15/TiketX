@@ -17,14 +17,22 @@ public sealed class CustomerTicketReadModelAdapter : ICustomerTicketReadModel
         _time = time;
     }
 
-    public async Task<IReadOnlyList<TicketDto>> GetForUserAsync(Guid userId, int? page = null, int? pageSize = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TicketDto>> GetForUserAsync(Guid userId, int? page = null, int? pageSize = null, string? status = null, CancellationToken cancellationToken = default)
     {
         IQueryable<Ticket> query = _context.Tickets
             .AsNoTracking()
             .Include(t => t.Event)
             .Include(t => t.Seat)
-            .Where(t => t.UserId == userId)
-            .OrderByDescending(t => t.CreatedAt);
+            .Where(t => t.UserId == userId);
+
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<TicketStatus>(status, true, out var parsedStatus))
+        {
+            query = query.Where(t => t.Status == parsedStatus);
+        }
+
+        query = query
+            .OrderByDescending(t => t.CreatedAt)
+            .ThenByDescending(t => t.Id);
 
         var effectivePage = page is > 0 ? page.Value : 1;
         var effectivePageSize = pageSize is > 0 ? Math.Min(pageSize.Value, 50) : 10;
