@@ -23,7 +23,8 @@ public record EventDto(
     EventStatus Status,
     int RefundCutoffHours,
     bool IsDeleted = false,
-    bool HasTicketHistory = false
+    bool HasTicketHistory = false,
+    string? Version = null
 );
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize)

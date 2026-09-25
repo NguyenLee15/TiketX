@@ -3,6 +3,7 @@ import { TrendingUp, Clock, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import { Stats } from './Dashboard/types';
+import { adminDashboardStatsSchema } from '../../schemas/adminSchemas';
 import { DashboardKpiGrid } from './Dashboard/DashboardKpiGrid';
 import { DashboardRevenueChart } from './Dashboard/DashboardRevenueChart';
 import { DashboardTopEvents } from './Dashboard/DashboardTopEvents';
@@ -28,10 +29,16 @@ export default function AdminDashboardPage() {
       else setIsRefreshing(true);
       setError(false);
       const response = await api.get('/api/admin/stats', { signal: controller.signal });
-      if (response.data.success) {
-        setStats(response.data.data);
-        hasLoadedStatsRef.current = true;
-        setLastUpdated(new Date());
+      if (response.data?.success) {
+        const parsed = adminDashboardStatsSchema.safeParse(response.data.data);
+        if (parsed.success) {
+          setStats(parsed.data as Stats);
+          hasLoadedStatsRef.current = true;
+          setLastUpdated(new Date());
+        } else {
+          setError(true);
+          toast.error('Dữ liệu thống kê bảng điều khiển không đúng định dạng.');
+        }
       } else {
         setError(true);
       }
@@ -40,8 +47,10 @@ export default function AdminDashboardPage() {
       setError(true);
       toast.error('Không thể tải dữ liệu thống kê bảng điều khiển');
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
     }
   }, []);
 

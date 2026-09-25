@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { ShieldCheck, Volume2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
+import { scanTicketDataSchema } from '../../schemas/adminSchemas';
 import { ScanCameraPanel } from './Scan/ScanCameraPanel';
 import { ScanResultDisplay, ScanResult } from './Scan/ScanResultDisplay';
 import { RecentScansList } from './Scan/RecentScansList';
@@ -37,22 +38,49 @@ export default function AdminScanTicketPage() {
 
       const response = await api.post('/api/tickets/check-in', { qrToken: trimmed });
 
-      if (response.data.success) {
-        playAudioFeedback('success');
-        const data = response.data.data;
+      if (response.data?.success) {
+        const parsed = scanTicketDataSchema.safeParse(response.data.data);
+        if (parsed.success) {
+          playAudioFeedback('success');
+          const data = parsed.data;
+          const result: ScanResult = {
+            status: 'valid',
+            message: 'VÉ HỢP LỆ — XÁC NHẬN CHO VÀO CỬA SỰ KIỆN',
+            ticket: data
+          };
+          setScanResult(result);
+          setRecentScans(prev => [result, ...prev.slice(0, 9)]);
+          toast.success(`Check-in thành công: ${data.attendeeName} - Ghế ${data.row}${data.number}`);
+        } else {
+          playAudioFeedback('failure');
+          const result: ScanResult = {
+            status: 'invalid',
+            message: 'Dữ liệu vé từ máy chủ không đúng định dạng.'
+          };
+          setScanResult(result);
+          setRecentScans(prev => [result, ...prev.slice(0, 9)]);
+          toast.error('Dữ liệu vé từ máy chủ không hợp lệ.');
+        }
+      }
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { status?: number; data?: { message?: string; code?: string } }; message?: string; code?: string };
+      const isNetworkError = !apiErr.response || apiErr.message === 'Network Error' || apiErr.code === 'ERR_NETWORK' || apiErr.code === 'ECONNABORTED';
+
+      if (isNetworkError) {
+        playAudioFeedback('warning');
+        const netMsg = 'Mất kết nối máy chủ khi soát vé. Vui lòng kiểm tra đường truyền và thử lại.';
         const result: ScanResult = {
-          status: 'valid',
-          message: 'VÉ HỢP LỆ — XÁC NHẬN CHO VÀO CỬA SỰ KIỆN',
-          ticket: data
+          status: 'conflict',
+          message: netMsg
         };
         setScanResult(result);
         setRecentScans(prev => [result, ...prev.slice(0, 9)]);
-        toast.success(`Check-in thành công: ${data.attendeeName} - Ghế ${data.row}${data.number}`);
+        toast.error(netMsg, { duration: 5000 });
+        return;
       }
-    } catch (err: unknown) {
-      const apiErr = err as { response?: { status?: number; data?: { message?: string; code?: string } }; message?: string };
+
       const code = apiErr.response?.data?.code;
-      const msg = apiErr.response?.data?.message || (apiErr.message === 'Network Error' ? 'Mất kết nối mạng tới máy chủ.' : 'Vé không hợp lệ hoặc đã bị hủy.');
+      const msg = apiErr.response?.data?.message || 'Vé không hợp lệ hoặc đã bị hủy.';
 
       if (code === 'TICKET_ALREADY_USED') {
         playAudioFeedback('warning');

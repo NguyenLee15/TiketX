@@ -62,12 +62,12 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var events = await query
+        var rawEvents = await query
             .OrderByDescending(e => e.Date)
             .ThenBy(e => e.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(e => new EventDto(
+            .Select(e => new {
                 e.Id,
                 e.Title,
                 e.Description,
@@ -80,16 +80,41 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
                 e.BannerUrl,
                 e.OrganizerName,
                 e.TotalSeats,
-                _context.Seats.Count(s => s.EventId == e.Id && s.Status == SeatStatus.Available),
+                AvailableSeats = _context.Seats.Count(s => s.EventId == e.Id && s.Status == SeatStatus.Available),
                 e.BasePrice,
-                e.BasePrice * 0.75m,
-                e.BasePrice * 1.75m,
+                MinPrice = e.BasePrice * 0.75m,
+                MaxPrice = e.BasePrice * 1.75m,
                 e.Status,
                 e.RefundCutoffHours,
                 e.IsDeleted,
-                _context.Tickets.Any(t => t.EventId == e.Id)
-            ))
+                HasTicketHistory = _context.Tickets.Any(t => t.EventId == e.Id),
+                e.Version
+            })
             .ToListAsync(cancellationToken);
+
+        var events = rawEvents.Select(e => new EventDto(
+            e.Id,
+            e.Title,
+            e.Description,
+            e.Date,
+            e.EndDate,
+            e.Location,
+            e.VenueName,
+            e.Category,
+            e.ImageUrl,
+            e.BannerUrl,
+            e.OrganizerName,
+            e.TotalSeats,
+            e.AvailableSeats,
+            e.BasePrice,
+            e.MinPrice,
+            e.MaxPrice,
+            e.Status,
+            e.RefundCutoffHours,
+            e.IsDeleted,
+            e.HasTicketHistory,
+            e.Version != null && e.Version.Length > 0 ? Convert.ToBase64String(e.Version) : null
+        )).ToList();
 
         return new PagedResult<EventDto>(events, totalCount, page, pageSize);
     }

@@ -40,7 +40,7 @@ public class BlockUserCommandHandler : IRequestHandler<BlockUserCommand, AdminOp
         bool lockAcquired;
         try
         {
-            lockAcquired = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(5), cancellationToken);
+            lockAcquired = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
         }
         catch
         {

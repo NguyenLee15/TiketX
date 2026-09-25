@@ -44,6 +44,7 @@ export interface Event {
   isDeleted?: boolean;
   hasTicketHistory?: boolean;
   ticketTypes?: TicketType[];
+  version?: string;
 }
 
 export interface EventDetail extends Event {

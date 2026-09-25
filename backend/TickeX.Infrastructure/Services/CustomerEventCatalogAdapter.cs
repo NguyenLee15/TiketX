@@ -55,7 +55,7 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
                 e.Seats.Count(s => s.Status == SeatStatus.Available), e.BasePrice,
                 e.Seats.Any() ? (decimal)e.Seats.Min(s => (double)s.Price) : e.BasePrice,
                 e.Seats.Any() ? (decimal)e.Seats.Max(s => (double)s.Price) : e.BasePrice,
-                e.Status, e.RefundCutoffHours, false, false))
+                e.Status, e.RefundCutoffHours, false, false, null))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<EventDto>(items, totalCount, page, pageSize);

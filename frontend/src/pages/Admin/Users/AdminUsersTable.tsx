@@ -122,6 +122,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                       <div className="flex justify-end items-center gap-2 shrink-0">
                         <select 
                           value={user.role}
+                          aria-label={`Phân quyền cho người dùng ${user.name}`}
                           disabled={isSelf || isSubmitting}
                           onChange={(e) => onRequestChangeRole(user, e.target.value)}
                           className="bg-surface-1 border border-border-subtle hover:border-brand-primary rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary transition-colors cursor-pointer font-semibold whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
@@ -194,6 +195,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
               <div className="flex items-center justify-between gap-2 pt-2 border-t border-border-subtle">
                 <select 
                   value={user.role}
+                  aria-label={`Phân quyền cho người dùng ${user.name}`}
                   disabled={isSelf || isSubmitting}
                   onChange={(e) => onRequestChangeRole(user, e.target.value)}
                   className="bg-surface-2 border border-border-subtle rounded-xl px-2.5 py-1.5 text-xs text-white flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-40"

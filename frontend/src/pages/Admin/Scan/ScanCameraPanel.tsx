@@ -13,6 +13,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
   const [cameraActive, setCameraActive] = useState(true);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const lastScannedTokenRef = useRef('');
@@ -99,7 +100,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
         }
       }
     };
-  }, [cameraActive, facingMode, isVerifying, onScanToken]);
+  }, [cameraActive, facingMode, isVerifying, onScanToken, retryNonce]);
 
   const handlePasteClipboard = async () => {
     try {
@@ -178,7 +179,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
                 <AlertTriangle className="w-10 h-10 text-amber-400" />
                 <p className="text-sm font-semibold text-white">{cameraError}</p>
                 <button
-                  onClick={() => { setCameraError(null); setCameraActive(true); }}
+                  onClick={() => { setCameraError(null); setCameraActive(true); setRetryNonce(n => n + 1); }}
                   className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
                 >
                   Thử lại kết nối

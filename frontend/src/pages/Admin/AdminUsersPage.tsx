@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuthStore } from '../../stores/useAuthStore';
 import ConfirmModal from '../../components/Admin/ConfirmModal';
+import { adminUsersPagedResponseSchema } from '../../schemas/adminSchemas';
 import { AdminUsersFilterBar } from './Users/AdminUsersFilterBar';
 import { AdminUsersTable, AdminUserItem } from './Users/AdminUsersTable';
 import { AdminUsersSkeleton } from './Users/AdminUsersSkeleton';
@@ -56,24 +57,35 @@ export default function AdminUsersPage() {
       if (blockFilter === 'active') params.isBlocked = 'false';
 
       const res = await api.get('/api/admin/users', { params, signal: controller.signal });
-      if (res.data.success) {
-        const data = res.data.data;
-        if (Array.isArray(data)) {
-          setUsers(data);
-          setTotalCount(data.length);
-          setTotalPages(1);
-        } else if (data && data.items) {
-          setUsers(data.items);
-          setTotalCount(data.totalCount || 0);
-          setTotalPages(data.totalPages || 1);
+      if (res.data?.success) {
+        const parsed = adminUsersPagedResponseSchema.safeParse(res.data.data);
+        if (parsed.success) {
+          const data = parsed.data;
+          if (Array.isArray(data)) {
+            setUsers(data as AdminUserItem[]);
+            setTotalCount(data.length);
+            setTotalPages(1);
+          } else if (data && data.items) {
+            setUsers(data.items as AdminUserItem[]);
+            setTotalCount(data.totalCount || 0);
+            setTotalPages(data.totalPages || 1);
+          }
+        } else {
+          setLoadError(true);
+          toast.error('Dữ liệu người dùng từ máy chủ không đúng định dạng.');
         }
+      } else {
+        setLoadError(true);
+        toast.error(res.data?.message || 'Không thể tải danh sách người dùng.');
       }
     } catch (error: unknown) {
       if ((error as { code?: string })?.code === 'ERR_CANCELED') return;
       setLoadError(true);
       toast.error('Không thể tải danh sách người dùng.');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [page, pageSize, searchTerm, roleFilter, blockFilter]);
 

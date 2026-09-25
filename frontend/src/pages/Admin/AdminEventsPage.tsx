@@ -11,6 +11,7 @@ import { formValueToEventStatus } from '../../utils/adminEventState';
 import { AdminEventsFilterBar } from './Events/AdminEventsFilterBar';
 import { AdminEventsTable } from './Events/AdminEventsTable';
 import { AdminEventsSkeleton } from './Events/AdminEventsSkeleton';
+import { adminEventsPagedResponseSchema } from '../../schemas/adminSchemas';
 
 export default function AdminEventsPage() {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
@@ -21,12 +22,21 @@ export default function AdminEventsPage() {
 
   // Pagination & Server Search/Filter state
   const [searchQuery, setSearchQuery] = useState(() => urlSearchParams.get('search') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
   const [statusFilter, setStatusFilter] = useState<string>(() => urlSearchParams.get('status') || 'All');
   const [categoryFilter, setCategoryFilter] = useState<string>(() => urlSearchParams.get('category') || 'All');
   const [page, setPage] = useState(() => Math.max(1, Number(urlSearchParams.get('page')) || 1));
   const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+
+  // Debounced search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,7 +53,7 @@ export default function AdminEventsPage() {
       setLoading(true);
       setLoadError(false);
       const params: Record<string, string | number> = { page, pageSize };
-      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
       if (categoryFilter !== 'All') params.category = categoryFilter;
       if (statusFilter === 'Deleted') {
         params.deletedOnly = 'true';
@@ -52,23 +62,31 @@ export default function AdminEventsPage() {
       }
 
       const res = await api.get('/api/events/admin-all', { params, signal: controller.signal });
-      if (res.data.success) {
-        const data = res.data.data;
-        setEvents(data.items || []);
-        setTotalPages(data.totalPages || 1);
-        setTotalCount(data.totalCount || 0);
+      if (res.data?.success) {
+        const parsed = adminEventsPagedResponseSchema.safeParse(res.data.data);
+        if (parsed.success) {
+          const data = parsed.data;
+          setEvents(data.items as Event[]);
+          setTotalPages(data.totalPages || 1);
+          setTotalCount(data.totalCount || 0);
+        } else {
+          setLoadError(true);
+          toast.error('Dữ liệu sự kiện từ máy chủ không đúng định dạng.');
+        }
       } else {
         setLoadError(true);
-        toast.error(res.data.message || 'Không thể tải danh sách sự kiện.');
+        toast.error(res.data?.message || 'Không thể tải danh sách sự kiện.');
       }
     } catch (err: unknown) {
-      if ((err as { name?: string })?.name === 'CanceledError') return;
+      if ((err as { name?: string; code?: string })?.name === 'CanceledError' || (err as { code?: string })?.code === 'ERR_CANCELED') return;
       setLoadError(true);
       toast.error('Lỗi khi kết nối tới máy chủ sự kiện.');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
-  }, [page, pageSize, searchQuery, categoryFilter, statusFilter]);
+  }, [page, pageSize, debouncedSearch, categoryFilter, statusFilter]);
 
   useEffect(() => {
     fetchEvents();
@@ -77,12 +95,12 @@ export default function AdminEventsPage() {
 
   useEffect(() => {
     const nextParams = new URLSearchParams();
-    if (searchQuery.trim()) nextParams.set('search', searchQuery.trim());
+    if (debouncedSearch.trim()) nextParams.set('search', debouncedSearch.trim());
     if (statusFilter !== 'All') nextParams.set('status', statusFilter);
     if (categoryFilter !== 'All') nextParams.set('category', categoryFilter);
     if (page > 1) nextParams.set('page', String(page));
     setUrlSearchParams(nextParams, { replace: true });
-  }, [searchQuery, statusFilter, categoryFilter, page, setUrlSearchParams]);
+  }, [debouncedSearch, statusFilter, categoryFilter, page, setUrlSearchParams]);
 
   const handleOpenCreateModal = () => {
     setSelectedEvent(null);
@@ -114,7 +132,7 @@ export default function AdminEventsPage() {
           basePrice: data.basePrice || selectedEvent.basePrice || 200000,
           status: formValueToEventStatus(data.status),
           refundCutoffHours: selectedEvent.refundCutoffHours || 24,
-          expectedVersion: (selectedEvent as unknown as { version?: string })?.version
+          expectedVersion: selectedEvent.version
         };
 
         const response = await api.put(`/api/events/${selectedEvent.id}`, payload);

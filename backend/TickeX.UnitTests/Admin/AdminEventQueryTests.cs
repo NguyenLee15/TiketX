@@ -40,6 +40,21 @@ public sealed class AdminEventQueryTests : IDisposable
         history.Items.Should().Contain(x => x.Id == deleted.Id && x.IsDeleted);
     }
 
+    [Fact]
+    public async Task AdminEvents_ShouldProjectValidBase64Version_ForOptimisticLocking()
+    {
+        var ev = new Event("Concert", "Description", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(3), "Location", "Venue", 100);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var handler = new GetAdminEventsQueryHandler(_context);
+        var result = await handler.Handle(new GetAdminEventsQuery(), CancellationToken.None);
+
+        var item = result.Items.Should().ContainSingle(x => x.Id == ev.Id).Subject;
+        item.Version.Should().NotBeNullOrWhiteSpace();
+        item.Version.Should().Be(Convert.ToBase64String(ev.Version));
+    }
+
     public void Dispose()
     {
         _context.Dispose();

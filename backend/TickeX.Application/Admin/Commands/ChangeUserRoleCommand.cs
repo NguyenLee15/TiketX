@@ -56,7 +56,7 @@ public class ChangeUserRoleCommandHandler : IRequestHandler<ChangeUserRoleComman
         bool lockAcquired;
         try
         {
-            lockAcquired = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(5), cancellationToken);
+            lockAcquired = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
         }
         catch
         {
