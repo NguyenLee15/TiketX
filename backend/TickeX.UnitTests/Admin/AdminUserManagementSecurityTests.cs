@@ -32,7 +32,13 @@ public class AdminUserManagementSecurityTests : IDisposable
         _mockLockService = new Mock<IDistributedLockService>();
         _mockLockService
             .Setup(l => l.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .ReturnsAsync(new TestDistributedLockLease());
+    }
+
+    private sealed class TestDistributedLockLease : IDistributedLockLease
+    {
+        public bool IsValid => true;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     public void Dispose()

@@ -18,6 +18,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<EventStaffAssignment> EventStaffAssignments => Set<EventStaffAssignment>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefundRequest> RefundRequests => Set<RefundRequest>();
+    public DbSet<RefundBankAccount> RefundBankAccounts => Set<RefundBankAccount>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<NotificationOutboxItem> NotificationOutbox => Set<NotificationOutboxItem>();
 

@@ -16,6 +16,8 @@ using TickeX.Infrastructure.Persistence;
 using TickeX.Infrastructure.Services;
 using TickeX.Application.Seats;
 using TickeX.Application.Payments.Commands;
+using TickeX.Application.Users.Commands;
+using TickeX.Application.Users.Queries;
 using Xunit;
 
 namespace TickeX.UnitTests.Customer;
@@ -80,7 +82,7 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
 
         var lockService = new Mock<IDistributedLockService>();
         lockService.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .ReturnsAsync(new TestDistributedLockLease());
         var notifications = new Mock<ISeatNotificationService>();
         var scheduler = new Mock<IReservationExpiryScheduler>();
         var handler = new LockSeatCommandHandler(new ReservationOperations(
@@ -138,7 +140,7 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         await _context.SaveChangesAsync();
         var seat = await _context.Seats.SingleAsync();
         var locks = new Mock<IDistributedLockService>();
-        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(new TestDistributedLockLease());
         var scheduler = new Mock<IReservationExpiryScheduler>();
         scheduler.Setup(x => x.Schedule(It.IsAny<Guid>(), It.IsAny<TimeSpan>())).Throws(new InvalidOperationException("Hangfire down"));
         var notifications = new Mock<ISeatNotificationService>();
@@ -173,11 +175,12 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         var ticket = new Ticket(@event.Id, seat.Id, userId, seat.Price);
         ticket.MarkAsPaid();
         _context.Tickets.Add(ticket);
+        _context.RefundBankAccounts.Add(new RefundBankAccount(userId, "protected-payload", "6789"));
         await _context.SaveChangesAsync();
 
         var lockService = new Mock<IDistributedLockService>();
         lockService.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .ReturnsAsync(new TestDistributedLockLease());
         var handler = new RefundTicketCommandHandler(_context, lockService.Object, new RefundRequestPort(_context));
 
         var result = await handler.Handle(
@@ -201,6 +204,84 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
     }
 
     [Fact]
+    public async Task CustomerRefund_WithoutRefundDestination_DoesNotChangeTicketOrCreateOutbox()
+    {
+        var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
+        _context.Users.Add(user);
+        var @event = CreateEvent("Future", DateTime.UtcNow.AddDays(4));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.Events.Add(@event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        seat.MarkAsSold();
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        ticket.MarkAsPaid();
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        var locks = new Mock<IDistributedLockService>();
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestDistributedLockLease());
+        var handler = new RefundTicketCommandHandler(_context, locks.Object, new RefundRequestPort(_context));
+
+        var result = await handler.Handle(new RefundTicketCommand(ticket.Id, user.Id), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.Code.Should().Be("REFUND_DESTINATION_REQUIRED");
+        (await _context.Tickets.AsNoTracking().SingleAsync()).Status.Should().Be(TicketStatus.Paid);
+        (await _context.RefundRequests.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SavingRefundDestination_SnapshotsWaitingRefundAndProfileMasksAccountNumber()
+    {
+        var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
+        _context.Users.Add(user);
+        var @event = CreateEvent("Cancelled", DateTime.UtcNow.AddDays(4));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.Events.Add(@event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        ticket.MarkAsPaid();
+        ticket.MarkRefundPending();
+        _context.Tickets.Add(ticket);
+        var waiting = new RefundRequest(@event.Id, ticket.Id, ticket.Price, $"event-cancel:{ticket.Id:N}");
+        waiting.WaitForDestination();
+        _context.RefundRequests.Add(waiting);
+        await _context.SaveChangesAsync();
+
+        var protector = new Mock<IRefundBankAccountProtector>();
+        protector.Setup(x => x.Protect(It.IsAny<RefundBankAccountDetails>())).Returns("encrypted-payload");
+        protector.Setup(x => x.Unprotect("encrypted-payload"))
+            .Returns(new RefundBankAccountDetails("970415", "CUSTOMER NAME", "123456789012"));
+        var saved = await new SaveRefundBankAccountCommandHandler(_context, protector.Object)
+            .Handle(new SaveRefundBankAccountCommand(user.Id, "970415", "Customer Name", "123456789012"), CancellationToken.None);
+
+        saved.Should().BeTrue();
+        var storedRefund = await _context.RefundRequests.AsNoTracking().SingleAsync();
+        storedRefund.Status.Should().Be("Pending");
+        storedRefund.EncryptedDestinationSnapshot.Should().Be("encrypted-payload");
+        var profile = await new GetUserProfileQueryHandler(_context, protector.Object)
+            .Handle(new GetUserProfileQuery(user.Id), CancellationToken.None);
+        profile!.RefundBankAccountMasked.Should().Be("•••• 9012");
+    }
+
+    [Theory]
+    [InlineData(int.MaxValue, 50)]
+    [InlineData(1, 51)]
+    [InlineData(0, 10)]
+    public async Task CustomerTicketPagination_RejectsOutOfRangeBeforeDatabaseQuery(int page, int pageSize)
+    {
+        var readModel = new CustomerTicketReadModelAdapter(_context, new VietnamTimePolicy());
+
+        var act = () => readModel.GetForUserAsync(Guid.NewGuid(), page, pageSize, cancellationToken: CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
     public async Task Release_WhenRealtimeNotificationFails_ReturnsCommittedSuccess()
     {
         var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
@@ -215,7 +296,7 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         await _context.SaveChangesAsync();
 
         var locks = new Mock<IDistributedLockService>();
-        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(new TestDistributedLockLease());
         var notifications = new Mock<ISeatNotificationService>();
         notifications.Setup(x => x.NotifySeatStatusChanged(
                 It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<DateTime?>()))
@@ -234,7 +315,7 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
     public async Task CustomerRefund_WhenTicketDoesNotExist_ReturnsTypedNotFoundCode()
     {
         var locks = new Mock<IDistributedLockService>();
-        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(new TestDistributedLockLease());
         var handler = new RefundTicketCommandHandler(_context, locks.Object, new RefundRequestPort(_context));
 
         var result = await handler.Handle(new RefundTicketCommand(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None);
@@ -324,7 +405,7 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
 
         var lockService = new Mock<IDistributedLockService>();
         lockService.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .ReturnsAsync(new TestDistributedLockLease());
         var notifications = new Mock<ISeatNotificationService>();
         var scheduler = new Mock<IReservationExpiryScheduler>();
         var options = new ReservationOptions { HoldMinutes = 5, MaximumPendingSeatsPerEvent = 4 };
@@ -416,7 +497,7 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
 
         var lockService = new Mock<IDistributedLockService>();
         lockService.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .ReturnsAsync(new TestDistributedLockLease());
         var notifications = new Mock<ISeatNotificationService>();
         var outbox = new Mock<INotificationOutboxPort>();
         var ticketSecurity = new Mock<ITicketSecurityService>();
@@ -446,6 +527,12 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
 
     private static Event CreateEvent(string title, DateTime date) =>
         new(title, "Description", date, date.AddHours(2), "HCM", "Venue", 1);
+
+    private sealed class TestDistributedLockLease : IDistributedLockLease
+    {
+        public bool IsValid => true;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
 
     public void Dispose()
     {

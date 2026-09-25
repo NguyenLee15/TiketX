@@ -31,6 +31,10 @@ export const userProfileResponseSchema = z.object({
   phone: z.string().optional().nullable().default(''),
   avatarUrl: z.string().optional().nullable().default(''),
   role: z.string().optional().default('Customer'),
+  hasRefundBankAccount: z.boolean().optional().default(false),
+  refundBankBin: z.string().optional().nullable().default(null),
+  refundBankAccountName: z.string().optional().nullable().default(null),
+  refundBankAccountMasked: z.string().optional().nullable().default(null),
 }).passthrough();
 
 export type UserProfileResponse = z.infer<typeof userProfileResponseSchema>;

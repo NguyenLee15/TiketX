@@ -2,7 +2,7 @@ namespace TickeX.Application.Interfaces;
 
 public enum RefundEnqueueResult { Created, AlreadyExists, ConcurrencyConflict }
 
-public sealed record RefundEnqueueItem(Guid EventId, Guid TicketId, decimal Amount, string IdempotencyKey);
+public sealed record RefundEnqueueItem(Guid EventId, Guid TicketId, decimal Amount, string IdempotencyKey, string? EncryptedDestinationSnapshot = null);
 
 public interface IRefundRequestPort
 {

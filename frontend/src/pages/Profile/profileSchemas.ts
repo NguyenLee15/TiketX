@@ -25,3 +25,10 @@ export const passwordSchema = z.object({
 
 export type PasswordFormValues = z.infer<typeof passwordSchema>;
 
+export const refundBankAccountSchema = z.object({
+  bankBin: z.string().regex(/^\d{6,11}$/, 'Nhập mã BIN ngân hàng gồm 6–11 chữ số'),
+  accountName: z.string().trim().min(2, 'Nhập tên chủ tài khoản').max(120),
+  accountNumber: z.string().regex(/^\d{6,30}$/, 'Số tài khoản phải gồm 6–30 chữ số')
+});
+
+export type RefundBankAccountFormValues = z.infer<typeof refundBankAccountSchema>;

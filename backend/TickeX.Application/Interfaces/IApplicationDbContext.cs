@@ -13,6 +13,7 @@ public interface IApplicationDbContext
     DbSet<EventStaffAssignment> EventStaffAssignments { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<RefundRequest> RefundRequests { get; }
+    DbSet<RefundBankAccount> RefundBankAccounts { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<NotificationOutboxItem> NotificationOutbox { get; }
 

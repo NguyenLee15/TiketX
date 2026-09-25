@@ -34,10 +34,15 @@ public sealed class CustomerTicketReadModelAdapter : ICustomerTicketReadModel
             .OrderByDescending(t => t.CreatedAt)
             .ThenByDescending(t => t.Id);
 
-        var effectivePage = page is > 0 ? page.Value : 1;
-        var effectivePageSize = pageSize is > 0 ? Math.Min(pageSize.Value, 50) : 10;
+        var effectivePage = page ?? 1;
+        var effectivePageSize = pageSize ?? 10;
+        if (effectivePage < 1 || effectivePageSize is < 1 or > 50)
+            throw new ArgumentOutOfRangeException(nameof(page), "page must be positive and pageSize must be between 1 and 50.");
+        var offset = checked(((long)effectivePage - 1) * effectivePageSize);
+        if (offset > int.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(page), "page offset exceeds the supported range.");
         query = query
-            .Skip((effectivePage - 1) * effectivePageSize)
+            .Skip((int)offset)
             .Take(effectivePageSize);
 
         var tickets = await query.ToListAsync(cancellationToken);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Calendar, LogOut, Ticket, Users, Home, QrCode, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Calendar, LogOut, Ticket, Users, Home, QrCode, Menu, X, Banknote } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useModalAccessibility } from '../Admin/useModalAccessibility';
 import api from '../../services/api';
@@ -26,6 +26,7 @@ export default function AdminLayout() {
     { name: 'Quản lý sự kiện', href: '/admin/events', icon: Calendar, roles: ['Admin'] },
     { name: 'Trạm Soát vé QR', href: '/admin/scan-ticket', icon: QrCode, roles: ['Admin', 'Staff'] },
     { name: 'Quản lý người dùng', href: '/admin/users', icon: Users, roles: ['Admin'] },
+    { name: 'Hoàn tiền', href: '/admin/refunds', icon: Banknote, roles: ['Admin'] },
   ];
 
   const currentRole = user?.role || 'Customer';

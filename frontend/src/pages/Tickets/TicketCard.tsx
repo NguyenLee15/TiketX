@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Loader2, Download, RotateCcw, Crown, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
@@ -77,9 +78,12 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
     }
     if (s === 'refundpending') {
       return (
+        <>
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-warning/15 text-warning border border-warning/30 uppercase tracking-wider whitespace-nowrap shrink-0">
           <Clock className="w-3.5 h-3.5" /> Đang Hoàn Tiền
         </span>
+        <Link to="/profile?refundBankAccount=1" className="ml-2 text-xs font-semibold text-brand-primary underline underline-offset-4">Kiểm tra tài khoản nhận tiền</Link>
+        </>
       );
     }
     if (s === 'cancelled') {
@@ -225,4 +229,3 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
     </div>
   );
 });
-

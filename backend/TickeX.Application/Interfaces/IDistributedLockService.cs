@@ -2,6 +2,10 @@ namespace TickeX.Application.Interfaces;
 
 public interface IDistributedLockService
 {
-    Task<bool> AcquireLockAsync(string lockKey, TimeSpan expiration, CancellationToken cancellationToken);
-    Task ReleaseLockAsync(string lockKey);
+    Task<IDistributedLockLease?> AcquireLockAsync(string lockKey, TimeSpan expiration, CancellationToken cancellationToken);
+}
+
+public interface IDistributedLockLease : IAsyncDisposable
+{
+    bool IsValid { get; }
 }

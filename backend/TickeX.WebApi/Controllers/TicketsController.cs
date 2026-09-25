@@ -26,6 +26,10 @@ public class TicketsController : ControllerBase
     [HttpGet("my-tickets")]
     public async Task<IActionResult> GetMyTickets([FromQuery] int? page = null, [FromQuery] int? pageSize = null, [FromQuery] string? status = null, CancellationToken cancellationToken = default)
     {
+        var effectivePage = page ?? 1;
+        var effectivePageSize = pageSize ?? 10;
+        if (effectivePage < 1 || effectivePageSize is < 1 or > 50 || ((long)effectivePage - 1) * effectivePageSize > int.MaxValue)
+            return BadRequest(new { success = false, code = "PAGINATION_OUT_OF_RANGE", message = "page phải dương và pageSize phải nằm trong khoảng 1–50." });
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
         {
@@ -60,7 +64,7 @@ public class TicketsController : ControllerBase
             var statusCode = result.Code switch
             {
                 "REFUND_LOCK_UNAVAILABLE" => StatusCodes.Status503ServiceUnavailable,
-                "REFUND_CONCURRENCY_CONFLICT" => StatusCodes.Status409Conflict,
+                "REFUND_CONCURRENCY_CONFLICT" or "REFUND_DESTINATION_REQUIRED" => StatusCodes.Status409Conflict,
                 "REFUND_TICKET_NOT_FOUND" or "REFUND_EVENT_NOT_FOUND" => StatusCodes.Status404NotFound,
                 "REFUND_FORBIDDEN" => StatusCodes.Status403Forbidden,
                 "REFUND_TICKET_USED" or "REFUND_ALREADY_CANCELLED" or "REFUND_TICKET_NOT_PAID" or "REFUND_CUTOFF_EXPIRED" => StatusCodes.Status409Conflict,

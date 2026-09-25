@@ -39,6 +39,28 @@ public class AdminController : ControllerBase
         return Ok(new { success = true, data = result });
     }
 
+    [HttpGet("refunds")]
+    public async Task<IActionResult> GetRefunds([FromQuery] int page = 1, [FromQuery] int pageSize = 25, CancellationToken cancellationToken = default)
+    {
+        if (page < 1 || pageSize is < 1 or > 100 || ((long)page - 1) * pageSize > int.MaxValue)
+            return BadRequest(new { success = false, code = "PAGINATION_OUT_OF_RANGE", message = "page/pageSize nằm ngoài giới hạn hỗ trợ." });
+        var result = await _mediator.Send(new GetRefundRequestsQuery(page, pageSize), cancellationToken);
+        return Ok(new { success = true, data = result });
+    }
+
+    [HttpPost("refunds/{id:guid}/retries")]
+    public async Task<IActionResult> RetryRefund(Guid id, CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(new RetryRefundRequestCommand(id), cancellationToken);
+        return result switch
+        {
+            "REFUND_NOT_FOUND" => NotFound(new { success = false, code = result, message = "Không tìm thấy yêu cầu hoàn tiền." }),
+            "REFUND_RETRY_QUEUED" => Accepted(new { success = true, code = result }),
+            "REFUND_COMPLETED" => Ok(new { success = true, code = result }),
+            _ => Conflict(new { success = false, code = result, message = "Chưa thể retry cho đến khi trạng thái PayOS được đối soát." })
+        };
+    }
+
     public record ChangeRoleRequest(string Role, string? ExpectedVersion = null);
 
     [HttpPut("users/{id}/role")]

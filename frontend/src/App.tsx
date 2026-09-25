@@ -24,6 +24,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const AdminDashboardPage = lazy(() => import('./pages/Admin/AdminDashboardPage'));
 const AdminEventsPage = lazy(() => import('./pages/Admin/AdminEventsPage'));
 const AdminUsersPage = lazy(() => import('./pages/Admin/AdminUsersPage'));
+const AdminRefundsPage = lazy(() => import('./pages/Admin/AdminRefundsPage'));
 const AdminScanTicketPage = lazy(() => import('./pages/Admin/AdminScanTicketPage'));
 
 // Mock Pages (Development Only)
@@ -105,6 +106,14 @@ function App() {
             element={
               <AdminRoute allowedRoles={['Admin']}>
                 <AdminUsersPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="refunds"
+            element={
+              <AdminRoute allowedRoles={['Admin']}>
+                <AdminRefundsPage />
               </AdminRoute>
             }
           />

@@ -2,6 +2,7 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.DataProtection;
 using TickeX.Application.Interfaces;
 using TickeX.Infrastructure.Persistence;
 using TickeX.Infrastructure.Services;
@@ -14,6 +15,12 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        var keyRingPath = configuration["DataProtection:KeyRingPath"];
+        if (string.IsNullOrWhiteSpace(keyRingPath))
+            throw new InvalidOperationException("DataProtection:KeyRingPath is required so replicas share persistent keys.");
+        services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keyRingPath)).SetApplicationName("TickeX");
+        services.AddScoped<IRefundBankAccountProtector, DataProtectionRefundBankAccountProtector>();
+
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             var connStr = configuration.GetConnectionString("DefaultConnection");
@@ -69,6 +76,7 @@ public static class DependencyInjection
         });
             
         services.AddScoped<TickeX.Application.Interfaces.IDistributedLockService, TickeX.Infrastructure.Services.RedisDistributedLockService>();
+        services.AddSingleton<IIdempotencyStore, RedisIdempotencyStore>();
 
         // RabbitMQ
         services.AddSingleton<IMessagePublisher, TickeX.Infrastructure.Messaging.RabbitMQPublisher>();
@@ -77,6 +85,8 @@ public static class DependencyInjection
         
         // PayOS
         services.AddHttpClient<IPayOSService, TickeX.Infrastructure.Payments.PayOSService>();
+        services.AddHttpClient<IPayOSPayoutService, TickeX.Infrastructure.Payments.PayOSPayoutService>();
+        services.AddHostedService<RefundPayoutWorker>();
 
         return services;
     }

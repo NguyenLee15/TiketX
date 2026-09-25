@@ -66,6 +66,28 @@ public class UsersController : ControllerBase
         return Ok(new { success = true, message = "Password changed successfully" });
     }
 
+    [HttpPut("me/refund-bank-account")]
+    public async Task<IActionResult> SaveRefundBankAccount([FromBody] SaveRefundBankAccountRequest request, CancellationToken cancellationToken = default)
+    {
+        var userId = GetAuthenticatedUserId();
+        if (userId is null) return UnauthorizedEnvelope();
+        var saved = await _mediator.Send(new SaveRefundBankAccountCommand(userId.Value, request.BankBin, request.AccountName, request.AccountNumber), cancellationToken);
+        if (!saved) return BadRequest(new { success = false, code = "REFUND_BANK_ACCOUNT_INVALID", message = "Thông tin tài khoản nhận tiền không hợp lệ." });
+        return NoContent();
+    }
+
+    [HttpDelete("me/refund-bank-account")]
+    public async Task<IActionResult> DeleteRefundBankAccount(CancellationToken cancellationToken = default)
+    {
+        var userId = GetAuthenticatedUserId();
+        if (userId is null) return UnauthorizedEnvelope();
+        await _mediator.Send(new DeleteRefundBankAccountCommand(userId.Value), cancellationToken);
+        return NoContent();
+    }
+
+    private Guid? GetAuthenticatedUserId() =>
+        Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId) ? userId : null;
+
     private IActionResult UnauthorizedEnvelope() => Unauthorized(new
     {
         success = false,
@@ -77,3 +99,4 @@ public class UsersController : ControllerBase
 
 public record UpdateProfileRequest(string Name, string Phone, string AvatarUrl);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+public record SaveRefundBankAccountRequest(string BankBin, string AccountName, string AccountNumber);

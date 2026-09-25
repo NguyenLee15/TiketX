@@ -12,7 +12,12 @@ public sealed class RefundRequestPort : IRefundRequestPort
     public async Task<RefundEnqueueResult> EnqueueAsync(IReadOnlyCollection<RefundEnqueueItem> items, CancellationToken cancellationToken)
     {
         foreach (var item in items)
-            _context.RefundRequests.Add(new RefundRequest(item.EventId, item.TicketId, item.Amount, item.IdempotencyKey));
+        {
+            var request = new RefundRequest(item.EventId, item.TicketId, item.Amount, item.IdempotencyKey);
+            if (item.EncryptedDestinationSnapshot is null) request.WaitForDestination();
+            else request.SetDestinationSnapshot(item.EncryptedDestinationSnapshot);
+            _context.RefundRequests.Add(request);
+        }
         try
         {
             await _context.SaveChangesAsync(cancellationToken);

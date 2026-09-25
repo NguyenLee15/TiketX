@@ -49,10 +49,10 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         }
 
         string lockKey = $"payment:lock:{initialTicket.OrderCode}";
-        bool acquired = false;
+        IDistributedLockLease? lease;
         try
         {
-            acquired = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
+            lease = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -60,13 +60,13 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
             return false;
         }
 
-        if (!acquired)
+        if (lease is null)
         {
             _logger.LogWarning("Could not acquire payment lock for {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
             return false;
         }
 
-        try
+        await using (lease)
         {
             // Re-fetch the ticket inside the lock with Event and Seat included
             var ticket = await _context.Tickets
@@ -148,9 +148,14 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                             data.Amount,
                             $"orphaned-comp-{data.OrderCode}"
                         );
+                        var destination = await _context.RefundBankAccounts.AsNoTracking()
+                            .SingleOrDefaultAsync(x => x.UserId == ticket.UserId, cancellationToken);
+                        if (destination is null) refundReq.WaitForDestination();
+                        else refundReq.SetDestinationSnapshot(destination.EncryptedPayload);
                         _context.RefundRequests.Add(refundReq);
                     }
 
+                    if (!lease.IsValid) return false;
                     await _context.SaveChangesAsync(cancellationToken);
                     return true; // Acknowledge webhook to avoid endless retries while preserving compensation state
                 }
@@ -207,6 +212,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 }
 
                 // Explicitly commit financial, seat state, and outbox atomically into database
+                if (!lease.IsValid) return false;
                 await _context.SaveChangesAsync(cancellationToken);
 
                 if (ticket.Seat != null)
@@ -240,6 +246,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                     existingTx.MarkFailed("Payment rejected or cancelled by user", auditSummary);
                 }
 
+                if (!lease.IsValid) return false;
                 await _context.SaveChangesAsync(cancellationToken);
 
                 if (ticket.Seat != null)
@@ -249,14 +256,6 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
             }
 
             return true;
-        }
-        finally
-        {
-            try
-            {
-                await _lockService.ReleaseLockAsync(lockKey);
-            }
-            catch { }
         }
     }
 }

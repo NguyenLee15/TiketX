@@ -107,6 +107,17 @@ public class Ticket : BaseEntity
         Version = Guid.NewGuid().ToByteArray();
     }
 
+    public void CompleteRefund(decimal amount)
+    {
+        if (Status != TicketStatus.RefundPending)
+            throw new InvalidOperationException("Only refund-pending tickets can complete a refund.");
+        Status = TicketStatus.Cancelled;
+        RefundAmount = amount;
+        RefundedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
+    }
+
     public void Cancel()
     {
         if (Status == TicketStatus.Cancelled)

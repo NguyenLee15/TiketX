@@ -29,10 +29,10 @@ public class RefundTicketCommandHandler : IRequestHandler<RefundTicketCommand, R
         string lockKey = $"lock:refund:{request.TicketId}";
         
         // 1. Acquire distributed lock with 15-second timeout
-        bool acquired = false;
+        IDistributedLockLease? lease;
         try
         {
-            acquired = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(15), cancellationToken);
+            lease = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(15), cancellationToken);
         }
         catch (Exception)
         {
@@ -45,7 +45,7 @@ public class RefundTicketCommandHandler : IRequestHandler<RefundTicketCommand, R
                 Code: "REFUND_LOCK_UNAVAILABLE");
         }
 
-        if (!acquired)
+        if (lease is null)
         {
             return new RefundResult(
                 false,
@@ -54,6 +54,8 @@ public class RefundTicketCommandHandler : IRequestHandler<RefundTicketCommand, R
         }
 
         try
+        {
+        await using (lease)
         {
             // 2. Reload Ticket from DB with Seat and Event included
             var ticket = await _context.Tickets
@@ -98,6 +100,11 @@ public class RefundTicketCommandHandler : IRequestHandler<RefundTicketCommand, R
                 return new RefundResult(false, "Không tìm thấy thông tin sự kiện gắn với vé.", Code: "REFUND_EVENT_NOT_FOUND");
             }
 
+            var destination = await _context.RefundBankAccounts.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.UserId == ticket.UserId, cancellationToken);
+            if (destination is null)
+                return new RefundResult(false, "Hãy thiết lập tài khoản ngân hàng nhận tiền trong hồ sơ trước khi yêu cầu hoàn tiền.", Code: "REFUND_DESTINATION_REQUIRED");
+
             // Validate cutoff time (Event.RefundCutoffHours)
             var cutoffHours = ticket.Event.RefundCutoffHours > 0 ? ticket.Event.RefundCutoffHours : 24;
             var eventStartTime = ticket.Event.Date;
@@ -112,6 +119,8 @@ public class RefundTicketCommandHandler : IRequestHandler<RefundTicketCommand, R
             }
 
             decimal refundAmount = ticket.Price;
+            if (!lease.IsValid)
+                return new RefundResult(false, "Khóa xử lý đã hết hạn. Vui lòng thử lại.", Code: "REFUND_LOCK_LOST");
 
             // 4. Record Initiated Transaction (Outbox pattern)
             var existingTx = await _context.PaymentTransactions
@@ -132,29 +141,24 @@ public class RefundTicketCommandHandler : IRequestHandler<RefundTicketCommand, R
                 beforeState: "Paid",
                 afterState: System.Text.Json.JsonSerializer.Serialize(new { Status = "RefundPending", request.Reason }),
                 ipAddress: request.IpAddress));
+            if (!lease.IsValid)
+                return new RefundResult(false, "Khóa xử lý đã hết hạn. Vui lòng thử lại.", Code: "REFUND_LOCK_LOST");
             var enqueueResult = await _refundRequests.EnqueueAsync(
                 [new RefundEnqueueItem(
                     ticket.EventId,
                     ticket.Id,
                     ticket.Price,
-                    $"customer-refund:{ticket.EventId:N}:ticket:{ticket.Id:N}")],
+                    $"customer-refund:{ticket.EventId:N}:ticket:{ticket.Id:N}",
+                    destination.EncryptedPayload)],
                 cancellationToken);
             return enqueueResult == RefundEnqueueResult.Created
                 ? new RefundResult(true, "Yêu cầu hoàn tiền đang chờ xử lý.", refundAmount, "REFUND_PENDING")
                 : await RecoverAuthoritativeResultAsync(request.TicketId, cancellationToken);
-
+        }
         }
         catch (DbUpdateConcurrencyException)
         {
             return await RecoverAuthoritativeResultAsync(request.TicketId, cancellationToken);
-        }
-        finally
-        {
-            try
-            {
-                await _lockService.ReleaseLockAsync(lockKey);
-            }
-            catch { }
         }
     }
 

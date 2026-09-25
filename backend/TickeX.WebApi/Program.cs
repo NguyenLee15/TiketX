@@ -12,6 +12,27 @@ using TickeX.WebApi.Health;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (string.IsNullOrWhiteSpace(builder.Configuration["DataProtection:KeyRingPath"]))
+{
+    if (!builder.Environment.IsDevelopment())
+        throw new InvalidOperationException("DataProtection:KeyRingPath must point to persistent shared storage outside Development.");
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["DataProtection:KeyRingPath"] = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TickeX", "DataProtectionKeys")
+    });
+}
+
+if (args.Contains("--migrate", StringComparer.OrdinalIgnoreCase))
+{
+    var migrationConnection = builder.Configuration.GetConnectionString("MigrationConnection");
+    if (string.IsNullOrWhiteSpace(migrationConnection))
+        throw new InvalidOperationException("ConnectionStrings:MigrationConnection is required for migration runs.");
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["ConnectionStrings:DefaultConnection"] = migrationConnection
+    });
+}
+
 static bool IsConfigured(string? value) => !string.IsNullOrWhiteSpace(value)
     && !value.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase)
     && !value.StartsWith("replace-with", StringComparison.OrdinalIgnoreCase);
@@ -19,7 +40,6 @@ static bool IsConfigured(string? value) => !string.IsNullOrWhiteSpace(value)
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 1_048_576);
 
 // Add services to the container.
-builder.Services.AddDistributedMemoryCache();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -196,7 +216,10 @@ if (!builder.Environment.IsDevelopment())
     {
         (Name: "PayOS:ClientId", Value: builder.Configuration["PayOS:ClientId"]),
         (Name: "PayOS:ApiKey", Value: builder.Configuration["PayOS:ApiKey"]),
-        (Name: "PayOS:ChecksumKey", Value: builder.Configuration["PayOS:ChecksumKey"])
+        (Name: "PayOS:ChecksumKey", Value: builder.Configuration["PayOS:ChecksumKey"]),
+        (Name: "PayOS:PayoutClientId", Value: builder.Configuration["PayOS:PayoutClientId"]),
+        (Name: "PayOS:PayoutApiKey", Value: builder.Configuration["PayOS:PayoutApiKey"]),
+        (Name: "PayOS:PayoutChecksumKey", Value: builder.Configuration["PayOS:PayoutChecksumKey"])
     };
     var missingPayOsSetting = payOsSettings.FirstOrDefault(setting =>
         !IsConfigured(setting.Value));

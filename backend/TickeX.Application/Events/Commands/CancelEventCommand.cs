@@ -55,6 +55,10 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
             .GroupBy(p => p.TicketId)
             .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.CreatedAt).First());
         var refundItems = new List<RefundEnqueueItem>();
+        var userIds = tickets.Where(t => t.Status == TicketStatus.Paid).Select(t => t.UserId).Distinct().ToArray();
+        var destinations = await _context.RefundBankAccounts.AsNoTracking()
+            .Where(x => userIds.Contains(x.UserId))
+            .ToDictionaryAsync(x => x.UserId, x => x.EncryptedPayload, cancellationToken);
 
         foreach (var ticket in tickets)
         {
@@ -68,7 +72,8 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
                     request.Id,
                     ticket.Id,
                     ticket.Price,
-                    $"event-cancel:{request.Id:N}:ticket:{ticket.Id:N}"));
+                    $"event-cancel:{request.Id:N}:ticket:{ticket.Id:N}",
+                    destinations.GetValueOrDefault(ticket.UserId)));
                 refundedCount++;
                 refundPendingAmount += ticket.Price;
             }

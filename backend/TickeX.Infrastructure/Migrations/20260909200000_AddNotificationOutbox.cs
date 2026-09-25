@@ -1,41 +1,20 @@
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using TickeX.Infrastructure.Persistence;
 
 #nullable disable
 
 namespace TickeX.Infrastructure.Migrations;
 
+[DbContext(typeof(ApplicationDbContext))]
+[Migration("20260909200000_AddNotificationOutbox")]
 public partial class AddNotificationOutbox : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.CreateTable(
-            name: "notification_outbox",
-            columns: table => new
-            {
-                Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                TicketId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                EventId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                Status = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                AttemptCount = table.Column<int>(type: "int", nullable: false),
-                NextAttemptAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                ProcessedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                LastError = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
-                CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
-            },
-            constraints: table => table.PrimaryKey("PK_notification_outbox", x => x.Id));
-
-        migrationBuilder.CreateIndex(
-            name: "IX_notification_outbox_TicketId",
-            table: "notification_outbox",
-            column: "TicketId",
-            unique: true);
-
-        migrationBuilder.CreateIndex(
-            name: "IX_notification_outbox_Status_NextAttemptAt",
-            table: "notification_outbox",
-            columns: new[] { "Status", "NextAttemptAt" });
+        migrationBuilder.Sql("IF OBJECT_ID(N'notification_outbox', N'U') IS NULL CREATE TABLE [notification_outbox] ([Id] uniqueidentifier NOT NULL CONSTRAINT [PK_notification_outbox] PRIMARY KEY, [TicketId] uniqueidentifier NOT NULL, [UserId] uniqueidentifier NOT NULL, [EventId] uniqueidentifier NOT NULL, [Status] nvarchar(30) NOT NULL, [AttemptCount] int NOT NULL, [NextAttemptAt] datetime2 NULL, [ProcessedAt] datetime2 NULL, [LastError] nvarchar(2000) NULL, [CreatedAt] datetime2 NOT NULL, [UpdatedAt] datetime2 NULL)");
+        migrationBuilder.Sql("IF OBJECT_ID(N'notification_outbox', N'U') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_notification_outbox_TicketId' AND object_id = OBJECT_ID(N'notification_outbox')) CREATE UNIQUE INDEX [IX_notification_outbox_TicketId] ON [notification_outbox] ([TicketId])");
+        migrationBuilder.Sql("IF OBJECT_ID(N'notification_outbox', N'U') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_notification_outbox_Status_NextAttemptAt' AND object_id = OBJECT_ID(N'notification_outbox')) CREATE INDEX [IX_notification_outbox_Status_NextAttemptAt] ON [notification_outbox] ([Status], [NextAttemptAt])");
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

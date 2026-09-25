@@ -204,7 +204,7 @@ public class EventLifecycleAndDeletionTests : IDisposable
         updatedPaidTicket.RefundAmount.Should().BeNull();
 
         var refundRequest = await _context.RefundRequests.SingleAsync(x => x.TicketId == paidTicket.Id);
-        refundRequest.Status.Should().Be("Pending");
+        refundRequest.Status.Should().Be("AwaitingDestination");
         refundRequest.Amount.Should().Be(200000m);
         refundRequest.IdempotencyKey.Should().Contain(paidTicket.Id.ToString("N"));
 

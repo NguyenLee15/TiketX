@@ -14,6 +14,30 @@ services:
       retries: 20
       start_period: 20s
 
+  sql-bootstrap:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    entrypoint: ["/bin/bash", "-c"]
+    command: >-
+      /opt/mssql-tools18/bin/sqlcmd -S sqlserver,1433 -U sa -P "$$MSSQL_SA_PASSWORD" -C -b
+      -v MSSQL_APP_USER="$$MSSQL_APP_USER" MSSQL_APP_PASSWORD="$$MSSQL_APP_PASSWORD"
+      MSSQL_HANGFIRE_USER="$$MSSQL_HANGFIRE_USER" MSSQL_HANGFIRE_PASSWORD="$$MSSQL_HANGFIRE_PASSWORD"
+      MSSQL_MIGRATOR_USER="$$MSSQL_MIGRATOR_USER" MSSQL_MIGRATOR_PASSWORD="$$MSSQL_MIGRATOR_PASSWORD"
+      -i /scripts/bootstrap-sql-principals.sql
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
+      MSSQL_APP_USER: ${MSSQL_APP_USER:?Set MSSQL_APP_USER in .env}
+      MSSQL_APP_PASSWORD: ${MSSQL_APP_PASSWORD:?Set MSSQL_APP_PASSWORD in .env}
+      MSSQL_HANGFIRE_USER: ${MSSQL_HANGFIRE_USER:?Set MSSQL_HANGFIRE_USER in .env}
+      MSSQL_HANGFIRE_PASSWORD: ${MSSQL_HANGFIRE_PASSWORD:?Set MSSQL_HANGFIRE_PASSWORD in .env}
+      MSSQL_MIGRATOR_USER: ${MSSQL_MIGRATOR_USER:?Set MSSQL_MIGRATOR_USER in .env}
+      MSSQL_MIGRATOR_PASSWORD: ${MSSQL_MIGRATOR_PASSWORD:?Set MSSQL_MIGRATOR_PASSWORD in .env}
+    volumes:
+      - ./backend/scripts:/scripts:ro
+    networks: [private]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
   redis:
     image: redis:7-alpine
     command: redis-server --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env} --save 60 1 --loglevel warning
@@ -46,9 +70,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
-      ConnectionStrings__HangfireConnection: Server=sqlserver,1433;Database=TickeXHangfire;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
+      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=${MSSQL_APP_USER};Password=${MSSQL_APP_PASSWORD};TrustServerCertificate=True;
+      ConnectionStrings__HangfireConnection: Server=sqlserver,1433;Database=TickeXHangfire;User Id=${MSSQL_HANGFIRE_USER};Password=${MSSQL_HANGFIRE_PASSWORD};TrustServerCertificate=True;
       ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD},abortConnect=false
+      DataProtection__KeyRingPath: /var/tickex-dpkeys
       RabbitMQ__HostName: rabbitmq
       RabbitMQ__UserName: ${RABBITMQ_DEFAULT_USER}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
@@ -58,6 +83,9 @@ services:
       PayOS__ClientId: ${PAYOS_CLIENT_ID:?Set PAYOS_CLIENT_ID in .env}
       PayOS__ApiKey: ${PAYOS_API_KEY:?Set PAYOS_API_KEY in .env}
       PayOS__ChecksumKey: ${PAYOS_CHECKSUM_KEY:?Set PAYOS_CHECKSUM_KEY in .env}
+      PayOS__PayoutClientId: ${PAYOS_PAYOUT_CLIENT_ID:?Set PAYOS_PAYOUT_CLIENT_ID in .env}
+      PayOS__PayoutApiKey: ${PAYOS_PAYOUT_API_KEY:?Set PAYOS_PAYOUT_API_KEY in .env}
+      PayOS__PayoutChecksumKey: ${PAYOS_PAYOUT_CHECKSUM_KEY:?Set PAYOS_PAYOUT_CHECKSUM_KEY in .env}
       PayOS__ReturnUrl: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN in .env}/payment-result
       PayOS__CancelUrl: ${PUBLIC_ORIGIN}/my-tickets
       Smtp__Server: ${SMTP_SERVER:?Set SMTP_SERVER in .env}
@@ -67,10 +95,14 @@ services:
       Smtp__FromEmail: ${SMTP_FROM_EMAIL:?Set SMTP_FROM_EMAIL in .env}
       Cors__AllowedOrigins__0: ${PUBLIC_ORIGIN}
       ForwardedHeaders__KnownNetworks__0: 172.16.0.0/12
+    volumes:
+      - tickex_dpkeys:/var/tickex-dpkeys
     networks: [private]
     depends_on:
       sqlserver:
         condition: service_healthy
+      sql-bootstrap:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       rabbitmq:
@@ -101,3 +133,4 @@ networks:
 
 volumes:
   tickex_sqlserver_data:
+  tickex_dpkeys:

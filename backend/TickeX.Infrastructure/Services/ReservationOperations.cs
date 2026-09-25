@@ -39,10 +39,11 @@ public sealed class ReservationOperations : IReservationOperations
     public async Task<ReservationResult> ReserveAsync(Guid eventId, Guid seatId, Guid userId, byte[] version, CancellationToken cancellationToken)
     {
         var limitKey = $"seat-limit:{userId}:{eventId}";
-        if (!await TryAcquireAsync(limitKey, TimeSpan.FromSeconds(30), cancellationToken))
+        var limitLease = await TryAcquireAsync(limitKey, TimeSpan.FromSeconds(30), cancellationToken);
+        if (limitLease is null)
             return Fail("RESERVATION_LOCK_UNAVAILABLE", "Không thể khóa thao tác đặt vé lúc này. Vui lòng thử lại.");
 
-        try
+        await using (limitLease)
         {
             var holdThreshold = _time.UtcNow.AddMinutes(-_options.HoldMinutes);
             var pendingCount = await _context.Tickets.CountAsync(
@@ -52,10 +53,13 @@ public sealed class ReservationOperations : IReservationOperations
                 return Fail("RESERVATION_LIMIT_REACHED", $"Mỗi khách chỉ được giữ tối đa {_options.MaximumPendingSeatsPerEvent} ghế cho một sự kiện.");
 
             var seatKey = $"seat:lock:{seatId}";
-            if (!await TryAcquireAsync(seatKey, TimeSpan.FromMinutes(_options.HoldMinutes), cancellationToken))
+            var seatLease = await TryAcquireAsync(seatKey, TimeSpan.FromMinutes(_options.HoldMinutes), cancellationToken);
+            if (seatLease is null)
                 return Fail("RESERVATION_LOCK_UNAVAILABLE", "Ghế đang được xử lý hoặc dịch vụ khóa tạm thời chưa sẵn sàng.");
 
             try
+            {
+            await using (seatLease)
             {
                 var seat = await _context.Seats.Include(s => s.Event)
                     .FirstOrDefaultAsync(s => s.Id == seatId && s.EventId == eventId, cancellationToken);
@@ -85,6 +89,8 @@ public sealed class ReservationOperations : IReservationOperations
 
                 var ticket = new Ticket(eventId, seatId, userId, seat.Price);
                 _context.Tickets.Add(ticket);
+                if (!limitLease.IsValid || !seatLease.IsValid)
+                    return Fail("RESERVATION_LOCK_LOST", "Khóa đặt ghế đã hết hạn. Vui lòng thử lại.");
                 for (var attempt = 0; ; attempt++)
                 {
                     try
@@ -120,18 +126,11 @@ public sealed class ReservationOperations : IReservationOperations
                 }
                 return new ReservationResult(true, "RESERVATION_CREATED", "Giữ ghế thành công.", ticket.Id, expiresAt);
             }
+            }
             catch (DbUpdateConcurrencyException)
             {
                 return Fail("SEAT_VERSION_CONFLICT", "Trạng thái ghế đã thay đổi. Vui lòng chọn lại.");
             }
-            finally
-            {
-                await SafeReleaseAsync(seatKey);
-            }
-        }
-        finally
-        {
-            await SafeReleaseAsync(limitKey);
         }
     }
 
@@ -153,9 +152,10 @@ public sealed class ReservationOperations : IReservationOperations
             return Fail("RESERVATION_NOT_PENDING", "Lượt giữ ghế không còn ở trạng thái chờ.");
 
         var lockKey = $"seat:lock:{ticket.SeatId}";
-        if (!await TryAcquireAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken))
+        var lease = await TryAcquireAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
+        if (lease is null)
             return Fail("RESERVATION_LOCK_UNAVAILABLE", "Không thể khóa thao tác hủy giữ ghế lúc này.");
-        try
+        await using (lease)
         {
             var current = await _context.Tickets.Include(t => t.Seat)
                 .FirstOrDefaultAsync(t => t.Id == ticketId, cancellationToken);
@@ -172,6 +172,7 @@ public sealed class ReservationOperations : IReservationOperations
                 beforeState: $"Status={TicketStatus.Pending},SeatStatus={current.Seat?.Status}",
                 afterState: $"Status={TicketStatus.Cancelled},Reason={reason}"));
             current.Cancel();
+            if (!lease.IsValid) return Fail("RESERVATION_LOCK_LOST", "Khóa hủy giữ ghế đã hết hạn. Vui lòng thử lại.");
             await _context.SaveChangesAsync(cancellationToken);
             if (current.Seat != null)
                 try
@@ -185,23 +186,13 @@ public sealed class ReservationOperations : IReservationOperations
                 }
             return new ReservationResult(true, "RESERVATION_RELEASED", "Đã hủy lượt giữ ghế.");
         }
-        finally
-        {
-            await SafeReleaseAsync(lockKey);
-        }
     }
 
-    private async Task<bool> TryAcquireAsync(string key, TimeSpan duration, CancellationToken cancellationToken)
+    private async Task<IDistributedLockLease?> TryAcquireAsync(string key, TimeSpan duration, CancellationToken cancellationToken)
     {
         try { return await _locks.AcquireLockAsync(key, duration, cancellationToken); }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-        catch (Exception ex) { _logger.LogWarning(ex, "Required reservation lock {LockKey} is unavailable", key); return false; }
-    }
-
-    private async Task SafeReleaseAsync(string key)
-    {
-        try { await _locks.ReleaseLockAsync(key); }
-        catch (Exception ex) { _logger.LogWarning(ex, "Could not release reservation lock {LockKey}", key); }
+        catch (Exception ex) { _logger.LogWarning(ex, "Required reservation lock {LockKey} is unavailable", key); return null; }
     }
 
     private static ReservationResult Fail(string code, string message) => new(false, code, message);

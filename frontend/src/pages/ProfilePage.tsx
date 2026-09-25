@@ -14,11 +14,15 @@ import {
 import { ProfileInfoForm } from './Profile/ProfileInfoForm';
 import { ChangePasswordForm } from './Profile/ChangePasswordForm';
 import { userProfileResponseSchema } from '../schemas/customerSchemas';
+import { RefundBankAccountForm } from './Profile/RefundBankAccountForm';
+import { RefundBankAccountFormValues } from './Profile/profileSchemas';
 
 export default function ProfilePage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [refundBank, setRefundBank] = useState<{ bankBin: string | null; accountName: string | null; masked: string | null }>({ bankBin: null, accountName: null, masked: null });
+  const [savingRefundBank, setSavingRefundBank] = useState(false);
 
   const user = useAuthStore(state => state.user);
   const setAuth = useAuthStore(state => state.setAuth);
@@ -66,6 +70,7 @@ export default function ProfilePage() {
         const parsed = userProfileResponseSchema.safeParse(res.data.data);
         if (parsed.success) {
           setEmail(parsed.data.email || '');
+          setRefundBank({ bankBin: parsed.data.refundBankBin, accountName: parsed.data.refundBankAccountName, masked: parsed.data.refundBankAccountMasked });
           resetProfile({
             name: parsed.data.name || '',
             phone: parsed.data.phone || '',
@@ -130,6 +135,30 @@ export default function ProfilePage() {
     }
   };
 
+  const onSaveRefundBank = async (values: RefundBankAccountFormValues) => {
+    setSavingRefundBank(true);
+    try {
+      await api.put('/api/users/me/refund-bank-account', values);
+      toast.success('Đã lưu tài khoản nhận hoàn tiền.');
+      await fetchProfile();
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      toast.error(apiErr.response?.data?.message || 'Không thể lưu tài khoản nhận tiền.');
+    } finally { setSavingRefundBank(false); }
+  };
+
+  const onDeleteRefundBank = async () => {
+    setSavingRefundBank(true);
+    try {
+      await api.delete('/api/users/me/refund-bank-account');
+      toast.success('Đã xóa tài khoản nhận hoàn tiền.');
+      await fetchProfile();
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      toast.error(apiErr.response?.data?.message || 'Không thể xóa tài khoản nhận tiền.');
+    } finally { setSavingRefundBank(false); }
+  };
+
   if (loading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -176,6 +205,14 @@ export default function ProfilePage() {
           isSubmitting={savingPassword}
         />
       </div>
+      <RefundBankAccountForm
+        bankBin={refundBank.bankBin}
+        accountName={refundBank.accountName}
+        maskedAccount={refundBank.masked}
+        onSave={onSaveRefundBank}
+        onDelete={onDeleteRefundBank}
+        isSubmitting={savingRefundBank}
+      />
     </div>
   );
 }

@@ -53,19 +53,19 @@ public class ChangeUserRoleCommandHandler : IRequestHandler<ChangeUserRoleComman
 
         // Distributed lock to prevent race condition when concurrent requests could eliminate the last remaining Admin
         var lockKey = "lock:admin_role_mutation";
-        bool lockAcquired;
+        IDistributedLockLease? lease;
         try
         {
-            lockAcquired = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
+            lease = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
         }
         catch
         {
             return AdminOperationResult.Conflict("Không thể khóa thao tác quản trị lúc này. Vui lòng thử lại.", "ADMIN_LOCK_UNAVAILABLE");
         }
-        if (!lockAcquired)
+        if (lease is null)
             return AdminOperationResult.Conflict("Không thể khóa thao tác quản trị lúc này. Vui lòng thử lại.", "ADMIN_LOCK_UNAVAILABLE");
 
-        try
+        await using (lease)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
             if (user == null) 
@@ -116,6 +116,7 @@ public class ChangeUserRoleCommandHandler : IRequestHandler<ChangeUserRoleComman
 
             try
             {
+                if (!lease.IsValid) return AdminOperationResult.Conflict("Khóa thao tác đã hết hạn. Vui lòng thử lại.", "ADMIN_LOCK_LOST");
                 await _context.SaveChangesAsync(cancellationToken);
                 if (_refreshTokens is not null)
                     await _refreshTokens.RevokeAllForUserAsync(user.Id, cancellationToken);
@@ -128,21 +129,6 @@ public class ChangeUserRoleCommandHandler : IRequestHandler<ChangeUserRoleComman
             }
 
             return AdminOperationResult.Ok($"Đã thay đổi vai trò của người dùng thành {normalizedRole}.");
-        }
-        finally
-        {
-            if (lockAcquired)
-            {
-                try
-                {
-                    await _lockService.ReleaseLockAsync(lockKey);
-                }
-                catch
-                {
-                    // The mutation already completed; a release failure must not
-                    // turn a successful admin operation into a 500 response.
-                }
-            }
         }
     }
 }
