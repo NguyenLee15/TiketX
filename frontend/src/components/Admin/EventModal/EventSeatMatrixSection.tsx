@@ -42,9 +42,11 @@ export function EventSeatMatrixSection({ event, totalMatrixSeats, register, erro
               min={1}
               max={50}
               {...register('rowCount', { valueAsNumber: true })}
+              aria-invalid={Boolean(errors.rowCount)}
+              aria-describedby={errors.rowCount ? 'event-row-count-error' : undefined}
               className="w-full bg-surface-2 border border-border-subtle rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary"
             />
-            {errors.rowCount && <p className="text-danger text-[10px] mt-0.5">{errors.rowCount.message}</p>}
+            {errors.rowCount && <p id="event-row-count-error" role="alert" className="text-danger text-[10px] mt-0.5">{errors.rowCount.message}</p>}
           </div>
 
           <div>
@@ -57,13 +59,14 @@ export function EventSeatMatrixSection({ event, totalMatrixSeats, register, erro
               min={1}
               max={50}
               {...register('seatsPerRow', { valueAsNumber: true })}
+              aria-invalid={Boolean(errors.seatsPerRow)}
+              aria-describedby={errors.seatsPerRow ? 'event-seats-per-row-error' : undefined}
               className="w-full bg-surface-2 border border-border-subtle rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary"
             />
-            {errors.seatsPerRow && <p className="text-danger text-[10px] mt-0.5">{errors.seatsPerRow.message}</p>}
+            {errors.seatsPerRow && <p id="event-seats-per-row-error" role="alert" className="text-danger text-[10px] mt-0.5">{errors.seatsPerRow.message}</p>}
           </div>
         </div>
       )}
     </div>
   );
 }
-
