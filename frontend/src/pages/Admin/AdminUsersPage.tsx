@@ -175,6 +175,8 @@ export default function AdminUsersPage() {
       if (apiErr.response?.data?.code === 'USER_CONCURRENCY_CONFLICT' || apiErr.response?.status === 409) {
         setMutationError('Dữ liệu người dùng đã bị thay đổi bởi phiên khác. Đang tải lại danh sách mới nhất...');
         await fetchUsers();
+        setConfirmModal(null);
+        toast.error('Dữ liệu đã thay đổi. Vui lòng chọn lại thao tác từ danh sách mới nhất.');
       } else {
         setMutationError(apiErr.response?.data?.message || 'Thao tác thất bại. Vui lòng thử lại.');
       }

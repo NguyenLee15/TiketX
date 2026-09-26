@@ -41,6 +41,15 @@ public sealed class AdminEventQueryTests : IDisposable
     }
 
     [Fact]
+    public async Task AdminPagination_RejectsOverflowBeforeQuerying()
+    {
+        var events = () => new GetAdminEventsQueryHandler(_context).Handle(new GetAdminEventsQuery(Page: int.MaxValue), CancellationToken.None);
+        var users = () => new TickeX.Application.Admin.Queries.GetUsersQueryHandler(_context).Handle(new TickeX.Application.Admin.Queries.GetUsersQuery(Page: int.MaxValue), CancellationToken.None);
+        await events.Should().ThrowAsync<FluentValidation.ValidationException>();
+        await users.Should().ThrowAsync<FluentValidation.ValidationException>();
+    }
+
+    [Fact]
     public async Task AdminEvents_ShouldProjectValidBase64Version_ForOptimisticLocking()
     {
         var ev = new Event("Concert", "Description", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(3), "Location", "Venue", 100);

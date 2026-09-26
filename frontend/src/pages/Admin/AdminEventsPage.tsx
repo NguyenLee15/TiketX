@@ -177,6 +177,8 @@ export default function AdminEventsPage() {
       if (apiErr.response?.data?.code === 'EVENT_CONCURRENCY_CONFLICT' || apiErr.response?.status === 409) {
         toast.error('Sự kiện vừa được chỉnh sửa bởi quản trị viên khác. Đang tải lại dữ liệu...');
         await fetchEvents();
+        setIsModalOpen(false);
+        setSelectedEvent(null);
       } else {
         toast.error(apiErr.response?.data?.message || 'Thao tác thất bại');
       }

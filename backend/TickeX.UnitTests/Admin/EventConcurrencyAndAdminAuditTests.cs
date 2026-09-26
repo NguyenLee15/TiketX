@@ -72,6 +72,43 @@ public class EventConcurrencyAndAdminAuditTests : IDisposable
         result.ErrorCode.Should().Be("EVENT_CONCURRENCY_CONFLICT");
     }
 
+    [Theory]
+    [InlineData(EventStatus.Cancelled, 200000, "EVENT_CANCELLATION_REQUIRED")]
+    [InlineData(EventStatus.Published, 300000, "EVENT_PRICE_LOCKED")]
+    public async Task UpdateEvent_RejectsUnsafeLifecycleOrPriceChanges(EventStatus status, int price, string code)
+    {
+        var ev = new Event("Concert", "Description", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(2), "Location", "Venue", 10);
+        ev.GenerateSeatsMatrix(1, 10);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+        var command = new UpdateEventCommand(ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate,
+            ev.Location, ev.VenueName, ev.TotalSeats, ev.Category, ev.ImageUrl,
+            BasePrice: price, Status: status);
+
+        var result = await new UpdateEventCommandHandler(_context).Handle(command, CancellationToken.None);
+
+        result.ErrorCode.Should().Be(code);
+        ev.Status.Should().Be(EventStatus.Published);
+        ev.BasePrice.Should().Be(200000);
+    }
+
+    [Fact]
+    public async Task UpdateEvent_CannotReopenCancelledEvent()
+    {
+        var ev = new Event("Concert", "Description", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(2), "Location", "Venue", 10);
+        ev.Cancel();
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+        var command = new UpdateEventCommand(ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate,
+            ev.Location, ev.VenueName, ev.TotalSeats, ev.Category, ev.ImageUrl,
+            BasePrice: ev.BasePrice, Status: EventStatus.Published);
+
+        var result = await new UpdateEventCommandHandler(_context).Handle(command, CancellationToken.None);
+
+        result.ErrorCode.Should().Be("EVENT_CANCELLED");
+        ev.Status.Should().Be(EventStatus.Cancelled);
+    }
+
     [Fact]
     public async Task UpdateEvent_WithMatchingVersion_SucceedsAndRefreshesVersion()
     {

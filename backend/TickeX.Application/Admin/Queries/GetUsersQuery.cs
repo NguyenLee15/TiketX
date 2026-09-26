@@ -36,6 +36,8 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PagedResult<U
     {
         var page = request.Page > 0 ? request.Page : 1;
         var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 10, 1, 100);
+        var offset = ((long)page - 1) * pageSize;
+        if (offset > int.MaxValue) throw new FluentValidation.ValidationException(new[] { new FluentValidation.Results.ValidationFailure("Page", "Page offset exceeds the supported range.") });
 
         var query = _context.Users.AsNoTracking();
 
@@ -61,7 +63,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PagedResult<U
         var users = await query
             .OrderByDescending(u => u.CreatedAt)
             .ThenBy(u => u.Id)
-            .Skip((page - 1) * pageSize)
+            .Skip((int)offset)
             .Take(pageSize)
             .Select(u => new { u.Id, u.Name, u.Email, u.Role, u.IsBlocked, u.CreatedAt, u.Version })
             .ToListAsync(cancellationToken);

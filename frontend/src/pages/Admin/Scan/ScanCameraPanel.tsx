@@ -16,26 +16,20 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
   const [retryNonce, setRetryNonce] = useState(0);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const verifyingRef = useRef(isVerifying);
+  verifyingRef.current = isVerifying;
+  const stopRef = useRef<Promise<void>>(Promise.resolve());
   const lastScannedTokenRef = useRef('');
   const lastScannedTimeRef = useRef(0);
 
   useEffect(() => {
     let mounted = true;
     let startCancelled = false;
+    let ownedScanner: Html5Qrcode | null = null;
+    let startup: Promise<unknown> | null = null;
     const elementId = 'tickex-qr-reader';
 
     if (!cameraActive) {
-      if (scannerRef.current) {
-        if (scannerRef.current.isScanning) {
-          scannerRef.current.stop().catch(() => {}).finally(() => {
-            scannerRef.current?.clear();
-            scannerRef.current = null;
-          });
-        } else {
-          scannerRef.current.clear();
-          scannerRef.current = null;
-        }
-      }
       return;
     }
 
@@ -44,12 +38,15 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
       setCameraError(null);
 
       try {
+        await stopRef.current;
+        if (!mounted || startCancelled) return;
         const { Html5Qrcode: Html5QrcodeCtor } = await import('html5-qrcode');
         if (!mounted || startCancelled) return;
         const scanner = new Html5QrcodeCtor(elementId);
+        ownedScanner = scanner;
         scannerRef.current = scanner;
 
-        await scanner.start(
+        startup = scanner.start(
           { facingMode },
           {
             fps: 10,
@@ -58,7 +55,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
           },
           (decodedText) => {
             const now = Date.now();
-            if (isVerifying) return;
+            if (!mounted || startCancelled || verifyingRef.current) return;
             if (lastScannedTokenRef.current === decodedText && now - lastScannedTimeRef.current < 2500) {
               return; // Cooldown 2.5s for same token
             }
@@ -70,11 +67,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
             // Per-frame error when QR not detected in frame; ignore
           }
         );
-        if (!mounted || startCancelled) {
-          await scanner.stop().catch(() => undefined);
-          scanner.clear();
-          if (scannerRef.current === scanner) scannerRef.current = null;
-        }
+        await startup;
       } catch (err: unknown) {
         if (!mounted) return;
         const errMsg = (err instanceof Error ? err.message : String(err)) || 'Không thể truy cập camera.';
@@ -88,19 +81,18 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
       mounted = false;
       startCancelled = true;
       clearTimeout(timer);
-      if (scannerRef.current) {
-        if (scannerRef.current.isScanning) {
-          scannerRef.current.stop().catch(() => {}).finally(() => {
-            scannerRef.current?.clear();
-            scannerRef.current = null;
+      const scanner = ownedScanner;
+      if (scanner) {
+          stopRef.current = (startup ?? Promise.resolve()).catch(() => undefined).then(async () => {
+            if (scanner.isScanning) await scanner.stop();
+            scanner.clear();
+            if (scannerRef.current === scanner) scannerRef.current = null;
           });
-        } else {
-          scannerRef.current.clear();
-          scannerRef.current = null;
-        }
+          // Keep teardown failure observable by the next startup without an unhandled rejection on unmount.
+          void stopRef.current.catch(() => undefined);
       }
     };
-  }, [cameraActive, facingMode, isVerifying, onScanToken, retryNonce]);
+  }, [cameraActive, facingMode, onScanToken, retryNonce]);
 
   const handlePasteClipboard = async () => {
     try {

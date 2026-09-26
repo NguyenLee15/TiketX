@@ -33,6 +33,8 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
             > 100 => 100,
             _ => request.PageSize
         };
+        var offset = ((long)page - 1) * pageSize;
+        if (offset > int.MaxValue) throw new FluentValidation.ValidationException(new[] { new FluentValidation.Results.ValidationFailure("Page", "Page offset exceeds the supported range.") });
 
         var query = _context.Events
             .IgnoreQueryFilters()
@@ -65,7 +67,7 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
         var rawEvents = await query
             .OrderByDescending(e => e.Date)
             .ThenBy(e => e.Id)
-            .Skip((page - 1) * pageSize)
+            .Skip((int)offset)
             .Take(pageSize)
             .Select(e => new {
                 e.Id,

@@ -51,6 +51,11 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
         if (ev.IsDeleted)
             return AdminOperationResult.BadRequest("Không thể cập nhật sự kiện đã bị xóa.", "EVENT_DELETED");
 
+        if (request.Status == EventStatus.Cancelled && ev.Status != EventStatus.Cancelled)
+            return AdminOperationResult.BadRequest("Sử dụng thao tác hủy sự kiện để xử lý hoàn tiền.", "EVENT_CANCELLATION_REQUIRED");
+        if (ev.Status == EventStatus.Cancelled && request.Status != EventStatus.Cancelled)
+            return AdminOperationResult.BadRequest("Sự kiện đã hủy không thể mở lại.", "EVENT_CANCELLED");
+
         if (!string.IsNullOrWhiteSpace(request.ExpectedVersion))
         {
             if (AdminMutationVersionPolicy.TryDecodeRequiredVersion(request.ExpectedVersion, out var expectedBytes))
@@ -99,6 +104,9 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
                 );
             }
         }
+
+        if (request.BasePrice != ev.BasePrice)
+            return AdminOperationResult.BadRequest("Giá được khóa sau khi ma trận ghế đã được tạo.", "EVENT_PRICE_LOCKED");
 
         var beforeState = $"Title={ev.Title},Date={ev.Date:O},Status={ev.Status},BasePrice={ev.BasePrice}";
 

@@ -183,14 +183,14 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                 <select
                   id="event-status"
                   {...register('status')}
-                  disabled={watchedStatus === 'Completed' || isLoading}
+                  disabled={watchedStatus === 'Completed' || (event && eventStatusToFormValue(event.status) === 'Cancelled') || isLoading}
                   aria-label="Trạng thái sự kiện"
                   className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors cursor-pointer"
                 >
                   <option value="Published" className="bg-surface-1 text-white">Đang mở bán (Published)</option>
                   <option value="Draft" className="bg-surface-1 text-white">Bản nháp (Draft)</option>
                   {watchedStatus === 'Completed' && <option value="Completed" className="bg-surface-1 text-white">Đã kết thúc (Completed)</option>}
-                  <option value="Cancelled" className="bg-surface-1 text-white">Đã hủy (Cancelled)</option>
+                  {event && eventStatusToFormValue(event.status) === 'Cancelled' && <option value="Cancelled" className="bg-surface-1 text-white">Đã hủy (Cancelled)</option>}
                 </select>
                 {errors.status && <p className="text-danger text-xs mt-1">{errors.status.message}</p>}
               </div>
@@ -273,7 +273,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
 
           <div className="pt-3 border-t border-border-subtle space-y-2">
             <label htmlFor="event-base-price" className="block text-xs font-bold uppercase tracking-wider text-text-secondary">Giá vé cơ sở (VNĐ)</label>
-            <input id="event-base-price" type="number" min={1} {...register('basePrice', { valueAsNumber: true })} disabled={isLoading} className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary" />
+            <input id="event-base-price" type="number" min={1} {...register('basePrice', { valueAsNumber: true })} readOnly={Boolean(event)} disabled={isLoading} className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary" />
             {errors.basePrice && <p role="alert" className="text-danger text-xs">{errors.basePrice.message}</p>}
             <p className="text-[11px] text-text-secondary">Giá ghế được tạo tự động theo hạng: VIP 1,75×, Standard 1×, Economy 0,75×.</p>
           </div>
