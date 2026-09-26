@@ -8,7 +8,8 @@ export type SeatConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconn
 
 export const useSeatSignalR = (
   eventId: string | undefined, 
-  onSeatStatusChanged: (data: SeatStatusChangedPayload & { seatId: string; status: SeatStatus }) => void
+  onSeatStatusChanged: (data: SeatStatusChangedPayload & { seatId: string; status: SeatStatus }) => void,
+  onReconnected?: () => void
 ) => {
   const [status, setStatus] = useState<SeatConnectionStatus>('idle');
   const [retryKey, setRetryKey] = useState(0);
@@ -31,26 +32,38 @@ export const useSeatSignalR = (
       .build();
 
     const handleSeatStatusChanged = (payload: SeatStatusChangedPayload) => {
-            const seatId = payload.seatId || payload.SeatId || payload.id;
-            let status: SeatStatus = 0;
-            const rawStatus = (payload.status ?? payload.Status ?? '').toString().toLowerCase();
-            
-            if (rawStatus === 'locked' || rawStatus === '1') {
-              status = 1;
-            } else if (rawStatus === 'sold' || rawStatus === '2') {
-              status = 2;
-            } else {
-              status = 0;
-            }
+      const seatId = payload.seatId || payload.SeatId || payload.id;
+      let status: SeatStatus = 0;
+      const rawStatus = (payload.status ?? payload.Status ?? '').toString().toLowerCase();
+      
+      if (rawStatus === 'locked' || rawStatus === '1') {
+        status = 1;
+      } else if (rawStatus === 'sold' || rawStatus === '2') {
+        status = 2;
+      } else {
+        status = 0;
+      }
 
-            if (seatId) {
-              onSeatStatusChanged({
-                ...payload,
-                seatId,
-                status,
-                isLockedByCurrentUser: payload.isLockedByCurrentUser ?? payload.isLockedByMe,
-              });
-            }
+      if (seatId) {
+        onSeatStatusChanged({
+          ...payload,
+          seatId,
+          status,
+          isLockedByCurrentUser: payload.isLockedByCurrentUser ?? payload.isLockedByMe,
+        });
+      }
+    };
+
+    const handleOwnSeatLockChanged = (payload: SeatStatusChangedPayload) => {
+      const seatId = payload.seatId || payload.SeatId || payload.id;
+      if (seatId) {
+        onSeatStatusChanged({
+          ...payload,
+          seatId,
+          status: 1,
+          isLockedByCurrentUser: true,
+        });
+      }
     };
 
     connection.onreconnecting(() => active && setStatus('reconnecting'));
@@ -62,9 +75,11 @@ export const useSeatSignalR = (
       } catch (err) {
         console.error('Failed to rejoin event group after SignalR reconnect', err);
       }
+      onReconnected?.();
     });
     connection.onclose(() => active && setStatus('disconnected'));
     connection.on('SeatStatusChanged', handleSeatStatusChanged);
+    connection.on('OwnSeatLockChanged', handleOwnSeatLockChanged);
     setStatus('connecting');
 
     void connection.start()
@@ -79,6 +94,7 @@ export const useSeatSignalR = (
       active = false;
       if (!connection) return;
       connection.off('SeatStatusChanged', handleSeatStatusChanged);
+      connection.off('OwnSeatLockChanged', handleOwnSeatLockChanged);
       void (async () => {
         try {
           if (connection?.state === signalR.HubConnectionState.Connected) {
@@ -90,7 +106,7 @@ export const useSeatSignalR = (
         }
       })();
     };
-  }, [eventId, onSeatStatusChanged, retryKey]);
+  }, [eventId, onSeatStatusChanged, onReconnected, retryKey]);
 
   return { status, retry };
 };

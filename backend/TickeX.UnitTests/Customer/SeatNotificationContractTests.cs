@@ -30,5 +30,14 @@ public sealed class SeatNotificationContractTests
         json.Should().Contain("version-token");
         json.ToLowerInvariant().Should().NotContain("reservationowner");
         json.ToLowerInvariant().Should().NotContain("islockedbycurrentuser");
+
+        // Verify 6-param overload also keeps public group payload free of reservationowner
+        object? payload6 = null;
+        proxy.Setup(x => x.SendCoreAsync("SeatStatusChanged", It.IsAny<object?[]>(), It.IsAny<CancellationToken>()))
+            .Callback<string, object?[], CancellationToken>((_, args, _) => payload6 = args[0])
+            .Returns(Task.CompletedTask);
+        await service.NotifySeatStatusChanged(Guid.NewGuid(), Guid.NewGuid(), "Locked", "version-token-2", DateTime.UtcNow.AddMinutes(5), Guid.NewGuid());
+        var json6 = JsonSerializer.Serialize(payload6);
+        json6.ToLowerInvariant().Should().NotContain("reservationowner");
     }
 }

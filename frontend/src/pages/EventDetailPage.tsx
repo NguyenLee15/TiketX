@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Loader2, ArrowLeft, Info, Check, Zap, ArrowRight, Clock, ShieldAlert } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -36,11 +36,13 @@ export default function EventDetailPage() {
 
   const { isAuthenticated, user } = useAuthStore();
   const navigate = useNavigate();
+  const bookingIdempotencyKeyRef = useRef<string | null>(null);
 
   // Reset seat selection & checkout states when switching between event routes
   useEffect(() => {
     setSelectedSeat(null);
     setIsCheckoutOpen(false);
+    bookingIdempotencyKeyRef.current = null;
     const cleared = clearCheckoutState();
     setTicketId(cleared.ticketId);
     setLockExpiresAt(cleared.lockExpiresAt);
@@ -51,6 +53,7 @@ export default function EventDetailPage() {
     toast.error('Hạn giữ chỗ 5 phút đã hết. Ghế đã được tự động mở khóa!', { duration: 5000 });
     setSelectedSeat(null);
     setIsCheckoutOpen(false);
+    bookingIdempotencyKeyRef.current = null;
     const cleared = clearCheckoutState();
     setTicketId(cleared.ticketId);
     setLockExpiresAt(cleared.lockExpiresAt);
@@ -88,7 +91,15 @@ export default function EventDetailPage() {
     });
   }, [id, queryClient, refetchEvent, user?.id]);
 
-  const { status: seatConnectionStatus, retry: retrySeatConnection } = useSeatSignalR(id, handleSeatStatusChanged);
+  const handleSeatReconnect = useCallback(() => {
+    void refetchEvent();
+  }, [refetchEvent]);
+
+  const { status: seatConnectionStatus, retry: retrySeatConnection } = useSeatSignalR(
+    id,
+    handleSeatStatusChanged,
+    handleSeatReconnect
+  );
 
   const handleSeatClick = (seat: Seat) => {
     if (seat.status !== 0) return; // Only allow Available seats
@@ -98,6 +109,7 @@ export default function EventDetailPage() {
       return;
     }
     
+    bookingIdempotencyKeyRef.current = null;
     if (selectedSeat?.id === seat.id) {
       setSelectedSeat(null);
       setLockTimeLeft(null);
@@ -110,13 +122,29 @@ export default function EventDetailPage() {
   const handleBookTicket = async () => {
     if (!selectedSeat || !event) return;
     setLocking(true);
+
+    if (!bookingIdempotencyKeyRef.current) {
+      bookingIdempotencyKeyRef.current = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = (Math.random() * 16) | 0;
+            const v = c === 'x' ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          });
+    }
+
     try {
       const res = await api.post(`/api/seats/${selectedSeat.id}/lock`, {
         eventId: event.id,
         version: selectedSeat.version
+      }, {
+        headers: {
+          'Idempotency-Key': bookingIdempotencyKeyRef.current
+        }
       });
 
       if (res.data.success) {
+        bookingIdempotencyKeyRef.current = null;
         setTicketId(res.data.data.ticketId);
         
         // Sync timer with server expiresAt

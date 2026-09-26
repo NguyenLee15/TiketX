@@ -120,8 +120,9 @@ public class TicketPaidEventConsumer : BackgroundService
                 if (user != null)
                 {
                     var subject = $"Your TickeX Ticket: {ticketEvent.TicketId}";
+                    var safeName = System.Net.WebUtility.HtmlEncode(user.Name);
                     var emailBody = $@"
-                            <h1>Thank you for your purchase, {user.Name}!</h1>
+                            <h1>Thank you for your purchase, {safeName}!</h1>
                             <p>Your ticket (ID: {ticketEvent.TicketId}) is confirmed.</p>
                             <p>Here is your QR Code: [QR_CODE_IMG]</p>
                         ";

@@ -38,6 +38,27 @@ services:
       sqlserver:
         condition: service_healthy
 
+  db-migrator:
+    image: tickex-api:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["--migrate"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=True;
+      ConnectionStrings__HangfireConnection: Server=sqlserver,1433;Database=TickeXHangfire;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=True;
+      ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD},abortConnect=false
+      DataProtection__KeyRingPath: /var/tickex-dpkeys
+    volumes:
+      - tickex_dpkeys:/var/tickex-dpkeys
+    networks: [private]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      sql-bootstrap:
+        condition: service_completed_successfully
+
   redis:
     image: redis:7-alpine
     command: redis-server --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env} --save 60 1 --loglevel warning
@@ -102,6 +123,8 @@ services:
       sqlserver:
         condition: service_healthy
       sql-bootstrap:
+        condition: service_completed_successfully
+      db-migrator:
         condition: service_completed_successfully
       redis:
         condition: service_healthy

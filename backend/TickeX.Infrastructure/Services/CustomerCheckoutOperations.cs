@@ -74,6 +74,9 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
 
             if (existing.Status == "Pending" && string.IsNullOrWhiteSpace(existing.CheckoutUrl) && existing.CreatedAt > _time.UtcNow.AddSeconds(-30))
                 return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được xử lý. Vui lòng chờ giây lát.");
+
+            if (existing.Status != "Pending")
+                return Fail("PAYMENT_LINK_CONFLICT", "Giao dịch thanh toán đã ở trạng thái kết thúc.");
         }
 
         PaymentTransaction transaction;

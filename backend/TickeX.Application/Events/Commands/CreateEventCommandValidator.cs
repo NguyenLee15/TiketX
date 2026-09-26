@@ -38,6 +38,10 @@ public class CreateEventCommandValidator : AbstractValidator<CreateEventCommand>
         RuleFor(x => x.SeatsPerRow)
             .InclusiveBetween(1, 100).WithMessage("Số lượng ghế mỗi hàng phải từ 1 đến 100.");
 
+        RuleFor(x => x)
+            .Must(x => x.RowCount * x.SeatsPerRow <= 2500)
+            .WithMessage("Tổng số lượng ghế cho một sự kiện không được vượt quá 2.500 ghế.");
+
         RuleFor(x => x.RefundCutoffHours)
             .InclusiveBetween(0, 720).WithMessage("Thời hạn hủy vé phải từ 0 đến 720 giờ.");
 

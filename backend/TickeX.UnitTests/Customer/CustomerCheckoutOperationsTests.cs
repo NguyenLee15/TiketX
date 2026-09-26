@@ -84,6 +84,42 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
     }
 
     [Fact]
+    public async Task CreatePaymentLink_WhenProviderTimesOut_AllowsSubsequentRetryToSucceed()
+    {
+        var user = new User("Customer", "retry-link@test.local", "hash");
+        var @event = new Event("Future", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(2), "HCM", "Venue", 1);
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        var payos = new Mock<IPayOSService>();
+        // First attempt times out, second succeeds
+        payos.SetupSequence(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException())
+            .ReturnsAsync(new CreatePaymentResult { CheckoutUrl = "https://pay.payos.vn/web/test-retry-123" });
+
+        var operations = CreateOperations(payos.Object);
+
+        // First attempt fails cleanly
+        var firstResult = await operations.CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
+        firstResult.Success.Should().BeFalse();
+        firstResult.Code.Should().Be("PAYMENT_PROVIDER_ERROR");
+
+        // Second attempt retries under the hold window and succeeds!
+        var secondResult = await operations.CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
+        secondResult.Success.Should().BeTrue();
+        secondResult.CheckoutUrl.Should().Be("https://pay.payos.vn/web/test-retry-123");
+        var tx = await _context.PaymentTransactions.SingleAsync(x => x.TicketId == ticket.Id);
+        tx.CheckoutUrl.Should().Be("https://pay.payos.vn/web/test-retry-123");
+        tx.Status.Should().Be("Pending");
+    }
+
+    [Fact]
     public async Task GetPaymentStatus_OnlyReturnsTheOwnerOrder()
     {
         var owner = new User("Owner", "owner@test.local", "hash");

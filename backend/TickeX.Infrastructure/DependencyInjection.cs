@@ -23,7 +23,8 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {
-            var connStr = configuration.GetConnectionString("DefaultConnection");
+            var connStr = configuration.GetConnectionString("MigrationConnection") 
+                ?? configuration.GetConnectionString("DefaultConnection");
             if (connStr != null && connStr.Contains("Server=", StringComparison.OrdinalIgnoreCase))
             {
                 options.UseSqlServer(connStr, b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
