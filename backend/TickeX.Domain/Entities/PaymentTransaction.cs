@@ -47,6 +47,13 @@ public class PaymentTransaction : BaseEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void MarkCancelled()
+    {
+        Status = "Cancelled";
+        ProcessedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void MarkRefundInitiated(string rawPayload = "")
     {
         Status = "RefundInitiated";

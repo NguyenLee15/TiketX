@@ -79,12 +79,32 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 return false;
             }
 
+            IDistributedLockLease? seatLease;
+            try { seatLease = await _lockService.AcquireLockAsync($"seat:lock:{ticket.SeatId}", TimeSpan.FromSeconds(30), cancellationToken); }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Seat lock unavailable for payment {OrderCode}", data.OrderCode);
+                return false;
+            }
+            if (seatLease is null) return false;
+            await using (seatLease)
+            {
+            var latest = await _context.Tickets.AsNoTracking()
+                .Where(t => t.Id == ticket.Id)
+                .Select(t => new { t.Status }).SingleAsync(cancellationToken);
+            var seatOwner = await _context.Seats.AsNoTracking()
+                .Where(s => s.Id == ticket.SeatId)
+                .Select(s => new { s.Status, s.LockedByUserId }).SingleAsync(cancellationToken);
+            var seatBelongsToTicket = seatOwner.Status == SeatStatus.Locked && seatOwner.LockedByUserId == ticket.UserId;
+
             // 1. Check existing PaymentTransaction for idempotency
             var existingTx = await _context.PaymentTransactions
                 .FirstOrDefaultAsync(pt => pt.OrderCode == data.OrderCode, cancellationToken);
+            if (data.Success && existingTx?.Status == "Refunded")
+                return true;
 
             // Invariant 1: If ticket is ALREADY Paid, never downgrade or cancel!
-            if (ticket.Status == TicketStatus.Paid)
+            if (latest.Status == TicketStatus.Paid)
             {
                 if (data.Success)
                 {
@@ -104,10 +124,12 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
             var auditSummary = PaymentAudit.CreateWebhookSummary(data.OrderCode, data.Amount, providerTxId, data.Code);
 
             // Invariant 2: Ticket must be Pending to process payment
-            if (ticket.Status != TicketStatus.Pending)
+            if (latest.Status != TicketStatus.Pending || (data.Success && !seatBelongsToTicket))
             {
                 if (data.Success)
                 {
+                    if (latest.Status == TicketStatus.Pending && !seatBelongsToTicket)
+                        ticket.Cancel();
                     _logger.LogError("ORPHANED PAYMENT DETECTED: Order {OrderCode}, Ticket {TicketId}, Amount {Amount}. Ticket status is {Status}. Money captured but reservation hold expired or invalid. Recording OrphanedPaid transaction for compensation.",
                         data.OrderCode, ticket.Id, data.Amount, ticket.Status);
 
@@ -155,7 +177,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                         _context.RefundRequests.Add(refundReq);
                     }
 
-                    if (!lease.IsValid) return false;
+                    if (!lease.IsValid || !seatLease.IsValid) return false;
                     await _context.SaveChangesAsync(cancellationToken);
                     return true; // Acknowledge webhook to avoid endless retries while preserving compensation state
                 }
@@ -212,7 +234,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 }
 
                 // Explicitly commit financial, seat state, and outbox atomically into database
-                if (!lease.IsValid) return false;
+                if (!lease.IsValid || !seatLease.IsValid) return false;
                 await _context.SaveChangesAsync(cancellationToken);
 
                 if (ticket.Seat != null)
@@ -224,6 +246,8 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
             else
             {
                 // Payment failed: Release seat and cancel ticket
+                if (!seatBelongsToTicket)
+                    return false;
                 ticket.Cancel();
                 if (ticket.Seat != null)
                 {
@@ -246,7 +270,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                     existingTx.MarkFailed("Payment rejected or cancelled by user", auditSummary);
                 }
 
-                if (!lease.IsValid) return false;
+                if (!lease.IsValid || !seatLease.IsValid) return false;
                 await _context.SaveChangesAsync(cancellationToken);
 
                 if (ticket.Seat != null)
@@ -256,6 +280,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
             }
 
             return true;
+            }
         }
     }
 }

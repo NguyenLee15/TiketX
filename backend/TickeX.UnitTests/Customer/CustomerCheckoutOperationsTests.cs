@@ -42,7 +42,7 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
         await _context.SaveChangesAsync();
 
         var payos = new Mock<IPayOSService>();
-        payos.Setup(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        payos.Setup(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<DateTimeOffset?>()))
             .ReturnsAsync(new CreatePaymentResult { CheckoutUrl = "https://pay.example/checkout" });
         var operations = CreateOperations(payos.Object);
 
@@ -51,7 +51,7 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
 
         first.Success.Should().BeTrue();
         second.CheckoutUrl.Should().Be("https://pay.example/checkout");
-        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<DateTimeOffset?>()), Times.Once);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
 
         result.Success.Should().BeFalse();
         result.Code.Should().Be("PAYMENT_LINK_IN_PROGRESS");
-        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<DateTimeOffset?>()), Times.Never);
     }
 
     [Fact]
@@ -102,6 +102,51 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
         result.Code.Should().Be("PAYMENT_NOT_FOUND");
     }
 
+    [Fact]
+    public async Task CreatePaymentLink_WhenProviderTimesOut_KeepsIntentForReconciliation()
+    {
+        var user = new User("Customer", "timeout@test.local", "hash");
+        var @event = new Event("Future", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(2), "HCM", "Venue", 1);
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        var payos = new Mock<IPayOSService>();
+        payos.Setup(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<DateTimeOffset?>()))
+            .ThrowsAsync(new TimeoutException());
+
+        var result = await CreateOperations(payos.Object).CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        (await _context.PaymentTransactions.SingleAsync(x => x.TicketId == ticket.Id)).Status.Should().Be("Pending");
+    }
+
+    [Fact]
+    public async Task GetPaymentStatus_ReturnsRefundStateForCancelledOwnerTicket()
+    {
+        var user = new User("Customer", "refund-status@test.local", "hash");
+        var @event = new Event("Future", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(2), "HCM", "Venue", 1);
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var ticket = new Ticket(@event.Id, (await _context.Seats.SingleAsync()).Id, user.Id, 100000);
+        ticket.Cancel();
+        var refund = new RefundRequest(@event.Id, ticket.Id, ticket.Price, "orphaned-comp-test");
+        refund.WaitForDestination();
+        _context.AddRange(ticket, refund);
+        await _context.SaveChangesAsync();
+
+        var result = await CreateOperations(Mock.Of<IPayOSService>()).GetStatusAsync(ticket.OrderCode, user.Id, CancellationToken.None);
+
+        result.Status.Should().Be("Cancelled");
+        result.RefundStatus.Should().Be("AwaitingDestination");
+    }
+
     private CustomerCheckoutOperations CreateOperations(IPayOSService payos)
     {
         var settings = new Dictionary<string, string?>
@@ -115,7 +160,7 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
         environment.SetupGet(x => x.EnvironmentName).Returns(Environments.Production);
         return new CustomerCheckoutOperations(_context, payos, mediator.Object,
             new ConfigurationBuilder().AddInMemoryCollection(settings).Build(), environment.Object,
-            NullLogger<CustomerCheckoutOperations>.Instance);
+            NullLogger<CustomerCheckoutOperations>.Instance, Mock.Of<IDistributedLockService>(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()) == Task.FromResult<IDistributedLockLease?>(Mock.Of<IDistributedLockLease>(l => l.IsValid == true))));
     }
 
     public void Dispose()

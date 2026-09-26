@@ -27,7 +27,8 @@ public record TicketDto(
     decimal? RefundAmount,
     DateTime? RefundedAt,
     int RefundCutoffHours,
-    bool CanRefund
+    bool CanRefund,
+    string? RefundStatus = null
 );
 
 public record GetMyTicketsQuery(Guid UserId, int? Page = null, int? PageSize = null, string? Status = null) : IRequest<List<TicketDto>>;

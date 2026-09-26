@@ -21,6 +21,7 @@ export interface TicketItemData {
   tier: number;
   price: number;
   status: string;
+  refundStatus?: string | null;
   orderCode: string | number;
   qrCodeSignature: string;
   paidAt?: string;
@@ -185,6 +186,17 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
               <span className="text-text-tertiary text-[11px] italic whitespace-nowrap">
                 (Đã quá hạn hoàn vé)
               </span>
+            )}
+          </div>
+        )}
+        {ticket.refundStatus && (
+          <div className="border-t border-border-subtle/60 pt-2 text-xs text-text-secondary">
+            {ticket.refundStatus === 'Completed' ? 'Khoản bồi hoàn đã hoàn tất.'
+              : ticket.refundStatus === 'AwaitingDestination' ? 'Khoản bồi hoàn đang chờ tài khoản nhận tiền.'
+              : ticket.refundStatus === 'NeedsReview' ? 'Khoản bồi hoàn cần được đối soát. Vui lòng liên hệ hỗ trợ.'
+              : 'Khoản bồi hoàn đang được xử lý.'}
+            {ticket.refundStatus === 'AwaitingDestination' && (
+              <Link to="/profile?refundBankAccount=1" className="ml-2 font-semibold text-brand-primary underline underline-offset-4">Thiết lập tài khoản nhận tiền</Link>
             )}
           </div>
         )}

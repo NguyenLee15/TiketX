@@ -34,6 +34,8 @@ public sealed class ReservationsController : ControllerBase
                 "RESERVATION_FORBIDDEN" => StatusCodes.Status403Forbidden,
                 "RESERVATION_NOT_FOUND" => StatusCodes.Status404NotFound,
                 "RESERVATION_LOCK_UNAVAILABLE" => StatusCodes.Status503ServiceUnavailable,
+                "RESERVATION_LOCK_LOST" => StatusCodes.Status503ServiceUnavailable,
+                "RESERVATION_PROVIDER_UNKNOWN" => StatusCodes.Status503ServiceUnavailable,
                 _ => StatusCodes.Status409Conflict
             };
             return StatusCode(status, new 

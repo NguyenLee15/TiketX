@@ -80,14 +80,16 @@ public class PaymentsController : ControllerBase
             return Ok(new { success = true, code = result.Code, message = result.Message, data = new
             {
                 orderCode = result.OrderCode, amount = result.Amount, checkoutUrl = result.CheckoutUrl,
-                status = result.Status, ticketId = result.TicketId
+                status = result.Status, ticketId = result.TicketId, refundStatus = result.RefundStatus
             }});
         if (notFound && result.Code == "PAYMENT_NOT_FOUND")
             return NotFound(new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
         if (result.Code == "PAYMENT_FORBIDDEN")
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
-        if (result.Code == "PAYMENT_PROVIDER_UNAVAILABLE")
+        if (result.Code is "PAYMENT_PROVIDER_UNAVAILABLE" or "PAYMENT_PROVIDER_ERROR" or "PAYMENT_LOCK_UNAVAILABLE")
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
+        if (result.Code is "PAYMENT_LINK_IN_PROGRESS" or "PAYMENT_LINK_CONFLICT")
+            return Conflict(new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
         return BadRequest(new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
     }
 }

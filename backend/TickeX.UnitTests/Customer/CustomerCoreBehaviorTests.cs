@@ -312,6 +312,110 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
     }
 
     [Fact]
+    public async Task Release_WithPaymentIntent_KeepsSeatWhenProviderStateIsUnknown()
+    {
+        var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
+        var @event = CreateEvent("Future", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        _context.PaymentTransactions.Add(new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price));
+        await _context.SaveChangesAsync();
+        var locks = new Mock<IDistributedLockService>();
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(new TestDistributedLockLease());
+        var payos = new Mock<IPayOSService>();
+        var operations = new ReservationOperations(_context, locks.Object, Mock.Of<ISeatNotificationService>(),
+            Mock.Of<IReservationExpiryScheduler>(), Options.Create(new ReservationOptions()), NullLogger<ReservationOperations>.Instance,
+            payOS: payos.Object);
+
+        var result = await operations.ReleaseAsync(ticket.Id, user.Id, "cancel", CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        (await _context.Tickets.AsNoTracking().SingleAsync()).Status.Should().Be(TicketStatus.Pending);
+        (await _context.Seats.AsNoTracking().SingleAsync()).Status.Should().Be(SeatStatus.Locked);
+    }
+
+    [Fact]
+    public void CancelledTicket_CanRecordConfirmedOrphanCompensationOnlyOnce()
+    {
+        var ticket = new Ticket(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 100000);
+        ticket.Cancel();
+
+        ticket.CompleteOrphanCompensation(100000);
+
+        ticket.Status.Should().Be(TicketStatus.Cancelled);
+        ticket.RefundAmount.Should().Be(100000);
+        ticket.RefundedAt.Should().NotBeNull();
+        var act = () => ticket.CompleteOrphanCompensation(100000);
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task Release_WithConfirmedPayOSCancellation_ReleasesSeatAndCancelsIntent()
+    {
+        var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
+        var @event = CreateEvent("Future", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        _context.PaymentTransactions.Add(new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price));
+        await _context.SaveChangesAsync();
+        var locks = new Mock<IDistributedLockService>();
+        var acquiredKeys = new List<string>();
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .Callback<string, TimeSpan, CancellationToken>((key, _, _) => acquiredKeys.Add(key))
+            .ReturnsAsync(new TestDistributedLockLease());
+        var payos = new Mock<IPayOSService>();
+        payos.Setup(x => x.CancelPaymentLinkAsync(ticket.OrderCode, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PayOSPaymentLinkState("CANCELLED"));
+        var operations = new ReservationOperations(_context, locks.Object, Mock.Of<ISeatNotificationService>(),
+            Mock.Of<IReservationExpiryScheduler>(), Options.Create(new ReservationOptions()), NullLogger<ReservationOperations>.Instance,
+            payOS: payos.Object);
+
+        var result = await operations.ReleaseAsync(ticket.Id, user.Id, "customer", CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        (await _context.Tickets.AsNoTracking().SingleAsync(x => x.Id == ticket.Id)).Status.Should().Be(TicketStatus.Cancelled);
+        (await _context.PaymentTransactions.AsNoTracking().SingleAsync(x => x.TicketId == ticket.Id)).Status.Should().Be("Cancelled");
+        (await _context.Seats.AsNoTracking().SingleAsync(x => x.Id == seat.Id)).Status.Should().Be(SeatStatus.Available);
+        acquiredKeys.Should().Equal($"payment:lock:{ticket.OrderCode}", $"seat:lock:{seat.Id}");
+    }
+
+    [Fact]
+    public async Task Reserve_ExpiredSeatWithUnreconciledPaymentIntent_DoesNotReclaim()
+    {
+        var owner = new User("Owner", $"{Guid.NewGuid():N}@test.local", "hash");
+        var next = new User("Next", $"{Guid.NewGuid():N}@test.local", "hash");
+        var @event = CreateEvent("Future", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(owner, next, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(owner.Id);
+        var old = new Ticket(@event.Id, seat.Id, owner.Id, seat.Price);
+        _context.Tickets.Add(old);
+        _context.PaymentTransactions.Add(new PaymentTransaction(old.OrderCode, old.Id, old.Price));
+        await _context.SaveChangesAsync();
+        var locks = new Mock<IDistributedLockService>();
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(new TestDistributedLockLease());
+        var operations = new ReservationOperations(_context, locks.Object, Mock.Of<ISeatNotificationService>(),
+            Mock.Of<IReservationExpiryScheduler>(), Options.Create(new ReservationOptions { HoldMinutes = 0 }), NullLogger<ReservationOperations>.Instance);
+
+        var result = await operations.ReserveAsync(@event.Id, seat.Id, next.Id, seat.Version, CancellationToken.None);
+
+        result.Code.Should().Be("SEAT_UNAVAILABLE");
+        (await _context.Tickets.AsNoTracking().SingleAsync()).Status.Should().Be(TicketStatus.Pending);
+    }
+
+    [Fact]
     public async Task CustomerRefund_WhenTicketDoesNotExist_ReturnsTypedNotFoundCode()
     {
         var locks = new Mock<IDistributedLockService>();
@@ -453,13 +557,13 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         var operations = new CustomerCheckoutOperations(
             _context, payos.Object, mediator.Object,
             new ConfigurationBuilder().AddInMemoryCollection(settings).Build(),
-            environment.Object, NullLogger<CustomerCheckoutOperations>.Instance);
+            environment.Object, NullLogger<CustomerCheckoutOperations>.Instance, Mock.Of<IDistributedLockService>(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()) == Task.FromResult<IDistributedLockLease?>(new TestDistributedLockLease())));
 
         var result = await operations.CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
 
         result.Success.Should().BeFalse();
         result.Code.Should().Be("RESERVATION_EXPIRED");
-        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<DateTimeOffset?>()), Times.Never);
     }
 
     [Fact]
@@ -523,6 +627,64 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         refundReq.TicketId.Should().Be(ticket.Id);
         refundReq.Amount.Should().Be(ticket.Price);
         (await _context.AuditLogs.AnyAsync(a => a.Action == "ORPHANED_PAYMENT_DETECTED")).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SuccessfulWebhook_WhenSeatOwnerChanged_QueuesCompensationWithoutSellingSeat()
+    {
+        var owner = new User("Owner", $"{Guid.NewGuid():N}@test.local", "hash");
+        var next = new User("Next", $"{Guid.NewGuid():N}@test.local", "hash");
+        var @event = CreateEvent("Future", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(owner, next, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(owner.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, owner.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        seat.ReclaimLock(next.Id);
+        await _context.SaveChangesAsync();
+        var locks = new Mock<IDistributedLockService>();
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(new TestDistributedLockLease());
+        var handler = new ProcessPaymentCommandHandler(_context, Mock.Of<INotificationOutboxPort>(), Mock.Of<ISeatNotificationService>(),
+            locks.Object, Mock.Of<ITicketSecurityService>(), NullLogger<ProcessPaymentCommandHandler>.Instance);
+
+        var result = await handler.Handle(new ProcessPaymentCommand(new PayOSWebhookData { OrderCode = ticket.OrderCode, Amount = ticket.Price, Success = true, Code = "00" }), CancellationToken.None);
+
+        result.Should().BeTrue();
+        ticket.Status.Should().Be(TicketStatus.Cancelled);
+        seat.Status.Should().Be(SeatStatus.Locked);
+        seat.LockedByUserId.Should().Be(next.Id);
+        (await _context.PaymentTransactions.SingleAsync()).Status.Should().Be("OrphanedPaid");
+        (await _context.RefundRequests.SingleAsync()).Status.Should().Be("AwaitingDestination");
+    }
+
+    [Fact]
+    public async Task SuccessfulWebhook_ReplayedAfterCompensation_PreservesRefundedPayment()
+    {
+        var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
+        var @event = CreateEvent("Future", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var ticket = new Ticket(@event.Id, (await _context.Seats.SingleAsync()).Id, user.Id, 100000);
+        ticket.Cancel();
+        ticket.CompleteOrphanCompensation(ticket.Price);
+        var payment = new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price);
+        payment.MarkRefunded("confirmed-payout-reference");
+        _context.AddRange(ticket, payment);
+        await _context.SaveChangesAsync();
+        var locks = new Mock<IDistributedLockService>();
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).ReturnsAsync(new TestDistributedLockLease());
+        var handler = new ProcessPaymentCommandHandler(_context, Mock.Of<INotificationOutboxPort>(), Mock.Of<ISeatNotificationService>(),
+            locks.Object, Mock.Of<ITicketSecurityService>(), NullLogger<ProcessPaymentCommandHandler>.Instance);
+
+        var result = await handler.Handle(new ProcessPaymentCommand(new PayOSWebhookData { OrderCode = ticket.OrderCode, Amount = ticket.Price, Success = true, Reference = "original-payment" }), CancellationToken.None);
+
+        result.Should().BeTrue();
+        payment.Status.Should().Be("Refunded");
+        payment.ProviderTransactionId.Should().Be("confirmed-payout-reference");
+        (await _context.RefundRequests.CountAsync()).Should().Be(0);
     }
 
     private static Event CreateEvent(string title, DateTime date) =>

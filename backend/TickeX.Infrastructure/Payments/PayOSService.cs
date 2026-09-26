@@ -37,7 +37,7 @@ public class PayOSService : IPayOSService
         _httpClient.DefaultRequestHeaders.Add("x-api-key", _apiKey);
     }
 
-    public async Task<CreatePaymentResult?> CreatePaymentLink(long orderCode, int amount, string description, string returnUrl, string cancelUrl, CancellationToken cancellationToken = default)
+    public async Task<CreatePaymentResult?> CreatePaymentLink(long orderCode, int amount, string description, string returnUrl, string cancelUrl, CancellationToken cancellationToken = default, DateTimeOffset? expiresAt = null)
     {
         var requestData = new
         {
@@ -59,25 +59,49 @@ public class PayOSService : IPayOSService
             description = description,
             returnUrl = returnUrl,
             cancelUrl = cancelUrl,
-            signature = signature
+            signature = signature,
+            expiredAt = expiresAt?.ToUnixTimeSeconds()
         };
 
-        var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync("v2/payment-requests", content, cancellationToken);
+        using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        using var response = await _httpClient.PostAsync("v2/payment-requests", content, cancellationToken);
 
         if (response.IsSuccessStatusCode)
         {
             var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
-            var jsonDoc = JsonDocument.Parse(responseString);
+            using var jsonDoc = JsonDocument.Parse(responseString);
+            if (!jsonDoc.RootElement.TryGetProperty("code", out var code) || code.GetString() != "00") return null;
             var dataElement = jsonDoc.RootElement.GetProperty("data");
             string checkoutUrl = dataElement.GetProperty("checkoutUrl").GetString() ?? "";
             
             return new CreatePaymentResult { CheckoutUrl = checkoutUrl };
         }
 
-        var error = await response.Content.ReadAsStringAsync(cancellationToken);
         _logger.LogWarning("PayOS payment-link request failed with HTTP status {StatusCode}.", (int)response.StatusCode);
         return null;
+    }
+
+    public async Task<PayOSPaymentLinkState?> GetPaymentLinkStateAsync(long orderCode, CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.GetAsync($"v2/payment-requests/{orderCode}", cancellationToken);
+        return await ReadPaymentStateAsync(response, cancellationToken);
+    }
+
+    public async Task<PayOSPaymentLinkState?> CancelPaymentLinkAsync(long orderCode, string reason, CancellationToken cancellationToken = default)
+    {
+        using var content = new StringContent(JsonSerializer.Serialize(new { cancellationReason = reason }), Encoding.UTF8, "application/json");
+        using var response = await _httpClient.PostAsync($"v2/payment-requests/{orderCode}/cancel", content, cancellationToken);
+        return await ReadPaymentStateAsync(response, cancellationToken);
+    }
+
+    private static async Task<PayOSPaymentLinkState?> ReadPaymentStateAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        if (!response.IsSuccessStatusCode) return null;
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+        if (!json.RootElement.TryGetProperty("code", out var code) || code.GetString() != "00"
+            || !json.RootElement.TryGetProperty("data", out var data)
+            || !data.TryGetProperty("status", out var status)) return null;
+        return new PayOSPaymentLinkState(status.GetString() ?? string.Empty);
     }
 
     public PayOSWebhookData? VerifyPaymentWebhookData(string webhookBody, string signature)

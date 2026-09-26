@@ -46,6 +46,7 @@ export const paymentStatusResponseSchema = z.object({
   qrCode: z.string().optional().nullable(),
   status: z.union([z.string(), z.number()]),
   ticketId: z.string().optional().nullable(),
+  refundStatus: z.string().optional().nullable(),
 }).passthrough();
 
 export type PaymentStatusResponse = z.infer<typeof paymentStatusResponseSchema>;

@@ -26,6 +26,9 @@ public sealed class RetryRefundRequestCommandHandler(IApplicationDbContext conte
             var ticket = await context.Tickets.SingleAsync(x => x.Id == refund.TicketId, cancellationToken);
             var payment = await context.PaymentTransactions.SingleOrDefaultAsync(x => x.TicketId == refund.TicketId, cancellationToken);
             if (ticket.Status == TickeX.Domain.Enums.TicketStatus.RefundPending) ticket.CompleteRefund(refund.Amount);
+            else if (ticket.Status == TickeX.Domain.Enums.TicketStatus.Cancelled && ticket.RefundedAt is null && payment?.Status == "OrphanedPaid")
+                ticket.CompleteOrphanCompensation(refund.Amount);
+            else return "REFUND_TICKET_REVIEW_REQUIRED";
             payment?.MarkRefunded(remote.PayoutId ?? refund.ProviderReference ?? stableReference, "PayOS payout reconciled as SUCCEEDED");
             refund.MarkCompleted(remote.PayoutId ?? refund.ProviderReference ?? stableReference);
             await context.SaveChangesAsync(cancellationToken);

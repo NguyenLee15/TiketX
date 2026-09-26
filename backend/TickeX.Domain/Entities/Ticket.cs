@@ -118,6 +118,16 @@ public class Ticket : BaseEntity
         Version = Guid.NewGuid().ToByteArray();
     }
 
+    public void CompleteOrphanCompensation(decimal amount)
+    {
+        if (Status != TicketStatus.Cancelled || RefundedAt is not null || amount <= 0)
+            throw new InvalidOperationException("Only uncompensated cancelled tickets can complete orphan compensation.");
+        RefundAmount = amount;
+        RefundedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
+    }
+
     public void Cancel()
     {
         if (Status == TicketStatus.Cancelled)

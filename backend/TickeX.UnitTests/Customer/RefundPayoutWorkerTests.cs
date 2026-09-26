@@ -102,6 +102,37 @@ public sealed class RefundPayoutWorkerTests
     }
 
     [Fact]
+    public async Task ConfirmedOrphanPayout_RecordsCompensationOnCancelledTicket()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        Guid refundId;
+        Guid ticketId;
+        await using (var seed = new ApplicationDbContext(options))
+        {
+            await seed.Database.EnsureCreatedAsync();
+            (refundId, ticketId) = await SeedRefundAsync(seed, orphan: true);
+        }
+        await using var provider = CreateWorkerServices(options, new FakePayoutService()).BuildServiceProvider();
+        using var stop = new CancellationTokenSource();
+        var worker = new RefundPayoutWorker(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<RefundPayoutWorker>.Instance);
+        await worker.StartAsync(stop.Token);
+        await WaitUntilAsync(async () =>
+        {
+            await using var check = new ApplicationDbContext(options);
+            return await check.RefundRequests.AnyAsync(x => x.Id == refundId && x.Status == "Completed");
+        }, TimeSpan.FromSeconds(5));
+        await worker.StopAsync(CancellationToken.None);
+        await using var final = new ApplicationDbContext(options);
+        var ticket = await final.Tickets.AsNoTracking().SingleAsync(x => x.Id == ticketId);
+        ticket.Status.Should().Be(TicketStatus.Cancelled);
+        ticket.RefundAmount.Should().Be(ticket.Price);
+        ticket.RefundedAt.Should().NotBeNull();
+        (await final.PaymentTransactions.AsNoTracking().SingleAsync(x => x.TicketId == ticketId)).Status.Should().Be("Refunded");
+    }
+
+    [Fact]
     public async Task TwoWorkers_OnlyOneClaimsAndSubmitsTheSameRefund()
     {
         var connectionString = $"Data Source=refund-worker-{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
@@ -145,7 +176,7 @@ public sealed class RefundPayoutWorkerTests
         return services;
     }
 
-    private static async Task<(Guid RefundId, Guid TicketId)> SeedRefundAsync(ApplicationDbContext db)
+    private static async Task<(Guid RefundId, Guid TicketId)> SeedRefundAsync(ApplicationDbContext db, bool orphan = false)
     {
         var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
         var ev = new Event("Future", "Description", DateTime.UtcNow.AddDays(3), DateTime.UtcNow.AddDays(3).AddHours(2), "HCM", "Venue", 1);
@@ -156,12 +187,12 @@ public sealed class RefundPayoutWorkerTests
         seat.Lock(user.Id);
         seat.MarkAsSold();
         var ticket = new Ticket(ev.Id, seat.Id, user.Id, seat.Price);
-        ticket.MarkAsPaid();
-        ticket.MarkRefundPending();
+        if (orphan) ticket.Cancel();
+        else { ticket.MarkAsPaid(); ticket.MarkRefundPending(); }
         db.Tickets.Add(ticket);
         var payment = new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price);
-        payment.MarkSuccess("payment-reference");
-        payment.MarkRefundInitiated();
+        if (orphan) payment.MarkOrphaned("Late payment", "payment-reference");
+        else { payment.MarkSuccess("payment-reference"); payment.MarkRefundInitiated(); }
         db.PaymentTransactions.Add(payment);
         var refund = new RefundRequest(ev.Id, ticket.Id, ticket.Price, $"customer-refund:{ticket.Id:N}");
         refund.SetDestinationSnapshot("encrypted-destination");

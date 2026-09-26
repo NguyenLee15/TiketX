@@ -126,6 +126,7 @@ export const ticketItemSchema = z.object({
   }),
   price: z.number().nonnegative(),
   status: z.string().min(1),
+  refundStatus: z.string().optional().nullable(),
   orderCode: z.union([z.string().min(1), z.number()]).transform(v => String(v)),
   qrCodeSignature: z.string().optional().default(''),
   paidAt: z.string().optional().nullable(),

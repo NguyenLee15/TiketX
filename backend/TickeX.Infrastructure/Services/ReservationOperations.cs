@@ -17,6 +17,7 @@ public sealed class ReservationOperations : IReservationOperations
     private readonly ReservationOptions _options;
     private readonly ILogger<ReservationOperations> _logger;
     private readonly ITimePolicy _time;
+    private readonly IPayOSService? _payOS;
 
     public ReservationOperations(
         IApplicationDbContext context,
@@ -25,7 +26,8 @@ public sealed class ReservationOperations : IReservationOperations
         IReservationExpiryScheduler scheduler,
         IOptions<ReservationOptions> options,
         ILogger<ReservationOperations> logger,
-        ITimePolicy? time = null)
+        ITimePolicy? time = null,
+        IPayOSService? payOS = null)
     {
         _context = context;
         _locks = locks;
@@ -34,6 +36,7 @@ public sealed class ReservationOperations : IReservationOperations
         _options = options.Value;
         _logger = logger;
         _time = time ?? new UtcTimePolicy();
+        _payOS = payOS;
     }
 
     public async Task<ReservationResult> ReserveAsync(Guid eventId, Guid seatId, Guid userId, byte[] version, CancellationToken cancellationToken)
@@ -79,6 +82,9 @@ public sealed class ReservationOperations : IReservationOperations
                     var oldTickets = await _context.Tickets
                         .Where(t => t.SeatId == seat.Id && t.Status == TicketStatus.Pending)
                         .ToListAsync(cancellationToken);
+                    var oldIds = oldTickets.Select(t => t.Id).ToArray();
+                    if (await _context.PaymentTransactions.AnyAsync(p => oldIds.Contains(p.TicketId) && p.Status == "Pending", cancellationToken))
+                        return Fail("SEAT_UNAVAILABLE", "Thanh toán cũ đang được đối soát; ghế chưa thể mở bán lại.");
                     foreach (var oldTicket in oldTickets) oldTicket.Cancel();
                     seat.ReclaimLock(userId);
                 }
@@ -151,16 +157,67 @@ public sealed class ReservationOperations : IReservationOperations
         if (ticket.Status != TicketStatus.Pending)
             return Fail("RESERVATION_NOT_PENDING", "Lượt giữ ghế không còn ở trạng thái chờ.");
 
-        var lockKey = $"seat:lock:{ticket.SeatId}";
-        var lease = await TryAcquireAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
-        if (lease is null)
+        var paymentLease = await TryAcquireAsync($"payment:lock:{ticket.OrderCode}", TimeSpan.FromSeconds(30), cancellationToken);
+        if (paymentLease is null)
             return Fail("RESERVATION_LOCK_UNAVAILABLE", "Không thể khóa thao tác hủy giữ ghế lúc này.");
-        await using (lease)
+        await using (paymentLease)
         {
+            var lease = await TryAcquireAsync($"seat:lock:{ticket.SeatId}", TimeSpan.FromSeconds(30), cancellationToken);
+            if (lease is null) return Fail("RESERVATION_LOCK_UNAVAILABLE", "Không thể khóa thao tác hủy giữ ghế lúc này.");
+            await using (lease)
+            {
             var current = await _context.Tickets.Include(t => t.Seat)
                 .FirstOrDefaultAsync(t => t.Id == ticketId, cancellationToken);
             if (current == null || (requireOwner && current.UserId != userId) || current.Status != TicketStatus.Pending)
                 return Fail("RESERVATION_NOT_PENDING", "Lượt giữ ghế đã thay đổi.");
+            var latest = await _context.Tickets.AsNoTracking().Include(t => t.Seat)
+                .Where(t => t.Id == ticketId)
+                .Select(t => new { t.Status, SeatStatus = t.Seat.Status, t.Seat.LockedByUserId })
+                .SingleAsync(cancellationToken);
+            if (latest.Status != TicketStatus.Pending || latest.SeatStatus != SeatStatus.Locked || latest.LockedByUserId != current.UserId)
+                return Fail("RESERVATION_NOT_PENDING", "Lượt giữ ghế đã thay đổi.");
+            var payment = await _context.PaymentTransactions.SingleOrDefaultAsync(p => p.OrderCode == current.OrderCode, cancellationToken);
+            if (payment?.Status == "Pending")
+            {
+                if (payment.CheckoutUrl.StartsWith("/mock-payos", StringComparison.Ordinal))
+                {
+                    payment.MarkCancelled();
+                }
+                else
+                {
+                    PayOSPaymentLinkState? state = null;
+                    try
+                    {
+                        if (_payOS is not null)
+                        {
+                            state = await _payOS.CancelPaymentLinkAsync(current.OrderCode, reason, cancellationToken);
+                            if (state?.Status != "CANCELLED")
+                                state = await _payOS.GetPaymentLinkStateAsync(current.OrderCode, cancellationToken);
+                        }
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+                    catch (Exception ex) { _logger.LogWarning(ex, "PayOS cancellation state unknown for {OrderCode}", current.OrderCode); }
+                    if (state?.Status == "CANCELLED") payment.MarkCancelled();
+                    else
+                    {
+                        _logger.LogWarning("Reservation {TicketId} retained for PayOS reconciliation; provider state {ProviderState}", current.Id, state?.Status ?? "UNKNOWN");
+                        if (!requireOwner)
+                        {
+                            try { _scheduler.Schedule(current.Id, TimeSpan.FromSeconds(60)); }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Expiry reconciliation scheduling failed for {TicketId}; job must retry", current.Id);
+                                return Fail("RESERVATION_LOCK_UNAVAILABLE", "Không thể lên lịch đối soát. Tác vụ cần thử lại.");
+                            }
+                        }
+                        return state?.Status is "PAID" or "PROCESSING"
+                            ? Fail("RESERVATION_PAYMENT_PROCESSING", "Thanh toán đang được xử lý; ghế chưa thể trả.")
+                            : Fail("RESERVATION_PROVIDER_UNKNOWN", "Chưa xác nhận được trạng thái PayOS. Vui lòng thử lại.");
+                    }
+                }
+            }
+            else if (payment?.Status is "Success" or "OrphanedPaid")
+                return Fail("RESERVATION_PAYMENT_PROCESSING", "Thanh toán đã được ghi nhận; ghế chưa thể trả.");
             if (current.Seat?.Status == SeatStatus.Locked && (!requireOwner || current.Seat.LockedByUserId == userId))
                 current.Seat.Release();
             _context.AuditLogs.Add(new AuditLog(
@@ -172,7 +229,7 @@ public sealed class ReservationOperations : IReservationOperations
                 beforeState: $"Status={TicketStatus.Pending},SeatStatus={current.Seat?.Status}",
                 afterState: $"Status={TicketStatus.Cancelled},Reason={reason}"));
             current.Cancel();
-            if (!lease.IsValid) return Fail("RESERVATION_LOCK_LOST", "Khóa hủy giữ ghế đã hết hạn. Vui lòng thử lại.");
+            if (!lease.IsValid || !paymentLease.IsValid) return Fail("RESERVATION_LOCK_LOST", "Khóa hủy giữ ghế đã hết hạn. Vui lòng thử lại.");
             await _context.SaveChangesAsync(cancellationToken);
             if (current.Seat != null)
                 try
@@ -185,6 +242,7 @@ public sealed class ReservationOperations : IReservationOperations
                     _logger.LogWarning(ex, "Reservation {TicketId} was released but realtime notification failed", current.Id);
                 }
             return new ReservationResult(true, "RESERVATION_RELEASED", "Đã hủy lượt giữ ghế.");
+            }
         }
     }
 

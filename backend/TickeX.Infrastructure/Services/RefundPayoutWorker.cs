@@ -101,9 +101,17 @@ public sealed class RefundPayoutWorker(
             }
             else if (result.State == "SUCCEEDED")
             {
-                refund.MarkCompleted(result.PayoutId ?? refund.ProviderReference ?? stableReference);
-                ticket.CompleteRefund(refund.Amount);
-                payment?.MarkRefunded(result.PayoutId ?? stableReference, "PayOS payout confirmed SUCCEEDED");
+                if (ticket.Status == TicketStatus.RefundPending)
+                    ticket.CompleteRefund(refund.Amount);
+                else if (ticket.Status == TicketStatus.Cancelled && ticket.RefundedAt is null && payment?.Status == "OrphanedPaid")
+                    ticket.CompleteOrphanCompensation(refund.Amount);
+                else
+                    refund.MarkNeedsReview($"Ticket state {ticket.Status} cannot complete payout automatically.", "SUCCEEDED");
+                if (refund.Status != "NeedsReview")
+                {
+                    refund.MarkCompleted(result.PayoutId ?? refund.ProviderReference ?? stableReference);
+                    payment?.MarkRefunded(result.PayoutId ?? stableReference, "PayOS payout confirmed SUCCEEDED");
+                }
             }
             else if (result.State is "PROCESSING" or "PENDING" or "NOT_FOUND")
             {

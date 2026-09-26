@@ -46,6 +46,14 @@ public sealed class CustomerTicketReadModelAdapter : ICustomerTicketReadModel
             .Take(effectivePageSize);
 
         var tickets = await query.ToListAsync(cancellationToken);
+        var ticketIds = tickets.Select(t => t.Id).ToArray();
+        var refundStatuses = await _context.RefundRequests.AsNoTracking()
+            .Where(r => ticketIds.Contains(r.TicketId))
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new { r.TicketId, r.Status })
+            .ToListAsync(cancellationToken);
+        var latestRefundStatus = refundStatuses.GroupBy(r => r.TicketId)
+            .ToDictionary(g => g.Key, g => g.First().Status);
 
         var now = _time.UtcNow;
         var result = new List<TicketDto>(tickets.Count);
@@ -81,7 +89,8 @@ public sealed class CustomerTicketReadModelAdapter : ICustomerTicketReadModel
                 ticket.RefundAmount,
                 ticket.RefundedAt,
                 cutoffHours,
-                canRefund));
+                canRefund,
+                latestRefundStatus.GetValueOrDefault(ticket.Id)));
         }
 
         return result;

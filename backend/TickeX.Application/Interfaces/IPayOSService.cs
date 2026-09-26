@@ -5,6 +5,8 @@ public class CreatePaymentResult
     public string CheckoutUrl { get; set; } = string.Empty;
 }
 
+public sealed record PayOSPaymentLinkState(string Status);
+
 public class PayOSWebhookData
 {
     public long OrderCode { get; set; }
@@ -22,6 +24,8 @@ public class PayOSWebhookData
 
 public interface IPayOSService
 {
-    Task<CreatePaymentResult?> CreatePaymentLink(long orderCode, int amount, string description, string returnUrl, string cancelUrl, CancellationToken cancellationToken = default);
+    Task<CreatePaymentResult?> CreatePaymentLink(long orderCode, int amount, string description, string returnUrl, string cancelUrl, CancellationToken cancellationToken = default, DateTimeOffset? expiresAt = null);
+    Task<PayOSPaymentLinkState?> GetPaymentLinkStateAsync(long orderCode, CancellationToken cancellationToken = default);
+    Task<PayOSPaymentLinkState?> CancelPaymentLinkAsync(long orderCode, string reason, CancellationToken cancellationToken = default);
     PayOSWebhookData? VerifyPaymentWebhookData(string webhookBody, string signature);
 }

@@ -28,9 +28,7 @@ export const CheckoutReleaseDialog: React.FC<CheckoutReleaseDialogProps> = React
         <h3 id="release-confirm-title" className="text-base font-bold text-white">
           Rời phiên thanh toán?
         </h3>
-        <p className="text-xs leading-relaxed text-text-secondary">
-          Ghế sẽ được trả lại để người khác có thể đặt, và liên kết thanh toán hiện tại sẽ bị hủy.
-        </p>
+        <p className="text-xs leading-relaxed text-text-secondary">Hệ thống sẽ xác nhận hủy liên kết thanh toán với PayOS trước khi trả ghế. Nếu chưa xác nhận được, ghế vẫn được giữ.</p>
         
         {releaseError && (
           <p role="alert" aria-live="polite" className="text-xs text-danger">

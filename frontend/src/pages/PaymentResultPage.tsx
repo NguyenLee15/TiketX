@@ -14,7 +14,8 @@ export type PaymentPhase =
   | { state: 'success'; status: 'Paid' }
   | { state: 'pending'; status: 'Pending' | 'RefundPending'; notice?: string }
   | { state: 'failed'; status: 'Failed' | 'Cancelled' | 'Expired' | 'Used'; message: string }
-  | { state: 'unknown'; status: 'Unknown'; message: string };
+  | { state: 'unknown'; status: 'Unknown'; message: string }
+  | { state: 'compensation'; status: 'Cancelled'; refundStatus: string };
 
 export default function PaymentResultPage() {
   const [searchParams] = useSearchParams();
@@ -71,6 +72,7 @@ export default function PaymentResultPage() {
         return true;
       }
       const next = normalizePaymentStatus(parsed.data.status);
+      const refundStatus = parsed.data.refundStatus;
 
       if (!signal?.aborted && mountedRef.current) {
         if (next === 'Paid') {
@@ -84,6 +86,8 @@ export default function PaymentResultPage() {
             status: 'Used',
             message: 'Vé này đã được sử dụng (đã check-in vào sự kiện).',
           });
+        } else if (next === 'Cancelled' && refundStatus) {
+          setPhase({ state: 'compensation', status: 'Cancelled', refundStatus });
         } else if (next === 'Failed' || next === 'Cancelled' || next === 'Expired') {
           setPhase({
             state: 'failed',
@@ -184,8 +188,11 @@ export default function PaymentResultPage() {
   const isSuccess = phase.state === 'success';
   const isPending = phase.state === 'pending' || (phase.state === 'checking' && (phase.status === 'Pending' || phase.status === 'RefundPending'));
   const isUnknown = phase.state === 'unknown';
+  const isCompensation = phase.state === 'compensation';
 
-  const title = isSuccess
+  const title = isCompensation
+    ? phase.refundStatus === 'Completed' ? 'Đã bồi hoàn' : 'Giao dịch đang được bồi hoàn'
+    : isSuccess
     ? 'Đặt Vé Thành Công!'
     : phase.status === 'RefundPending'
     ? 'Yêu Cầu Hoàn Tiền Đang Xử Lý'
@@ -199,7 +206,12 @@ export default function PaymentResultPage() {
     ? 'Trạng Thái Không Xác Định'
     : 'Thanh Toán Không Thành Công';
 
-  const description = isSuccess
+  const description = isCompensation
+    ? phase.refundStatus === 'AwaitingDestination' ? 'Cần thiết lập tài khoản nhận tiền để tiếp tục bồi hoàn.'
+      : phase.refundStatus === 'NeedsReview' ? 'Khoản bồi hoàn cần đối soát. Vui lòng liên hệ hỗ trợ.'
+      : phase.refundStatus === 'Completed' ? 'Khoản bồi hoàn đã được xác nhận.'
+      : 'Khoản bồi hoàn đang được xử lý. Vui lòng theo dõi trong Vé của tôi.'
+    : isSuccess
     ? 'Vé điện tử đã sẵn sàng trong mục Vé của tôi.'
     : phase.status === 'RefundPending'
     ? 'Yêu cầu đã được ghi nhận và đang chờ cổng thanh toán xác nhận.'
@@ -246,6 +258,9 @@ export default function PaymentResultPage() {
         {notice && <p role="alert" className="mt-4 text-xs text-warning">{notice}</p>}
 
         <div className="mt-7 space-y-3">
+          {isCompensation && phase.refundStatus === 'AwaitingDestination' && (
+            <Link to="/profile?refundBankAccount=1" className="w-full py-3 bg-brand-primary text-white font-bold rounded-xl flex justify-center items-center">Thiết lập tài khoản nhận tiền</Link>
+          )}
           {(isPending || isChecking || isUnknown) && (
             <button
               type="button"
