@@ -4,7 +4,7 @@ export const profileSchema = z.object({
   name: z.string().min(2, 'Họ và tên phải có ít nhất 2 ký tự').max(100, 'Họ và tên tối đa 100 ký tự'),
   phone: z
     .string()
-    .regex(/^(\+84|0)[3|5|7|8|9][0-9]{8}$/, 'Số điện thoại không hợp lệ (VD: 0901234567)')
+    .regex(/^(\+84|0)[35789]\d{8}$/, 'Số điện thoại không hợp lệ (VD: 0901234567)')
     .or(z.literal('')),
   avatarUrl: z
     .string()

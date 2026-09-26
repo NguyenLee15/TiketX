@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Mail, Lock, User, ArrowRight, Loader2, Zap } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
+import { useAuthStore } from '../../stores/useAuthStore';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Họ và tên phải có ít nhất 2 ký tự').max(100, 'Họ và tên tối đa 100 ký tự'),
@@ -22,6 +23,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const [serverError, setServerError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const {
     register,
@@ -48,8 +50,19 @@ export default function RegisterPage() {
       };
       const res = await api.post('/api/auth/register', payload);
       if (res.data.success) {
-        toast.success('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
-        navigate('/login');
+        const data = res.data.data;
+        if (data?.userId) {
+          const userData = {
+            id: data.userId,
+            name: data.name || values.name.trim(),
+            email: data.email || values.email.trim(),
+            role: data.role || 'Customer'
+          };
+          useAuthStore.getState().setAuth(userData, data.token ?? null);
+        }
+        toast.success('Đăng ký tài khoản thành công!');
+        const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/';
+        navigate(from, { replace: true });
       } else {
         const msg = res.data.message || 'Đăng ký thất bại';
         setServerError(msg);

@@ -46,7 +46,7 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
             _ => query.OrderBy(e => e.Date).ThenBy(e => e.Id)
         };
 
-        var page = request.Page > 0 ? request.Page : 1;
+        var page = Math.Clamp(request.Page > 0 ? request.Page : 1, 1, 10000);
         var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 12, 1, 50);
         var items = await query.Skip((page - 1) * pageSize).Take(pageSize)
             .Select(e => new EventDto(

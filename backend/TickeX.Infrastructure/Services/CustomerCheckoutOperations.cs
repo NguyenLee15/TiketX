@@ -44,10 +44,16 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
             .Where(t => t.OrderCode == orderCode && t.UserId == userId)
             .Select(t => new { t.Id, t.OrderCode, t.Status, t.Price })
             .SingleOrDefaultAsync(cancellationToken);
-        return ticket is null
-            ? Fail("PAYMENT_NOT_FOUND", "Không tìm thấy đơn hàng.")
-            : new(true, "PAYMENT_STATUS", "Đã lấy trạng thái thanh toán.", ticket.OrderCode, ticket.Price,
-                Status: ToPublicStatus(ticket.Status), TicketId: ticket.Id);
+        if (ticket is null) return Fail("PAYMENT_NOT_FOUND", "Không tìm thấy đơn hàng.");
+
+        var refundStatus = await _context.RefundRequests.AsNoTracking()
+            .Where(r => r.TicketId == ticket.Id)
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => r.Status)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new(true, "PAYMENT_STATUS", "Đã lấy trạng thái thanh toán.", ticket.OrderCode, ticket.Price,
+            Status: ToPublicStatus(ticket.Status), TicketId: ticket.Id, RefundStatus: refundStatus);
     }
 
     public async Task<CustomerCheckoutResult> CreatePaymentLinkAsync(Guid ticketId, Guid userId, CancellationToken cancellationToken)

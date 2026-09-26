@@ -80,7 +80,7 @@ public class PaymentsController : ControllerBase
             return Ok(new { success = true, code = result.Code, message = result.Message, data = new
             {
                 orderCode = result.OrderCode, amount = result.Amount, checkoutUrl = result.CheckoutUrl,
-                status = result.Status, ticketId = result.TicketId
+                status = result.Status, ticketId = result.TicketId, refundStatus = result.RefundStatus
             }});
         if (notFound && result.Code == "PAYMENT_NOT_FOUND")
             return NotFound(new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
