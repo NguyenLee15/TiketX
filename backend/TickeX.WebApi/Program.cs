@@ -140,6 +140,20 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0
         });
     });
+
+    options.AddPolicy("PublicCatalogPolicy", httpContext =>
+    {
+        var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString();
+        var partitionKey = httpContext.RequestServices.GetRequiredService<TickeX.Application.Interfaces.IClientIdentityResolver>()
+            .Resolve(userId, clientIp);
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 60,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
 });
 
 var hangfireConnection = builder.Configuration.GetConnectionString("HangfireConnection");

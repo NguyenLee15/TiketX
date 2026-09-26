@@ -60,6 +60,10 @@ jobs:
     needs: [backend-build-and-test, frontend-build-and-typecheck]
     env:
       MSSQL_SA_PASSWORD: CiOnly!2026Password
+      MSSQL_APP_USER: tickex_app_ci
+      MSSQL_APP_PASSWORD: CiOnly!2026Password
+      MSSQL_HANGFIRE_USER: tickex_hangfire_ci
+      MSSQL_HANGFIRE_PASSWORD: CiOnly!2026Password
       MSSQL_MIGRATOR_USER: tickex_migrator
       MSSQL_MIGRATOR_PASSWORD: CiOnly!2026Password
       RABBITMQ_DEFAULT_USER: tickex-ci
@@ -70,6 +74,9 @@ jobs:
       PAYOS_CLIENT_ID: ci-payos-client-id
       PAYOS_API_KEY: ci-payos-api-key
       PAYOS_CHECKSUM_KEY: ci-payos-checksum-key
+      PAYOS_PAYOUT_CLIENT_ID: ci-payos-payout-client-id
+      PAYOS_PAYOUT_API_KEY: ci-payos-payout-api-key
+      PAYOS_PAYOUT_CHECKSUM_KEY: ci-payos-payout-checksum-key
       SMTP_SERVER: smtp.invalid
       SMTP_USERNAME: ci-smtp-user
       SMTP_PASSWORD: ci-smtp-password

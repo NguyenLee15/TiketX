@@ -22,6 +22,7 @@
     <ProjectReference Include="..\TickeX.Domain\TickeX.Domain.csproj" />
     <ProjectReference Include="..\TickeX.Application\TickeX.Application.csproj" />
     <ProjectReference Include="..\TickeX.Infrastructure\TickeX.Infrastructure.csproj" />
+    <ProjectReference Include="..\TickeX.WebApi\TickeX.WebApi.csproj" />
   </ItemGroup>
 
   <ItemGroup>

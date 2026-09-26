@@ -24,6 +24,7 @@ public class EventsController : ControllerBase
 
     [AllowAnonymous]
     [HttpGet]
+    [EnableRateLimiting("PublicCatalogPolicy")]
     public async Task<IActionResult> GetEvents([FromQuery] GetEventsQuery query, CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(query, cancellationToken);
@@ -40,6 +41,7 @@ public class EventsController : ControllerBase
 
     [AllowAnonymous]
     [HttpGet("{id}")]
+    [EnableRateLimiting("PublicCatalogPolicy")]
     public async Task<IActionResult> GetEvent(Guid id, CancellationToken cancellationToken = default)
     {
         Guid? currentUserId = null;
