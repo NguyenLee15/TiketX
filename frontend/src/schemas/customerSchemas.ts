@@ -39,6 +39,18 @@ export const userProfileResponseSchema = z.object({
 
 export type UserProfileResponse = z.infer<typeof userProfileResponseSchema>;
 
+export const refundStatusSchema = z.enum([
+  'Pending',
+  'Processing',
+  'AwaitingDestination',
+  'NeedsReview',
+  'Completed',
+  'Failed',
+  'Unknown',
+]).catch('Unknown');
+
+export type RefundStatus = z.infer<typeof refundStatusSchema>;
+
 export const paymentStatusResponseSchema = z.object({
   orderCode: z.union([z.string().min(1), z.number()]).transform(v => String(v)),
   amount: z.number().optional().nullable(),
@@ -46,7 +58,7 @@ export const paymentStatusResponseSchema = z.object({
   qrCode: z.string().optional().nullable(),
   status: z.union([z.string(), z.number()]),
   ticketId: z.string().optional().nullable(),
-  refundStatus: z.string().optional().nullable(),
+  refundStatus: refundStatusSchema.optional().nullable(),
 }).passthrough();
 
 export type PaymentStatusResponse = z.infer<typeof paymentStatusResponseSchema>;

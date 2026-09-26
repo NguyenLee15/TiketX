@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
+import { refundStatusSchema } from '../schemas/customerSchemas';
 import api from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
 import { Event, EventDetail } from '../types';
@@ -126,7 +127,7 @@ export const ticketItemSchema = z.object({
   }),
   price: z.number().nonnegative(),
   status: z.string().min(1),
-  refundStatus: z.string().optional().nullable(),
+  refundStatus: refundStatusSchema.optional().nullable(),
   orderCode: z.union([z.string().min(1), z.number()]).transform(v => String(v)),
   qrCodeSignature: z.string().optional().default(''),
   paidAt: z.string().optional().nullable(),

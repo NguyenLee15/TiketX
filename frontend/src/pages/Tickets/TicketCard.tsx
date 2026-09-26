@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Loader2, Download, RotateCcw, Crown, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
+import type { RefundStatus } from '../../schemas/customerSchemas';
 
 export interface TicketItemData {
   id: string;
@@ -21,7 +22,7 @@ export interface TicketItemData {
   tier: number;
   price: number;
   status: string;
-  refundStatus?: string | null;
+  refundStatus?: RefundStatus | null;
   orderCode: string | number;
   qrCodeSignature: string;
   paidAt?: string;
@@ -47,15 +48,17 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
   const hasSignedQr = Boolean(ticket.qrCodeSignature?.trim());
   const canShowQr = hasSignedQr && ['paid', 'used'].includes(ticket.status.toLowerCase());
   const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false);
+  const [downloadError, setDownloadError] = React.useState(false);
 
   const handleDownloadPdf = React.useCallback(async () => {
     if (!canShowQr || isDownloadingPdf) return;
     try {
       setIsDownloadingPdf(true);
+      setDownloadError(false);
       const { generateTicketPdf } = await import('../../utils/ticketPdfGenerator');
       await generateTicketPdf(ticket as unknown as Parameters<typeof generateTicketPdf>[0]);
-    } catch (err) {
-      console.error('Failed to generate ticket PDF', err);
+    } catch {
+      setDownloadError(true);
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -83,7 +86,6 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-warning/15 text-warning border border-warning/30 uppercase tracking-wider whitespace-nowrap shrink-0">
           <Clock className="w-3.5 h-3.5" /> Đang Hoàn Tiền
         </span>
-        <Link to="/profile?refundBankAccount=1" className="ml-2 text-xs font-semibold text-brand-primary underline underline-offset-4">Kiểm tra tài khoản nhận tiền</Link>
         </>
       );
     }
@@ -189,16 +191,8 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
             )}
           </div>
         )}
-        {ticket.refundStatus && (
-          <div className="border-t border-border-subtle/60 pt-2 text-xs text-text-secondary">
-            {ticket.refundStatus === 'Completed' ? 'Khoản bồi hoàn đã hoàn tất.'
-              : ticket.refundStatus === 'AwaitingDestination' ? 'Khoản bồi hoàn đang chờ tài khoản nhận tiền.'
-              : ticket.refundStatus === 'NeedsReview' ? 'Khoản bồi hoàn cần được đối soát. Vui lòng liên hệ hỗ trợ.'
-              : 'Khoản bồi hoàn đang được xử lý.'}
-            {ticket.refundStatus === 'AwaitingDestination' && (
-              <Link to="/profile?refundBankAccount=1" className="ml-2 font-semibold text-brand-primary underline underline-offset-4">Thiết lập tài khoản nhận tiền</Link>
-            )}
-          </div>
+        {(ticket.refundStatus || ticket.status.toLowerCase() === 'refundpending') && (
+          <RefundStatusNotice status={ticket.refundStatus ?? 'Processing'} />
         )}
       </div>
       
@@ -225,6 +219,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
           </p>
         </div>
 
+        {downloadError && <p role="alert" className="text-center text-xs text-danger">Không thể tạo file vé PDF. Vui lòng thử lại.</p>}
         <button
           onClick={handleDownloadPdf}
           disabled={!canShowQr || isDownloadingPdf}
@@ -241,3 +236,25 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
     </div>
   );
 });
+
+function RefundStatusNotice({ status }: { status: RefundStatus }) {
+  const message = status === 'Completed' ? 'Khoản bồi hoàn đã hoàn tất.'
+    : status === 'AwaitingDestination' ? 'Khoản bồi hoàn đang chờ tài khoản nhận tiền.'
+    : status === 'NeedsReview' ? 'Khoản bồi hoàn cần được đối soát. Vui lòng liên hệ hỗ trợ.'
+    : status === 'Failed' ? 'Yêu cầu bồi hoàn chưa hoàn tất. Vui lòng liên hệ hỗ trợ.'
+    : status === 'Pending' ? 'Khoản bồi hoàn đang chờ xử lý.'
+    : status === 'Unknown' ? 'Trạng thái bồi hoàn đang được kiểm tra.'
+    : 'Khoản bồi hoàn đang được xử lý.';
+
+  return (
+    <div className="border-t border-border-subtle/60 pt-2 text-xs text-text-secondary">
+      {message}
+      {status === 'AwaitingDestination' && (
+        <Link to="/profile?refundBankAccount=1" className="ml-2 font-semibold text-brand-primary underline underline-offset-4">Thiết lập tài khoản nhận tiền</Link>
+      )}
+      {(status === 'NeedsReview' || status === 'Failed') && (
+        <a href="mailto:support@tickex.vn" className="ml-2 font-semibold text-brand-primary underline underline-offset-4">Liên hệ hỗ trợ</a>
+      )}
+    </div>
+  );
+}

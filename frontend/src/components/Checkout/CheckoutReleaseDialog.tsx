@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useModalAccessibility } from '../Admin/useModalAccessibility';
 
 interface CheckoutReleaseDialogProps {
   isOpen: boolean;
@@ -15,6 +16,9 @@ export const CheckoutReleaseDialog: React.FC<CheckoutReleaseDialogProps> = React
   onCancel,
   onConfirm,
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalAccessibility(isOpen, releasing, onCancel, dialogRef);
+
   if (!isOpen) return null;
 
   return (
@@ -24,7 +28,7 @@ export const CheckoutReleaseDialog: React.FC<CheckoutReleaseDialogProps> = React
       aria-modal="true" 
       aria-labelledby="release-confirm-title"
     >
-      <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-surface-2 p-5 shadow-2xl space-y-3">
+      <div ref={dialogRef} className="w-full max-w-sm rounded-2xl border border-border-subtle bg-surface-2 p-5 shadow-2xl space-y-3">
         <h3 id="release-confirm-title" className="text-base font-bold text-white">
           Rời phiên thanh toán?
         </h3>
@@ -58,4 +62,3 @@ export const CheckoutReleaseDialog: React.FC<CheckoutReleaseDialogProps> = React
     </div>
   );
 });
-

@@ -5,6 +5,7 @@ import confetti from 'canvas-confetti';
 import api from '../services/api';
 import { normalizePaymentStatus, type PaymentStatus } from '../utils/customerState';
 import { paymentStatusResponseSchema } from '../schemas/customerSchemas';
+import type { RefundStatus } from '../schemas/customerSchemas';
 
 const TERMINAL = new Set<PaymentStatus>(['Paid', 'Failed', 'Cancelled', 'Expired', 'Used', 'Unknown']);
 const BACKOFF_MS = [1500, 2500, 4000, 6000, 8000, 10000];
@@ -15,7 +16,7 @@ export type PaymentPhase =
   | { state: 'pending'; status: 'Pending' | 'RefundPending'; notice?: string }
   | { state: 'failed'; status: 'Failed' | 'Cancelled' | 'Expired' | 'Used'; message: string }
   | { state: 'unknown'; status: 'Unknown'; message: string }
-  | { state: 'compensation'; status: 'Cancelled'; refundStatus: string };
+  | { state: 'compensation'; status: 'Cancelled' | 'RefundPending'; refundStatus: RefundStatus };
 
 export default function PaymentResultPage() {
   const [searchParams] = useSearchParams();
@@ -86,8 +87,8 @@ export default function PaymentResultPage() {
             status: 'Used',
             message: 'Vé này đã được sử dụng (đã check-in vào sự kiện).',
           });
-        } else if (next === 'Cancelled' && refundStatus) {
-          setPhase({ state: 'compensation', status: 'Cancelled', refundStatus });
+        } else if (refundStatus) {
+          setPhase({ state: 'compensation', status: next === 'RefundPending' ? 'RefundPending' : 'Cancelled', refundStatus });
         } else if (next === 'Failed' || next === 'Cancelled' || next === 'Expired') {
           setPhase({
             state: 'failed',
@@ -191,7 +192,10 @@ export default function PaymentResultPage() {
   const isCompensation = phase.state === 'compensation';
 
   const title = isCompensation
-    ? phase.refundStatus === 'Completed' ? 'Đã bồi hoàn' : 'Giao dịch đang được bồi hoàn'
+    ? phase.refundStatus === 'Completed' ? 'Đã bồi hoàn'
+      : phase.refundStatus === 'NeedsReview' || phase.refundStatus === 'Failed' ? 'Bồi hoàn cần hỗ trợ'
+      : phase.refundStatus === 'AwaitingDestination' ? 'Cần tài khoản nhận tiền'
+      : 'Giao dịch đang được bồi hoàn'
     : isSuccess
     ? 'Đặt Vé Thành Công!'
     : phase.status === 'RefundPending'
@@ -209,7 +213,10 @@ export default function PaymentResultPage() {
   const description = isCompensation
     ? phase.refundStatus === 'AwaitingDestination' ? 'Cần thiết lập tài khoản nhận tiền để tiếp tục bồi hoàn.'
       : phase.refundStatus === 'NeedsReview' ? 'Khoản bồi hoàn cần đối soát. Vui lòng liên hệ hỗ trợ.'
+      : phase.refundStatus === 'Failed' ? 'Yêu cầu bồi hoàn chưa hoàn tất. Vui lòng liên hệ hỗ trợ.'
       : phase.refundStatus === 'Completed' ? 'Khoản bồi hoàn đã được xác nhận.'
+      : phase.refundStatus === 'Pending' ? 'Khoản bồi hoàn đang chờ xử lý.'
+      : phase.refundStatus === 'Unknown' ? 'Trạng thái bồi hoàn đang được kiểm tra.'
       : 'Khoản bồi hoàn đang được xử lý. Vui lòng theo dõi trong Vé của tôi.'
     : isSuccess
     ? 'Vé điện tử đã sẵn sàng trong mục Vé của tôi.'
@@ -260,6 +267,9 @@ export default function PaymentResultPage() {
         <div className="mt-7 space-y-3">
           {isCompensation && phase.refundStatus === 'AwaitingDestination' && (
             <Link to="/profile?refundBankAccount=1" className="w-full py-3 bg-brand-primary text-white font-bold rounded-xl flex justify-center items-center">Thiết lập tài khoản nhận tiền</Link>
+          )}
+          {isCompensation && (phase.refundStatus === 'NeedsReview' || phase.refundStatus === 'Failed') && (
+            <a href="mailto:support@tickex.vn" className="w-full py-3 bg-brand-primary text-white font-bold rounded-xl flex justify-center items-center">Liên hệ hỗ trợ</a>
           )}
           {(isPending || isChecking || isUnknown) && (
             <button
