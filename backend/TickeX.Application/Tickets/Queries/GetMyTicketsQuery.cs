@@ -31,4 +31,6 @@ public record TicketDto(
     string? RefundStatus = null
 );
 
-public record GetMyTicketsQuery(Guid UserId, int? Page = null, int? PageSize = null, string? Status = null) : IRequest<List<TicketDto>>;
+public sealed record TicketPage(IReadOnlyList<TicketDto> Items, bool HasNextPage);
+
+public record GetMyTicketsQuery(Guid UserId, int? Page = null, int? PageSize = null, string? Status = null) : IRequest<TicketPage>;

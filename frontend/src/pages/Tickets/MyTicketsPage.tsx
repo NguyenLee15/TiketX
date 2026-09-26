@@ -28,13 +28,14 @@ export default function MyTicketsPage() {
   const currentPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
 
   const {
-    data: fetchedTickets,
+    data: ticketPage,
     isLoading,
     isError: loadError,
     refetch: refetchTickets,
   } = useMyTicketsQuery(currentPage, PAGE_SIZE, filterTab === 'All' ? undefined : filterTab);
 
-  const tickets = useMemo(() => fetchedTickets ?? [], [fetchedTickets]);
+  const tickets = useMemo(() => ticketPage?.items ?? [], [ticketPage]);
+  const hasNextPage = ticketPage?.hasNextPage ?? false;
 
   const handleTabChange = useCallback((tab: TicketTabType) => {
     const next = new URLSearchParams(searchParams);
@@ -166,7 +167,7 @@ export default function MyTicketsPage() {
       {/* Pagination Controls */}
       <TicketPagination
         currentPage={currentPage}
-        hasNextPage={tickets.length >= PAGE_SIZE}
+        hasNextPage={hasNextPage}
         onPageChange={handlePageChange}
         isLoading={isLoading}
       />

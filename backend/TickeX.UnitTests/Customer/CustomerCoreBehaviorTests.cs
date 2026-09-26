@@ -489,14 +489,20 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
 
         // Page 1 with pageSize 2 -> 2 items
         var page1 = await adapter.GetForUserAsync(user.Id, page: 1, pageSize: 2);
-        page1.Should().HaveCount(2);
+        page1.Items.Should().HaveCount(2);
+        page1.HasNextPage.Should().BeTrue();
 
         // Page 2 with pageSize 2 -> 2 items
         var page2 = await adapter.GetForUserAsync(user.Id, page: 2, pageSize: 2);
-        page2.Should().HaveCount(2);
+        page2.Items.Should().HaveCount(2);
+        page2.HasNextPage.Should().BeTrue();
 
         // Page 1 and Page 2 items must not overlap
-        page1.Select(x => x.Id).Should().NotIntersectWith(page2.Select(x => x.Id));
+        page1.Items.Select(x => x.Id).Should().NotIntersectWith(page2.Items.Select(x => x.Id));
+
+        var lastPage = await adapter.GetForUserAsync(user.Id, page: 3, pageSize: 2);
+        lastPage.Items.Should().HaveCount(2);
+        lastPage.HasNextPage.Should().BeFalse();
     }
 
     [Fact]

@@ -3,6 +3,7 @@ import {
   catalogResponseSchema,
   eventDetailSchema,
   ticketsResponseSchema,
+  ticketsPageMetadataSchema,
   ticketItemSchema,
   seatSchema,
 } from './useCustomerQueries';
@@ -132,6 +133,9 @@ describe('Zod Schema Contract Synchronization Tests', () => {
 
     const arrayParsed = ticketsResponseSchema.safeParse([backendTicketPayload]);
     expect(arrayParsed.success).toBe(true);
+    const metadata = ticketsPageMetadataSchema.safeParse({ success: true, data: [backendTicketPayload], hasNextPage: false });
+    expect(metadata.success).toBe(true);
+    if (metadata.success) expect(metadata.data.hasNextPage).toBe(false);
   });
 
   it('should reject malformed data in Fail-Closed mode', () => {

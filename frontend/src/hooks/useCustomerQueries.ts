@@ -138,6 +138,14 @@ export const ticketItemSchema = z.object({
 }).passthrough();
 
 export const ticketsResponseSchema = z.array(ticketItemSchema);
+export const ticketsPageMetadataSchema = z.object({
+  hasNextPage: z.boolean().optional().default(false),
+}).passthrough();
+
+export interface MyTicketsQueryResult {
+  items: TicketItemData[];
+  hasNextPage: boolean;
+}
 
 export interface CatalogQueryOptions {
   page: number;
@@ -215,7 +223,7 @@ export function useMyTicketsQuery(page?: number, pageSize?: number, status?: str
   const user = useAuthStore(state => state.user);
   const userId = user?.id ?? '';
 
-  return useQuery<TicketItemData[]>({
+  return useQuery<MyTicketsQueryResult>({
     queryKey: ['tickets', 'my-tickets', userId, { page, pageSize, status }],
     enabled: Boolean(userId),
     queryFn: async ({ signal }) => {
@@ -251,7 +259,11 @@ export function useMyTicketsQuery(page?: number, pageSize?: number, status?: str
         throw new Error(`Dữ liệu danh sách vé không hợp lệ từ máy chủ: ${issues}`);
       }
 
-      return parsed.data as unknown as TicketItemData[];
+      const metadata = ticketsPageMetadataSchema.safeParse(response.data);
+      return {
+        items: parsed.data as unknown as TicketItemData[],
+        hasNextPage: metadata.success ? metadata.data.hasNextPage : false,
+      };
     },
     staleTime: 2 * 60 * 1000,
   });

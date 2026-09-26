@@ -17,7 +17,7 @@ public sealed class CustomerTicketReadModelAdapter : ICustomerTicketReadModel
         _time = time;
     }
 
-    public async Task<IReadOnlyList<TicketDto>> GetForUserAsync(Guid userId, int? page = null, int? pageSize = null, string? status = null, CancellationToken cancellationToken = default)
+    public async Task<TicketPage> GetForUserAsync(Guid userId, int? page = null, int? pageSize = null, string? status = null, CancellationToken cancellationToken = default)
     {
         IQueryable<Ticket> query = _context.Tickets
             .AsNoTracking()
@@ -43,9 +43,11 @@ public sealed class CustomerTicketReadModelAdapter : ICustomerTicketReadModel
             throw new ArgumentOutOfRangeException(nameof(page), "page offset exceeds the supported range.");
         query = query
             .Skip((int)offset)
-            .Take(effectivePageSize);
+            .Take(effectivePageSize + 1);
 
         var tickets = await query.ToListAsync(cancellationToken);
+        var hasNextPage = tickets.Count > effectivePageSize;
+        if (hasNextPage) tickets.RemoveAt(tickets.Count - 1);
         var ticketIds = tickets.Select(t => t.Id).ToArray();
         var refundStatuses = await _context.RefundRequests.AsNoTracking()
             .Where(r => ticketIds.Contains(r.TicketId))
@@ -93,6 +95,6 @@ public sealed class CustomerTicketReadModelAdapter : ICustomerTicketReadModel
                 latestRefundStatus.GetValueOrDefault(ticket.Id)));
         }
 
-        return result;
+        return new TicketPage(result, hasNextPage);
     }
 }

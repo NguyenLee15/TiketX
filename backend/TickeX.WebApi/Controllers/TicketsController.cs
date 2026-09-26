@@ -37,7 +37,7 @@ public class TicketsController : ControllerBase
         }
 
         var result = await _mediator.Send(new GetMyTicketsQuery(userId, page, pageSize, status), cancellationToken);
-        return Ok(new { success = true, data = result });
+        return Ok(new { success = true, data = result.Items, hasNextPage = result.HasNextPage });
     }
 
     public record RefundRequest(string? Reason);

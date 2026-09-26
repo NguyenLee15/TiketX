@@ -3,7 +3,7 @@ using TickeX.Application.Interfaces;
 
 namespace TickeX.Application.Tickets.Queries;
 
-public class GetMyTicketsQueryHandler : IRequestHandler<GetMyTicketsQuery, List<TicketDto>>
+public class GetMyTicketsQueryHandler : IRequestHandler<GetMyTicketsQuery, TicketPage>
 {
     private readonly ICustomerTicketReadModel _readModel;
     public GetMyTicketsQueryHandler(ICustomerTicketReadModel readModel)
@@ -11,8 +11,6 @@ public class GetMyTicketsQueryHandler : IRequestHandler<GetMyTicketsQuery, List<
         _readModel = readModel;
     }
 
-    public async Task<List<TicketDto>> Handle(GetMyTicketsQuery request, CancellationToken cancellationToken)
-    {
-        return (await _readModel.GetForUserAsync(request.UserId, request.Page, request.PageSize, request.Status, cancellationToken)).ToList();
-    }
+    public Task<TicketPage> Handle(GetMyTicketsQuery request, CancellationToken cancellationToken) =>
+        _readModel.GetForUserAsync(request.UserId, request.Page, request.PageSize, request.Status, cancellationToken);
 }
