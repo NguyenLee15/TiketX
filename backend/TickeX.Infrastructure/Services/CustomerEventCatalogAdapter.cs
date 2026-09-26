@@ -18,6 +18,15 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
 
     public async Task<PagedResult<EventDto>> SearchAsync(GetEventsQuery request, CancellationToken cancellationToken)
     {
+        var page = request.Page > 0 ? request.Page : 1;
+        var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 12, 1, 50);
+        var offset = ((long)page - 1) * pageSize;
+        if (offset > int.MaxValue)
+            throw new FluentValidation.ValidationException(new[]
+            {
+                new FluentValidation.Results.ValidationFailure("Page", "Page offset exceeds the supported range.")
+            });
+
         var now = _time.UtcNow;
         var query = _context.Events.AsNoTracking()
             .Where(e => e.Status == EventStatus.Published && !e.IsDeleted && e.Date > now);
@@ -46,9 +55,7 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
             _ => query.OrderBy(e => e.Date).ThenBy(e => e.Id)
         };
 
-        var page = request.Page > 0 ? request.Page : 1;
-        var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 12, 1, 50);
-        var items = await query.Skip((page - 1) * pageSize).Take(pageSize)
+        var items = await query.Skip((int)offset).Take(pageSize)
             .Select(e => new EventDto(
                 e.Id, e.Title, e.Description, e.Date, e.EndDate, e.Location, e.VenueName,
                 e.Category, e.ImageUrl, e.BannerUrl, e.OrganizerName, e.TotalSeats,

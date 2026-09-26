@@ -53,6 +53,19 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         result.Items.Select(x => x.Title).Should().Equal("Future");
     }
 
+    [Theory]
+    [InlineData(int.MaxValue)]
+    [InlineData(42949674)]
+    public async Task PublicCatalog_RejectsOverflowingPageOffsetBeforeQuerying(int page)
+    {
+        var catalog = new CustomerEventCatalogAdapter(_context, new UtcTimePolicy());
+
+        var act = () => catalog.SearchAsync(new GetEventsQuery(Page: page, PageSize: 50), CancellationToken.None);
+
+        var exception = await act.Should().ThrowAsync<FluentValidation.ValidationException>();
+        exception.Which.Errors.Should().ContainSingle(error => error.PropertyName == "Page");
+    }
+
     [Fact]
     public async Task PublicDetail_DoesNotExposeDeletedOrAlreadyStartedEvents()
     {
