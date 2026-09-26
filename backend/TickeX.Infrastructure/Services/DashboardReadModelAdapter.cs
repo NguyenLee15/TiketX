@@ -38,11 +38,11 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
                 .Where(t => t.Status == TicketStatus.Cancelled && t.RefundAmount.HasValue)
                 .Select(t => t.RefundAmount),
             cancellationToken);
-        var totalRefundPending = await SumAmountAsync(
-            operationalTickets
-                .Where(t => t.Status == TicketStatus.RefundPending)
-                .Select(t => (decimal?)t.Price),
-            cancellationToken);
+        var pendingRefundAmounts = _context.RefundRequests
+            .Where(refund => refund.Status != "Completed"
+                && operationalTickets.Any(ticket => ticket.Id == refund.TicketId))
+            .Select(refund => (decimal?)refund.Amount);
+        var totalRefundPending = await SumAmountAsync(pendingRefundAmounts, cancellationToken);
         var totalCheckedIn = await operationalTickets.CountAsync(t => t.Status == TicketStatus.Used, cancellationToken);
 
         var isSqlite = (_context as DbContext)?.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true;
@@ -85,16 +85,47 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
 
         var localToday = _time.LocalNow.Date;
         var cutoffLocal = localToday.AddDays(-6);
-        var cutoffUtc = _time.ToUtc(cutoffLocal);
-        var recentPaid = await operationalTickets
-            .Where(t => paidStates.Contains(t.Status) && t.PaidAt.HasValue && t.PaidAt.Value >= cutoffUtc)
-            .Select(t => new { PaidAt = t.PaidAt!.Value, t.Price }).ToListAsync(cancellationToken);
-        var grouped = recentPaid.GroupBy(x => _time.ToLocal(x.PaidAt).Date)
-            .ToDictionary(g => g.Key, g => new { Revenue = g.Sum(x => x.Price), Count = g.Count() });
+        var dayStartsUtc = Enumerable.Range(0, 8)
+            .Select(i => _time.ToUtc(cutoffLocal.AddDays(i)))
+            .ToArray();
+        Dictionary<int, (decimal Revenue, int Count)> dailyAggregates;
+        if (isSqlite)
+        {
+            var recentPaid = await operationalTickets
+                .Where(t => paidStates.Contains(t.Status) && t.PaidAt.HasValue
+                    && t.PaidAt.Value >= dayStartsUtc[0] && t.PaidAt.Value < dayStartsUtc[7])
+                .Select(t => new { PaidAt = t.PaidAt!.Value, t.Price }).ToListAsync(cancellationToken);
+            dailyAggregates = recentPaid
+                .GroupBy(t => Enumerable.Range(0, 7).First(i => t.PaidAt >= dayStartsUtc[i] && t.PaidAt < dayStartsUtc[i + 1]))
+                .ToDictionary(g => g.Key, g => (g.Sum(t => t.Price), g.Count()));
+        }
+        else
+        {
+            var day1StartUtc = dayStartsUtc[1];
+            var day2StartUtc = dayStartsUtc[2];
+            var day3StartUtc = dayStartsUtc[3];
+            var day4StartUtc = dayStartsUtc[4];
+            var day5StartUtc = dayStartsUtc[5];
+            var day6StartUtc = dayStartsUtc[6];
+            var groupedDailyStats = await operationalTickets
+                .Where(t => paidStates.Contains(t.Status) && t.PaidAt.HasValue
+                    && t.PaidAt.Value >= dayStartsUtc[0] && t.PaidAt.Value < dayStartsUtc[7])
+                .GroupBy(t => t.PaidAt!.Value < day1StartUtc ? 0
+                    : t.PaidAt.Value < day2StartUtc ? 1
+                    : t.PaidAt.Value < day3StartUtc ? 2
+                    : t.PaidAt.Value < day4StartUtc ? 3
+                    : t.PaidAt.Value < day5StartUtc ? 4
+                    : t.PaidAt.Value < day6StartUtc ? 5
+                    : 6)
+                .Select(g => new { DayIndex = g.Key, Revenue = g.Sum(t => t.Price), Count = g.Count() })
+                .ToListAsync(cancellationToken);
+            dailyAggregates = groupedDailyStats.ToDictionary(g => g.DayIndex, g => (g.Revenue, g.Count));
+        }
+
         var dailyStats = Enumerable.Range(0, 7).Select(i =>
         {
             var date = cutoffLocal.AddDays(i);
-            return grouped.TryGetValue(date, out var value)
+            return dailyAggregates.TryGetValue(i, out var value)
                 ? new DailyRevenueStat(date.ToString("yyyy-MM-dd"), value.Revenue, value.Count)
                 : new DailyRevenueStat(date.ToString("yyyy-MM-dd"), 0m, 0);
         }).ToList();

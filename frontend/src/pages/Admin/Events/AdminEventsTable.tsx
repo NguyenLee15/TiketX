@@ -150,6 +150,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                             onClick={() => onEdit(event)}
                             disabled={event.isDeleted}
                             className="p-2 bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white rounded-xl transition-colors border border-border-subtle"
+                            aria-label={`Sửa sự kiện ${event.title}`}
                             title="Sửa sự kiện"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -158,7 +159,9 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                           {!isCancelled && !isCompleted && (
                             <button
                               onClick={() => onCancel(event)}
+                              disabled={event.isDeleted}
                               className="p-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl transition-colors border border-amber-500/20"
+                              aria-label={`Hủy sự kiện ${event.title} và hoàn tiền vé`}
                               title="Hủy sự kiện & Hoàn tiền vé"
                             >
                               <XCircle className="w-3.5 h-3.5" />
@@ -169,6 +172,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                             onClick={() => onDelete(event)}
                             disabled={event.isDeleted}
                             className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-xl transition-colors border border-danger/20"
+                            aria-label={`Xóa sự kiện ${event.title}`}
                             title="Xóa sự kiện"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -250,6 +254,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
 
                 <button
                   onClick={() => onDelete(event)}
+                  disabled={event.isDeleted}
                   className="px-3 py-1.5 bg-danger/15 text-danger hover:bg-danger hover:text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger border border-danger/30 flex items-center gap-1"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

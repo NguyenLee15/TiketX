@@ -125,4 +125,31 @@ public class DashboardStatsTests : IDisposable
         result.DailyStats.Should().HaveCount(7);
         result.RecentTransactions.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task GetDashboardStats_CountsOrphanedRefundRequestAsPending()
+    {
+        var user = new User("Alice", "alice@example.com", "hash", "Customer");
+        _context.Users.Add(user);
+        var ev = new Event("Concert", "Desc", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(3), "Loc", "Venue", 1, "Concert", basePrice: 100000m);
+        ev.GenerateSeatsMatrix(1, 1);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var ticket = new Ticket(ev.Id, ev.Seats.Single().Id, user.Id, 100000m);
+        ticket.MarkAsPaid();
+        ticket.Cancel();
+        _context.Tickets.Add(ticket);
+        var refund = new RefundRequest(ev.Id, ticket.Id, 100000m, "orphaned-refund");
+        refund.WaitForDestination();
+        _context.RefundRequests.Add(refund);
+        await _context.SaveChangesAsync();
+
+        var readModel = new DashboardReadModelAdapter(_context, new VietnamTimePolicy());
+        var result = await readModel.GetAsync(CancellationToken.None);
+
+        result.TotalRefundPending.Should().Be(100000m);
+        result.TotalNetRevenue.Should().Be(0m);
+    }
+
 }
