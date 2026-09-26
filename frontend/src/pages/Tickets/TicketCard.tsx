@@ -91,7 +91,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
     }
     if (s === 'cancelled') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-danger/15 text-danger border border-danger/30 uppercase tracking-wider whitespace-nowrap shrink-0">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-danger/15 text-danger-readable border border-danger/30 uppercase tracking-wider whitespace-nowrap shrink-0">
           <XCircle className="w-3.5 h-3.5" /> Đã Hủy
         </span>
       );
@@ -175,7 +175,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
               <button
                 onClick={() => onInitiateRefund(ticket)}
                 disabled={refundingId === ticket.id}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-danger/10 hover:bg-danger/20 text-danger border border-danger/30 font-bold transition-colors text-xs whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-danger/10 hover:bg-danger/20 text-danger-readable border border-danger/30 font-bold transition-colors text-xs whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed"
               >
                 {refundingId === ticket.id ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -219,7 +219,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
           </p>
         </div>
 
-        {downloadError && <p role="alert" className="text-center text-xs text-danger">Không thể tạo file vé PDF. Vui lòng thử lại.</p>}
+        {downloadError && <p role="alert" className="text-center text-xs text-danger-readable">Không thể tạo file vé PDF. Vui lòng thử lại.</p>}
         <button
           onClick={handleDownloadPdf}
           disabled={!canShowQr || isDownloadingPdf}
@@ -250,10 +250,10 @@ function RefundStatusNotice({ status }: { status: RefundStatus }) {
     <div className="border-t border-border-subtle/60 pt-2 text-xs text-text-secondary">
       {message}
       {status === 'AwaitingDestination' && (
-        <Link to="/profile?refundBankAccount=1" className="ml-2 font-semibold text-brand-primary underline underline-offset-4">Thiết lập tài khoản nhận tiền</Link>
+        <Link to="/profile?refundBankAccount=1" className="ml-2 font-semibold text-brand-readable underline underline-offset-4">Thiết lập tài khoản nhận tiền</Link>
       )}
       {(status === 'NeedsReview' || status === 'Failed') && (
-        <a href="mailto:support@tickex.vn" className="ml-2 font-semibold text-brand-primary underline underline-offset-4">Liên hệ hỗ trợ</a>
+        <a href="mailto:support@tickex.vn" className="ml-2 font-semibold text-brand-readable underline underline-offset-4">Liên hệ hỗ trợ</a>
       )}
     </div>
   );

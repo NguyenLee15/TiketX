@@ -81,7 +81,7 @@ export default function AdminDashboardPage() {
     return (
       <div role="alert" className="min-h-[40vh] flex flex-col items-center justify-center gap-4 text-center">
         <p className="text-text-secondary">{error ? 'Không thể tải dữ liệu quản trị.' : 'Chưa có dữ liệu quản trị.'}</p>
-        <button type="button" onClick={fetchStats} className="px-4 py-2 rounded-xl bg-brand-primary text-white font-bold focus-visible:ring-2 focus-visible:ring-white">Thử lại</button>
+        <button type="button" onClick={fetchStats} className="px-4 py-2 rounded-xl bg-brand-primary text-surface-0 font-bold focus-visible:ring-2 focus-visible:ring-white">Thử lại</button>
       </div>
     );
   }
@@ -91,7 +91,7 @@ export default function AdminDashboardPage() {
       {/* Header Banner */}
       <div className="surface-panel flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-5 sm:p-6">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary/15 border border-brand-primary/30 w-fit mb-1.5 text-xs font-bold text-brand-primary">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary/15 border border-brand-primary/30 w-fit mb-1.5 text-xs font-bold text-brand-readable">
             <TrendingUp className="w-3.5 h-3.5" />
             Bảng Điều Khiển Quản Trị Hệ Thống
           </div>

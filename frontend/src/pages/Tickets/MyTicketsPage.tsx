@@ -102,7 +102,7 @@ export default function MyTicketsPage() {
         <XCircle className="w-10 h-10 text-danger" aria-hidden="true" />
         <h1 className="text-xl font-bold text-white">Không thể tải danh sách vé</h1>
         <p className="text-sm text-text-secondary">Kiểm tra kết nối và thử lại.</p>
-        <button onClick={() => void refetchTickets()} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">
+        <button onClick={() => void refetchTickets()} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-surface-0 focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">
           Thử lại
         </button>
       </div>
@@ -116,7 +116,7 @@ export default function MyTicketsPage() {
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary/15 border border-brand-primary/30 w-fit mb-2 whitespace-nowrap">
             <Ticket className="w-3.5 h-3.5 text-brand-primary" />
-            <span className="text-xs font-bold text-brand-primary uppercase tracking-wider">Vé Điện Tử Cá Nhân</span>
+            <span className="text-xs font-bold text-brand-readable uppercase tracking-wider">Vé Điện Tử Cá Nhân</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-display font-black text-white tracking-tight whitespace-nowrap">
             Vé Của Tôi
@@ -145,7 +145,7 @@ export default function MyTicketsPage() {
             <button
               type="button"
               onClick={() => handlePageChange(1)}
-              className="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-brand-primary text-xs font-bold text-white hover:bg-brand-primary/90 transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer"
+              className="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-brand-primary text-xs font-bold text-surface-0 hover:bg-brand-secondary transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer"
             >
               Quay lại trang 1
             </button>

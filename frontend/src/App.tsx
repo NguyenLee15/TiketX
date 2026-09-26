@@ -35,6 +35,10 @@ const MockPayOSPage = import.meta.env.DEV
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { authRefreshResponseSchema } from './schemas/customerSchemas';
 
+export function RouteLoadingStatus({ message = 'Đang tải…' }: { message?: string }) {
+  return <div role="status" aria-live="polite" aria-atomic="true" className="min-h-screen flex items-center justify-center text-text-secondary">{message}</div>;
+}
+
 function App() {
   const setAuth = useAuthStore(state => state.setAuth);
   const logout = useAuthStore(state => state.logout);
@@ -66,7 +70,7 @@ function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-text-secondary">Đang tải…</div>}>
+        <Suspense fallback={<RouteLoadingStatus />}>
         <Routes>
         {/* Admin & Staff Portal */}
         <Route
@@ -124,7 +128,7 @@ function App() {
           <Route
             path="/mock-payos"
             element={
-              <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Đang tải...</div>}>
+              <Suspense fallback={<RouteLoadingStatus message="Đang tải..." />}>
                 <MockPayOSPage />
               </Suspense>
             }

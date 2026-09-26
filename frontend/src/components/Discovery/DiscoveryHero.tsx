@@ -32,7 +32,7 @@ export function DiscoveryHero({
     <section className="border-b border-border-subtle pb-10 sm:pb-12">
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
         <div className="max-w-2xl space-y-4">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-primary">TickeX / Sự kiện</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-readable">TickeX / Sự kiện</p>
           <h1 className="max-w-xl text-4xl font-display font-bold leading-tight tracking-tight text-text-primary sm:text-5xl">
             Những cuộc hẹn đáng để bạn có mặt.
           </h1>
@@ -55,7 +55,7 @@ export function DiscoveryHero({
                 placeholder="Tên sự kiện, nghệ sĩ hoặc địa điểm"
                 className="min-h-11 w-full bg-transparent text-base text-text-primary placeholder:text-text-tertiary focus:outline-none"
               />
-              <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg bg-brand-primary px-4 text-sm font-bold text-white transition-colors hover:bg-brand-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">
+              <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg bg-brand-primary px-4 text-sm font-bold text-surface-0 transition-colors hover:bg-brand-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">
                 Tìm
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -73,7 +73,7 @@ export function DiscoveryHero({
         </div>
       </div>
 
-      <div className="mt-8 flex gap-2 overflow-x-auto pb-1" aria-label="Lọc theo danh mục">
+      <div role="group" className="mt-8 flex gap-2 overflow-x-auto pb-1" aria-label="Lọc theo danh mục">
         {CATEGORIES.map(({ id, label, icon: Icon }) => {
           const active = selectedCategory === id;
           return (
@@ -82,7 +82,7 @@ export function DiscoveryHero({
               type="button"
               aria-pressed={active}
               onClick={() => onCategoryChange(id)}
-              className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${active ? 'border-brand-primary bg-brand-primary text-white' : 'border-border-subtle bg-surface-2 text-text-secondary hover:border-brand-primary/60 hover:text-text-primary'}`}
+              className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${active ? 'border-brand-primary bg-brand-primary text-surface-0 hover:bg-brand-secondary' : 'border-border-subtle bg-surface-2 text-text-secondary hover:border-brand-primary/60 hover:text-text-primary'}`}
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
               {label}

@@ -239,7 +239,7 @@ export default function AdminEventsPage() {
         </div>
         <button 
           onClick={handleOpenCreateModal}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary shadow-md shadow-brand-glow text-xs sm:text-sm shrink-0 active:scale-95 whitespace-nowrap"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-primary hover:bg-brand-secondary text-surface-0 font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary shadow-md shadow-brand-glow text-xs sm:text-sm shrink-0 active:scale-95 whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
           <span>Tạo Sự Kiện Mới</span>
@@ -258,7 +258,7 @@ export default function AdminEventsPage() {
 
       {/* Main Content Area */}
       {loadError && !loading && (
-        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-xs text-danger">
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-xs text-danger-readable">
           <span>Không thể tải danh sách sự kiện.</span>
           <button type="button" onClick={fetchEvents} className="rounded-lg border border-danger/30 px-3 py-1.5 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger">Thử lại</button>
         </div>

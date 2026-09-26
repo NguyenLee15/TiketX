@@ -45,7 +45,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
     }
     if (s === 'draft' || s === '0') {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-primary/15 text-brand-primary border border-brand-primary/30 whitespace-nowrap">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-primary/15 text-brand-readable border border-brand-primary/30 whitespace-nowrap">
           Bản nháp
         </span>
       );
@@ -58,7 +58,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
       );
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-danger/15 text-danger border border-danger/30 whitespace-nowrap">
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-danger/15 text-danger-readable border border-danger/30 whitespace-nowrap">
         Đã hủy
       </span>
     );
@@ -105,11 +105,11 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                             className="w-12 h-12 rounded-xl object-cover shrink-0 border border-border-subtle group-hover:border-brand-primary/40 transition-colors shadow-sm"
                           />
                           <div className="min-w-0">
-                            <div className="font-bold text-white line-clamp-1 group-hover:text-brand-primary transition-colors">
+                            <div className="font-bold text-white line-clamp-1 group-hover:text-brand-readable transition-colors">
                               {event.title}
                             </div>
                             <div className="text-[11px] text-text-secondary flex items-center gap-2 mt-0.5">
-                              <span className="text-brand-primary font-medium whitespace-nowrap">{event.category}</span>
+                              <span className="text-brand-readable font-medium whitespace-nowrap">{event.category}</span>
                               <span>•</span>
                               <span className="flex items-center gap-1 whitespace-nowrap">
                                 <Grid3X3 className="w-3 h-3 text-text-tertiary" />
@@ -171,7 +171,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                           <button
                             onClick={() => onDelete(event)}
                             disabled={event.isDeleted}
-                            className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-xl transition-colors border border-danger/20"
+                            className="p-2 bg-danger/10 hover:bg-danger/20 text-danger-readable rounded-xl transition-colors border border-danger/20"
                             aria-label={`Xóa sự kiện ${event.title}`}
                             title="Xóa sự kiện"
                           >
@@ -255,7 +255,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                 <button
                   onClick={() => onDelete(event)}
                   disabled={event.isDeleted}
-                  className="px-3 py-1.5 bg-danger/15 text-danger hover:bg-danger hover:text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger border border-danger/30 flex items-center gap-1"
+                  className="px-3 py-1.5 bg-danger/15 text-danger-readable hover:bg-red-400 hover:text-surface-0 rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger border border-danger/30 flex items-center gap-1"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Xóa

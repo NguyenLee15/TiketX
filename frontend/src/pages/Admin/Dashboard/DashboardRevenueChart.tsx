@@ -34,7 +34,7 @@ export function DashboardRevenueChart({ dailyStats }: DashboardRevenueChartProps
           </div>
           <div className="text-right border-l border-border-subtle pl-4">
             <span className="text-text-secondary block">Vé bán:</span>
-            <span className="font-bold text-brand-primary font-display text-sm">
+            <span className="font-bold text-brand-readable font-display text-sm">
               {numberFormatter.format(total7DayTickets)} vé
             </span>
           </div>

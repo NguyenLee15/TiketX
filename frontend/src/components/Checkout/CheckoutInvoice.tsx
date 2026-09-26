@@ -50,7 +50,7 @@ export const CheckoutInvoice: React.FC<CheckoutInvoiceProps> = React.memo(({
           <Clock className="w-4 h-4 text-warning animate-pulse" />
           <span>Thời gian giữ chỗ còn lại:</span>
         </div>
-        <span className={`font-mono font-bold text-sm ${timeLeft < 60 ? 'text-danger animate-pulse' : 'text-warning'}`}>
+        <span className={`font-mono font-bold text-sm ${timeLeft < 60 ? 'text-danger-readable animate-pulse' : 'text-warning'}`}>
           {status === 'error' ? 'Hết hạn' : formatTime(timeLeft)}
         </span>
       </div>
@@ -76,7 +76,7 @@ export const CheckoutInvoice: React.FC<CheckoutInvoiceProps> = React.memo(({
 
         <div className="pt-2 border-t border-border-subtle/60 flex justify-between items-center">
           <span className="text-white font-bold text-sm">Tổng thanh toán:</span>
-          <span className="text-brand-primary font-black text-base font-display">
+          <span className="text-brand-readable font-black text-base font-display">
             {formatCurrency(seat.price)}
           </span>
         </div>

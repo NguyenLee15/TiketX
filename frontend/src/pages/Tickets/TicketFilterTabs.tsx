@@ -28,7 +28,7 @@ export const TicketFilterTabs: React.FC<TicketFilterTabsProps> = React.memo(({
           onClick={() => onTabChange(tab)}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
             currentTab === tab 
-              ? 'bg-brand-primary text-white shadow-md shadow-brand-glow' 
+              ? 'bg-brand-primary text-surface-0 shadow-md shadow-brand-glow'
               : 'text-text-secondary hover:text-white hover:bg-surface-2'
           }`}
         >
@@ -38,4 +38,3 @@ export const TicketFilterTabs: React.FC<TicketFilterTabsProps> = React.memo(({
     </div>
   );
 });
-

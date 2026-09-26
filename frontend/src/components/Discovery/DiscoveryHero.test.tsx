@@ -18,6 +18,7 @@ describe('DiscoveryHero', () => {
 
     expect(screen.getByLabelText('Tìm kiếm sự kiện')).toBeInTheDocument();
     expect(screen.getByLabelText('Sắp xếp sự kiện')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Lọc theo danh mục' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Tất cả sự kiện' })).toHaveAttribute('aria-pressed', 'true');
   });
 });

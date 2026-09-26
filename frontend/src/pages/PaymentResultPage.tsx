@@ -241,7 +241,7 @@ export default function PaymentResultPage() {
               ? 'border-warning/40 bg-warning/10 text-warning'
               : isUnknown
               ? 'border-warning/40 bg-warning/10 text-warning'
-              : 'border-danger/30 bg-danger/10 text-danger'
+              : 'border-danger/30 bg-danger/10 text-danger-readable'
           }`}
         >
           {isSuccess ? (
@@ -259,24 +259,24 @@ export default function PaymentResultPage() {
         <p className="mt-3 text-text-secondary text-sm leading-relaxed">{description}</p>
         {orderCode && (
           <p className="mt-3 text-xs text-text-tertiary">
-            Mã đơn hàng: <span className="font-mono font-bold text-brand-primary" translate="no">#{orderCode}</span>
+            Mã đơn hàng: <span className="font-mono font-bold text-brand-readable" translate="no">#{orderCode}</span>
           </p>
         )}
         {notice && <p role="alert" className="mt-4 text-xs text-warning">{notice}</p>}
 
         <div className="mt-7 space-y-3">
           {isCompensation && phase.refundStatus === 'AwaitingDestination' && (
-            <Link to="/profile?refundBankAccount=1" className="w-full py-3 bg-brand-primary text-white font-bold rounded-xl flex justify-center items-center">Thiết lập tài khoản nhận tiền</Link>
+            <Link to="/profile?refundBankAccount=1" className="w-full py-3 bg-brand-primary text-surface-0 font-bold rounded-xl flex justify-center items-center">Thiết lập tài khoản nhận tiền</Link>
           )}
           {isCompensation && (phase.refundStatus === 'NeedsReview' || phase.refundStatus === 'Failed') && (
-            <a href="mailto:support@tickex.vn" className="w-full py-3 bg-brand-primary text-white font-bold rounded-xl flex justify-center items-center">Liên hệ hỗ trợ</a>
+            <a href="mailto:support@tickex.vn" className="w-full py-3 bg-brand-primary text-surface-0 font-bold rounded-xl flex justify-center items-center">Liên hệ hỗ trợ</a>
           )}
           {(isPending || isChecking || isUnknown) && (
             <button
               type="button"
               onClick={() => void handleManualRetry()}
               disabled={isChecking}
-              className="w-full py-3 bg-brand-primary hover:opacity-90 disabled:opacity-50 text-white font-bold rounded-xl transition-opacity focus-visible:ring-2 focus-visible:ring-white flex justify-center items-center gap-2 cursor-pointer"
+              className="w-full py-3 bg-brand-primary hover:bg-brand-secondary disabled:opacity-50 text-surface-0 font-bold rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-white flex justify-center items-center gap-2 cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} aria-hidden="true" />
               {isChecking ? 'Đang kiểm tra…' : 'Kiểm Tra Lại'}

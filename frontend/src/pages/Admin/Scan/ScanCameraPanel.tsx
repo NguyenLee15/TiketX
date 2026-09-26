@@ -172,7 +172,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
                 <p className="text-sm font-semibold text-white">{cameraError}</p>
                 <button
                   onClick={() => { setCameraError(null); setCameraActive(true); setRetryNonce(n => n + 1); }}
-                  className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+                  className="px-4 py-2 bg-brand-primary hover:bg-brand-secondary text-surface-0 rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
                 >
                   Thử lại kết nối
                 </button>
@@ -209,7 +209,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
           <button
             onClick={handleManualSubmit}
             disabled={isVerifying || !ticketInput.trim()}
-            className="px-5 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-50 flex items-center gap-1.5 shrink-0 shadow-md shadow-brand-glow text-xs sm:text-sm active:scale-95"
+            className="px-5 py-2.5 bg-brand-primary hover:bg-brand-secondary text-surface-0 font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-50 flex items-center gap-1.5 shrink-0 shadow-md shadow-brand-glow text-xs sm:text-sm active:scale-95"
           >
             {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
             Soát Vé

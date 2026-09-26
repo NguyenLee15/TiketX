@@ -102,7 +102,7 @@ export default function StandardLayout() {
                   <Link to="/login" className="text-sm font-medium text-text-secondary hover:text-white transition-colors px-3 py-2">
                     Đăng nhập
                   </Link>
-                  <Link to="/register" className="text-sm font-bold px-5 py-2 bg-brand-primary text-white hover:bg-brand-primary/90 rounded-lg transition-[background-color,transform] active:scale-95 focus-visible:ring-2 focus-visible:ring-brand-primary">
+                  <Link to="/register" className="text-sm font-bold px-5 py-2 bg-brand-primary text-surface-0 hover:bg-brand-secondary rounded-lg transition-[background-color,transform] active:scale-95 focus-visible:ring-2 focus-visible:ring-brand-primary">
                     Đăng ký
                   </Link>
                 </div>

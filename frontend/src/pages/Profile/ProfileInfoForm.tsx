@@ -71,7 +71,7 @@ export function ProfileInfoForm({
                 />
               </div>
               {errors.avatarUrl && (
-                <p id="profile-avatar-url-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">{errors.avatarUrl.message}</p>
+                <p id="profile-avatar-url-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">{errors.avatarUrl.message}</p>
               )}
             </div>
           </div>
@@ -96,7 +96,7 @@ export function ProfileInfoForm({
                 />
               </div>
               {errors.name && (
-                <p id="profile-name-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">{errors.name.message}</p>
+                <p id="profile-name-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">{errors.name.message}</p>
               )}
             </div>
 
@@ -123,7 +123,7 @@ export function ProfileInfoForm({
               <label htmlFor="profile-phone" className="text-xs font-bold text-text-secondary uppercase">Số điện thoại liên hệ</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Phone className="h-4 w-4 text-text-secondary group-focus-within:text-brand-primary transition-colors" />
+                  <Phone className="h-4 w-4 text-text-secondary group-focus-within:text-brand-readable transition-colors" />
                 </div>
                 <input 
                   id="profile-phone"
@@ -138,7 +138,7 @@ export function ProfileInfoForm({
                 />
               </div>
               {errors.phone && (
-                <p id="profile-phone-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">{errors.phone.message}</p>
+                <p id="profile-phone-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">{errors.phone.message}</p>
               )}
             </div>
           </div>
@@ -147,7 +147,7 @@ export function ProfileInfoForm({
             <button 
               type="submit" 
               disabled={isSubmitting}
-              className="w-full sm:w-auto px-6 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-[opacity,transform,box-shadow] shadow-md shadow-brand-glow flex items-center justify-center gap-1.5 text-xs sm:text-sm disabled:opacity-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+              className="w-full sm:w-auto px-6 py-2.5 bg-brand-primary hover:bg-brand-secondary text-surface-0 font-bold rounded-xl transition-[background-color,transform,box-shadow] shadow-md shadow-brand-glow flex items-center justify-center gap-1.5 text-xs sm:text-sm disabled:opacity-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             >
               {isSubmitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -162,4 +162,3 @@ export function ProfileInfoForm({
     </div>
   );
 }
-

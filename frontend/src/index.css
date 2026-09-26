@@ -4,6 +4,7 @@
 
 @theme {
   --color-brand-primary: #D3613C;
+  --color-brand-readable: #F29A7A;
   --color-brand-secondary: #D9A26C;
   --color-brand-accent: #F1E7D8;
   --color-brand-glow: rgba(211, 97, 60, 0.18);
@@ -25,6 +26,7 @@
   --color-success: #10B981;
   --color-warning: #F59E0B;
   --color-danger: #EF4444;
+  --color-danger-readable: #FF9B9B;
 
   --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
   --font-display: 'Outfit', system-ui, -apple-system, sans-serif;

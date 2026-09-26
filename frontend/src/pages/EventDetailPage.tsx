@@ -164,7 +164,7 @@ export default function EventDetailPage() {
         </div>
         <h3 className="text-2xl font-display font-bold text-white mb-2">{loadError ? 'Không thể tải sự kiện' : 'Không tìm thấy sự kiện'}</h3>
         <p className="text-text-secondary">Kiểm tra kết nối rồi thử lại.</p>
-        <button type="button" onClick={() => void refetchEvent()} className="inline-flex mt-6 px-6 py-3 bg-brand-primary text-white rounded-xl font-medium focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">Thử lại</button>
+        <button type="button" onClick={() => void refetchEvent()} className="inline-flex mt-6 px-6 py-3 bg-brand-primary text-surface-0 rounded-xl font-medium focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">Thử lại</button>
         <Link to="/" className="inline-block mt-6 px-6 py-3 bg-surface-3 hover:bg-surface-2 text-white rounded-xl transition-colors font-medium">
           Quay lại danh sách sự kiện
         </Link>
@@ -198,7 +198,7 @@ export default function EventDetailPage() {
           {/* Seat Selection Panel */}
           <div className="surface-panel p-5 sm:p-6 relative overflow-hidden">
             <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-surface-3 flex items-center justify-center text-brand-primary">
+              <div className="w-6 h-6 rounded-lg bg-surface-3 flex items-center justify-center text-brand-readable">
                 <Check className="w-3.5 h-3.5" />
               </div>
               Thông Tin Ghế Đang Chọn
@@ -210,7 +210,7 @@ export default function EventDetailPage() {
                   <div className="relative z-10">
                     <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-wider mb-0.5">Vị trí ghế</p>
                     <p className="text-xl font-black text-white font-display tracking-tight">
-                      Hàng {selectedSeat.row} <span className="text-brand-primary">-</span> Ghế {selectedSeat.number}
+                      Hàng {selectedSeat.row} <span className="text-brand-readable">-</span> Ghế {selectedSeat.number}
                     </p>
                   </div>
                   <div className="text-right relative z-10">
@@ -240,7 +240,7 @@ export default function EventDetailPage() {
                 <button
                   onClick={handleBookTicket}
                   disabled={locking}
-                  className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
+                  className="w-full py-3.5 bg-brand-primary hover:bg-brand-secondary disabled:opacity-50 disabled:cursor-not-allowed text-surface-0 font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
                 >
                   {locking ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

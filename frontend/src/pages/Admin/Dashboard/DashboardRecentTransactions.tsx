@@ -22,7 +22,7 @@ export function DashboardRecentTransactions({ recentTransactions }: DashboardRec
             <div key={tx.ticketId} className="p-3 rounded-xl bg-surface-2/40 border border-border-subtle flex items-center justify-between text-xs gap-3">
               <div className="space-y-0.5 min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-brand-primary text-[11px] whitespace-nowrap">#{tx.orderCode}</span>
+                  <span className="font-mono font-bold text-brand-readable text-[11px] whitespace-nowrap">#{tx.orderCode}</span>
                   <span className="font-bold text-white truncate">{tx.userName}</span>
                 </div>
                 <p className="text-[11px] text-text-secondary line-clamp-1">{tx.eventTitle}</p>
@@ -36,7 +36,7 @@ export function DashboardRecentTransactions({ recentTransactions }: DashboardRec
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block whitespace-nowrap ${
                   tx.status === 'Paid' ? 'bg-success/15 text-success' :
                   tx.status === 'Used' ? 'bg-surface-3 text-text-tertiary' :
-                  tx.status === 'Cancelled' ? 'bg-danger/15 text-danger' : 'bg-warning/15 text-warning'
+                  tx.status === 'Cancelled' ? 'bg-danger/15 text-danger-readable' : 'bg-warning/15 text-warning'
                 }`}>
                   {tx.status === 'Paid' ? 'Đã thanh toán' :
                    tx.status === 'Used' ? 'Đã vào cổng' :

@@ -69,10 +69,10 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="font-bold text-white group-hover:text-brand-primary transition-colors line-clamp-1 flex items-center gap-1.5">
+                          <div className="font-bold text-white group-hover:text-brand-readable transition-colors line-clamp-1 flex items-center gap-1.5">
                             {user.name}
                             {isSelf && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-primary/20 text-brand-primary font-mono font-normal">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-primary/20 text-brand-readable font-mono font-normal">
                                 (Bạn)
                               </span>
                             )}
@@ -98,7 +98,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                     <td className="p-4 sm:p-5 whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border whitespace-nowrap ${
                         user.role === 'Admin' 
-                          ? 'bg-brand-primary/15 text-brand-primary border-brand-primary/30' :
+                          ? 'bg-brand-primary/15 text-brand-readable border-brand-primary/30' :
                         user.role === 'Staff'
                           ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                           : 'bg-surface-3 text-text-secondary border-border-subtle'
@@ -111,7 +111,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                     <td className="p-4 sm:p-5 whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border whitespace-nowrap ${
                         user.isBlocked 
-                          ? 'bg-danger/15 text-danger border-danger/30' 
+                          ? 'bg-danger/15 text-danger-readable border-danger/30'
                           : 'bg-success/15 text-success border-success/30'
                       }`}>
                         {user.isBlocked ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
@@ -138,7 +138,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary border whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed ${
                             user.isBlocked 
                               ? 'bg-success/15 hover:bg-success text-success hover:text-white border-success/30' 
-                              : 'bg-danger/15 hover:bg-danger text-danger hover:text-white border-danger/30'
+                              : 'bg-danger/15 hover:bg-red-400 text-danger-readable hover:text-surface-0 border-danger/30'
                           }`}
                         >
                           {user.isBlocked ? 'Mở Khóa' : 'Khóa'}
@@ -179,14 +179,14 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                   <div className="min-w-0">
                     <p className="font-bold text-white text-sm truncate flex items-center gap-1">
                       {user.name}
-                      {isSelf && <span className="text-[10px] text-brand-primary">(Bạn)</span>}
+                      {isSelf && <span className="text-[10px] text-brand-readable">(Bạn)</span>}
                     </p>
                     <p className="text-xs text-text-secondary truncate">{user.email}</p>
                   </div>
                 </div>
 
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
-                  user.isBlocked ? 'bg-danger/15 text-danger border-danger/30' : 'bg-success/15 text-success border-success/30'
+                  user.isBlocked ? 'bg-danger/15 text-danger-readable border-danger/30' : 'bg-success/15 text-success border-success/30'
                 }`}>
                   {user.isBlocked ? 'Đã khóa' : 'Hoạt động'}
                 </span>
@@ -211,7 +211,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold border shrink-0 disabled:opacity-40 ${
                     user.isBlocked 
                       ? 'bg-success/15 text-success border-success/30' 
-                      : 'bg-danger/15 text-danger border-danger/30'
+                      : 'bg-danger/15 text-danger-readable border-danger/30'
                   }`}
                 >
                   {user.isBlocked ? 'Mở Khóa' : 'Khóa'}

@@ -15,7 +15,7 @@ export function EventImagePreviewSection({ register, errors, watchedImageUrl }: 
   return (
     <div>
       <label htmlFor="event-image-url" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1">
-        URL Hình ảnh bìa <span className="text-danger">*</span>
+        URL Hình ảnh bìa <span className="text-danger-readable">*</span>
       </label>
       <input 
         id="event-image-url"
@@ -26,7 +26,7 @@ export function EventImagePreviewSection({ register, errors, watchedImageUrl }: 
         className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors"
         placeholder="https://images.unsplash.com/photo-..."
       />
-      {errors.imageUrl && <p id="event-image-url-error" role="alert" className="text-danger text-xs mt-1">{errors.imageUrl.message}</p>}
+      {errors.imageUrl && <p id="event-image-url-error" role="alert" className="text-danger-readable text-xs mt-1">{errors.imageUrl.message}</p>}
       
       {/* Image Preview Box */}
       {watchedImageUrl && (

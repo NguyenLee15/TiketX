@@ -172,7 +172,7 @@ export default function ProfilePage() {
       <div className="surface-panel mx-auto flex min-h-[40vh] max-w-lg flex-col items-center justify-center gap-4 p-6 text-center">
         <h1 className="text-xl font-display font-bold text-text-primary">Không thể tải hồ sơ</h1>
         <p className="text-base text-text-secondary">Kiểm tra kết nối rồi thử lại.</p>
-        <button type="button" onClick={() => void fetchProfile()} className="min-h-11 rounded-lg bg-brand-primary px-5 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">Thử lại</button>
+        <button type="button" onClick={() => void fetchProfile()} className="min-h-11 rounded-lg bg-brand-primary px-5 text-sm font-bold text-surface-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">Thử lại</button>
       </div>
     );
   }
@@ -182,7 +182,7 @@ export default function ProfilePage() {
       <div className="surface-panel flex flex-col gap-1.5 p-6 sm:p-8">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary/10 border border-brand-primary/20 w-fit mb-1">
           <Shield className="w-3.5 h-3.5 text-brand-primary" />
-          <span className="text-xs font-bold text-brand-primary uppercase tracking-wider">Cài Đặt Tài Khoản</span>
+          <span className="text-xs font-bold text-brand-readable uppercase tracking-wider">Cài Đặt Tài Khoản</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">Hồ Sơ Cá Nhân</h2>
         <p className="text-text-secondary text-xs sm:text-sm">Quản lý thông tin cá nhân và cài đặt bảo mật tài khoản của bạn.</p>

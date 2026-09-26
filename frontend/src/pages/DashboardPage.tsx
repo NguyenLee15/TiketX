@@ -76,7 +76,7 @@ export default function DashboardPage() {
       <section aria-labelledby="catalog-title" className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border-subtle pb-4">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.15em] text-brand-primary">Lịch sự kiện</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.15em] text-brand-readable">Lịch sự kiện</p>
             <h2 id="catalog-title" className="mt-1 text-2xl font-display font-bold text-text-primary sm:text-3xl">Khám phá chương trình</h2>
           </div>
           <p className="text-sm text-text-secondary">{events.length} / {totalCount} sự kiện</p>
@@ -156,7 +156,7 @@ function StatePanel({ title, message, actionLabel, onAction }: StatePanelProps) 
       <button
         type="button"
         onClick={onAction}
-        className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-brand-primary px-5 text-sm font-bold text-white hover:bg-brand-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer"
+        className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-brand-primary px-5 text-sm font-bold text-surface-0 hover:bg-brand-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer"
       >
         {actionLabel}
       </button>

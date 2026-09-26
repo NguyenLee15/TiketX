@@ -81,7 +81,7 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5" noValidate>
             {serverError && (
-              <div role="alert" aria-live="polite" className="p-3.5 bg-danger/10 border border-danger/20 rounded-xl text-danger text-xs font-medium animate-slide-up">
+              <div role="alert" aria-live="polite" className="p-3.5 bg-danger/10 border border-danger/20 rounded-xl text-danger-readable text-xs font-medium animate-slide-up">
                 {serverError}
               </div>
             )}
@@ -106,14 +106,14 @@ export default function RegisterPage() {
                 />
               </div>
               {errors.name && (
-                <p id="register-name-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">{errors.name.message}</p>
+                <p id="register-name-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">{errors.name.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
               <div className="group relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" />
+                  <Mail className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-readable transition-colors" />
                 </div>
                 <input
                   type="email"
@@ -130,14 +130,14 @@ export default function RegisterPage() {
                 />
               </div>
               {errors.email && (
-                <p id="register-email-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">{errors.email.message}</p>
+                <p id="register-email-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">{errors.email.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
               <div className="group relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" />
+                  <Lock className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-readable transition-colors" />
                 </div>
                 <input
                   type="password"
@@ -154,14 +154,14 @@ export default function RegisterPage() {
                 />
               </div>
               {errors.password && (
-                <p id="register-password-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">{errors.password.message}</p>
+                <p id="register-password-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">{errors.password.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
               <div className="group relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" />
+                  <Lock className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-readable transition-colors" />
                 </div>
                 <input
                   type="password"
@@ -178,7 +178,7 @@ export default function RegisterPage() {
                 />
               </div>
               {errors.confirmPassword && (
-                <p id="register-confirm-password-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">{errors.confirmPassword.message}</p>
+                <p id="register-confirm-password-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">{errors.confirmPassword.message}</p>
               )}
             </div>
 
@@ -200,7 +200,7 @@ export default function RegisterPage() {
 
           <div className="mt-6 text-center text-xs text-text-secondary">
             Bạn đã có tài khoản?{' '}
-            <Link to="/login" className="font-bold text-white hover:text-brand-primary transition-colors">
+            <Link to="/login" className="font-bold text-white hover:text-brand-readable transition-colors">
               Đăng nhập ngay
             </Link>
           </div>

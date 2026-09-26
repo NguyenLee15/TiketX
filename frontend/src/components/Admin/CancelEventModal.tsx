@@ -71,8 +71,8 @@ export default function CancelEventModal({
           </div>
         </div>
 
-        <div className="p-3.5 bg-danger/10 border border-danger/20 rounded-xl text-xs text-danger-300 space-y-1">
-          <p className="font-bold text-danger">Cảnh báo tác động nghiệp vụ:</p>
+        <div className="p-3.5 bg-danger/10 border border-danger/20 rounded-xl text-xs text-danger-readable space-y-1">
+          <p className="font-bold text-danger-readable">Cảnh báo tác động nghiệp vụ:</p>
           <ul className="list-disc list-inside space-y-0.5 text-[11px] text-text-secondary">
             <li>Sự kiện: <span className="text-white font-semibold">"{eventTitle}"</span></li>
             <li>Vé đã thanh toán sẽ chuyển sang <span className="text-white font-semibold">Đang chờ hoàn tiền</span>; provider sẽ xác nhận từng yêu cầu.</li>
@@ -84,7 +84,7 @@ export default function CancelEventModal({
         <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
             <label htmlFor="cancel-event-reason" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1">
-              Lý do hủy sự kiện <span className="text-danger">*</span>
+              Lý do hủy sự kiện <span className="text-danger-readable">*</span>
             </label>
             <textarea
               id="cancel-event-reason"
@@ -102,7 +102,7 @@ export default function CancelEventModal({
               aria-describedby={error ? 'cancel-event-reason-error' : undefined}
               className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus:border-danger/60 transition-colors resize-none disabled:opacity-50"
             />
-            {error && <p id="cancel-event-reason-error" role="alert" className="text-danger text-[11px] mt-1">{error}</p>}
+            {error && <p id="cancel-event-reason-error" role="alert" className="text-danger-readable text-[11px] mt-1">{error}</p>}
           </div>
 
           <div className="flex justify-end items-center gap-2.5 pt-2">
@@ -117,7 +117,7 @@ export default function CancelEventModal({
             <button
               type="submit"
               disabled={isLoading}
-              className="px-4 py-2 bg-danger hover:bg-danger/90 text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger shadow-md shadow-danger/20 flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+              className="px-4 py-2 bg-danger hover:bg-red-400 text-surface-0 rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger shadow-md shadow-danger/20 flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
             >
               {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Xác Nhận Hủy Sự Kiện

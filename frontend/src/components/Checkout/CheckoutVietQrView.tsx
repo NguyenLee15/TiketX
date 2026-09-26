@@ -45,7 +45,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
         <p className="text-text-secondary text-xs max-w-sm">{paymentInitError}</p>
         <button
           onClick={onRetryPayment}
-          className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+          className="px-4 py-2 bg-brand-primary hover:bg-brand-secondary text-surface-0 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>Thử lại tạo mã thanh toán</span>
@@ -107,9 +107,9 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
 
           {transferContent && (
             <div className="flex justify-between items-center p-2 rounded-xl bg-brand-primary/10 border border-brand-primary/30">
-              <span className="text-brand-primary font-semibold">Nội dung CK:</span>
+              <span className="text-brand-readable font-semibold">Nội dung CK:</span>
               <div className="flex items-center gap-1.5">
-                <span className="font-mono font-black text-brand-primary">{transferContent}</span>
+                <span className="font-mono font-black text-brand-readable">{transferContent}</span>
                 <button
                   onClick={() => copyToClipboard(transferContent, 'Nội dung chuyển khoản')}
                   className="p-1 hover:text-white text-brand-primary transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary rounded cursor-pointer"
@@ -128,7 +128,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
       {paymentData?.checkoutUrl && paymentData.checkoutUrl.startsWith('http') && (
         <button 
           onClick={onProceedPayOS}
-          className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-2 group text-sm active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer shadow-lg shadow-brand-glow"
+          className="w-full py-3.5 bg-brand-primary hover:bg-brand-secondary text-surface-0 font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-2 group text-sm active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer shadow-lg shadow-brand-glow"
         >
           <span>Chuyển Đến Cổng Thanh Toán PayOS</span>
           <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -137,4 +137,3 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
     </div>
   );
 });
-

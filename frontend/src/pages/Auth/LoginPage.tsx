@@ -155,7 +155,7 @@ export default function LoginPage() {
               <div 
                 role="alert" 
                 aria-live="polite"
-                className="p-3.5 bg-danger/10 border border-danger/20 rounded-xl text-danger text-xs font-medium animate-slide-up flex items-start gap-2"
+                className="p-3.5 bg-danger/10 border border-danger/20 rounded-xl text-danger-readable text-xs font-medium animate-slide-up flex items-start gap-2"
               >
                 <span>{serverError}</span>
               </div>
@@ -186,7 +186,7 @@ export default function LoginPage() {
                   />
                 </div>
                 {errors.email && (
-                  <p id="email-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">
+                  <p id="email-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">
                     {errors.email.message}
                   </p>
                 )}
@@ -199,7 +199,7 @@ export default function LoginPage() {
                 </label>
                 <div className="group relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <Lock className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" aria-hidden="true" />
+                    <Lock className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-readable transition-colors" aria-hidden="true" />
                   </div>
                   <input
                     id="login-password"
@@ -228,7 +228,7 @@ export default function LoginPage() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p id="password-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">
+                  <p id="password-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">
                     {errors.password.message}
                   </p>
                 )}
@@ -253,9 +253,9 @@ export default function LoginPage() {
                       setValue('password', 'Admin@123', { shouldValidate: true });
                       setServerError('');
                     }}
-                    className="px-2.5 py-1.5 rounded-lg bg-surface-3 hover:bg-surface-4 text-[11px] font-medium text-white transition-colors text-left border border-border-subtle hover:border-brand-primary/50 group"
+                    className="px-2.5 py-1.5 rounded-lg bg-surface-2 hover:bg-surface-3 text-[11px] font-medium text-white transition-colors text-left border border-border-subtle hover:border-brand-primary/50 group"
                   >
-                    <span className="text-brand-primary font-semibold block text-[11px]">Quản Trị Viên</span>
+                    <span className="text-brand-readable font-semibold block text-[11px]">Quản Trị Viên</span>
                     <span className="text-text-tertiary text-[10px] truncate block group-hover:text-text-secondary">admin@tickex.com</span>
                   </button>
                   <button
@@ -265,7 +265,7 @@ export default function LoginPage() {
                       setValue('password', 'Admin@123', { shouldValidate: true });
                       setServerError('');
                     }}
-                    className="px-2.5 py-1.5 rounded-lg bg-surface-3 hover:bg-surface-4 text-[11px] font-medium text-white transition-colors text-left border border-border-subtle hover:border-brand-secondary/50 group"
+                    className="px-2.5 py-1.5 rounded-lg bg-surface-2 hover:bg-surface-3 text-[11px] font-medium text-white transition-colors text-left border border-border-subtle hover:border-brand-secondary/50 group"
                   >
                     <span className="text-brand-secondary font-semibold block text-[11px]">Khách Hàng</span>
                     <span className="text-text-tertiary text-[10px] truncate block group-hover:text-text-secondary">user@tickex.com</span>
@@ -293,7 +293,7 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center text-xs text-text-secondary">
             Bạn chưa có tài khoản?{' '}
-            <Link to="/register" className="font-bold text-white hover:text-brand-primary transition-colors">
+            <Link to="/register" className="font-bold text-white hover:text-brand-readable transition-colors">
               Đăng ký tài khoản mới
             </Link>
           </div>

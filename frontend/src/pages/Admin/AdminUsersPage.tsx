@@ -196,7 +196,7 @@ export default function AdminUsersPage() {
           </p>
         </div>
         <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center border border-brand-primary/20 shadow-md shrink-0">
-          <Users className="w-5 h-5 text-brand-primary" />
+          <Users className="w-5 h-5 text-brand-readable" />
         </div>
       </div>
 
@@ -212,7 +212,7 @@ export default function AdminUsersPage() {
 
       {/* Main Content Area */}
       {loadError && !loading && (
-        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-xs text-danger">
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-xs text-danger-readable">
           <span>Không thể tải danh sách người dùng.</span>
           <button type="button" onClick={fetchUsers} className="rounded-lg border border-danger/30 px-3 py-1.5 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger">Thử lại</button>
         </div>
@@ -249,7 +249,7 @@ export default function AdminUsersPage() {
                   : `Bạn có chắc chắn muốn ${confirmModal.targetBlocked ? 'khóa' : 'mở khóa'} tài khoản của "${confirmModal.userName}"?`}
               </p>
               {mutationError && (
-                <p className="text-xs text-danger font-semibold bg-danger/10 p-2 rounded-lg border border-danger/20">
+                <p className="text-xs text-danger-readable font-semibold bg-danger/10 p-2 rounded-lg border border-danger/20">
                   {mutationError}
                 </p>
               )}

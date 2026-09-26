@@ -36,6 +36,7 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-surface-0 flex flex-col md:flex-row text-text-primary relative overflow-hidden">
+      <a href="#admin-main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:rounded-lg">Bỏ qua đến nội dung chính</a>
       {/* Mobile Top App Bar (< md) */}
       <header className="md:hidden h-16 bg-surface-1 border-b border-border-subtle px-4 flex items-center justify-between shrink-0 sticky top-0 z-40">
         <Link to={currentRole === 'Staff' ? "/admin/scan-ticket" : "/admin"} className="flex items-center gap-2.5">
@@ -75,7 +76,7 @@ export default function AdminLayout() {
         <div className="h-16 flex items-center justify-between px-5 border-b border-border-subtle shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded bg-surface-2 border border-border-subtle flex items-center justify-center shrink-0">
-              <Ticket className="w-4 h-4 text-brand-primary" />
+              <Ticket className="w-4 h-4 text-brand-readable" />
             </div>
             <span className="text-base font-display font-bold tracking-tight text-white">
               {portalTitle}
@@ -100,7 +101,7 @@ export default function AdminLayout() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
                   isActive 
-                    ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/30 font-bold' 
+                    ? 'bg-brand-primary/15 text-brand-readable border border-brand-primary/30 font-bold'
                     : 'text-text-secondary hover:text-white hover:bg-surface-2 border border-transparent'
                 }`}
               >
@@ -132,7 +133,7 @@ export default function AdminLayout() {
             <button 
               onClick={() => { setIsMobileMenuOpen(false); void handleLogout(); }}
               aria-label="Đăng xuất"
-              className="text-text-tertiary hover:text-danger transition-colors p-1.5 rounded-lg hover:bg-danger/10"
+              className="text-text-tertiary hover:text-danger-readable transition-colors p-1.5 rounded-lg hover:bg-danger/10"
               title="Đăng xuất"
             >
               <LogOut className="w-4 h-4" />
@@ -197,7 +198,7 @@ export default function AdminLayout() {
             <button 
               onClick={() => void handleLogout()}
               aria-label="Đăng xuất"
-              className="text-text-tertiary hover:text-danger transition-colors p-1.5 rounded hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+              className="text-text-tertiary hover:text-danger-readable transition-colors p-1.5 rounded hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
               title="Đăng xuất"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -207,7 +208,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative z-10 bg-surface-0">
+      <main id="admin-main-content" tabIndex={-1} className="flex-1 overflow-y-auto relative z-10 bg-surface-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 min-h-full">
           <div className="animate-slide-up">
             <Outlet />

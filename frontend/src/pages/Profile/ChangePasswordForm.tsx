@@ -49,7 +49,7 @@ export function ChangePasswordForm({
               />
             </div>
             {errors.currentPassword && (
-              <p id="password-current-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">{errors.currentPassword.message}</p>
+              <p id="password-current-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">{errors.currentPassword.message}</p>
             )}
           </div>
 
@@ -72,7 +72,7 @@ export function ChangePasswordForm({
               />
             </div>
             {errors.newPassword && (
-              <p id="password-new-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">{errors.newPassword.message}</p>
+              <p id="password-new-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">{errors.newPassword.message}</p>
             )}
           </div>
 
@@ -95,7 +95,7 @@ export function ChangePasswordForm({
               />
             </div>
             {errors.confirmPassword && (
-              <p id="password-confirm-error" role="alert" className="text-[11px] text-danger pl-1 animate-slide-up">{errors.confirmPassword.message}</p>
+              <p id="password-confirm-error" role="alert" className="text-[11px] text-danger-readable pl-1 animate-slide-up">{errors.confirmPassword.message}</p>
             )}
           </div>
 
@@ -103,7 +103,7 @@ export function ChangePasswordForm({
             <button 
               type="submit" 
               disabled={isSubmitting}
-              className="w-full py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-1.5 text-sm disabled:opacity-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+              className="w-full py-2.5 bg-brand-primary hover:bg-brand-secondary text-surface-0 font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-1.5 text-sm disabled:opacity-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             >
               {isSubmitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -118,4 +118,3 @@ export function ChangePasswordForm({
     </div>
   );
 }
-

@@ -42,7 +42,7 @@ export const TicketPagination: React.FC<TicketPaginationProps> = React.memo(({
 
       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2/80 border border-border-subtle text-xs font-medium text-text-secondary">
         <span>Trang</span>
-        <span className="font-bold text-brand-primary px-1.5 py-0.5 rounded bg-surface-3">
+        <span className="font-bold text-brand-readable px-1.5 py-0.5 rounded bg-surface-3">
           {currentPage}
         </span>
       </div>

@@ -80,7 +80,7 @@ export const ScanResultDisplay: React.FC<ScanResultDisplayProps> = ({ scanResult
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-text-secondary">Vị Trí Ghế:</span>
-                <span className="font-bold text-brand-primary text-sm">
+                <span className="font-bold text-brand-readable text-sm">
                   Hàng {scanResult.ticket.row} - Ghế {scanResult.ticket.number}
                 </span>
               </div>

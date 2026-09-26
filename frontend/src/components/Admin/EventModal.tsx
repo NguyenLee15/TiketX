@@ -133,7 +133,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
           <div className="space-y-3.5">
             <div>
               <label htmlFor="event-title" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1">
-                Tên sự kiện <span className="text-danger">*</span>
+                Tên sự kiện <span className="text-danger-readable">*</span>
               </label>
               <input 
                 id="event-title"
@@ -143,12 +143,12 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                 className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors"
                 placeholder="Ví dụ: Đại Nhạc Hội Mùa Hè 2026"
               />
-              {errors.title && <p id="event-title-error" role="alert" className="text-danger text-xs mt-1">{errors.title.message}</p>}
+              {errors.title && <p id="event-title-error" role="alert" className="text-danger-readable text-xs mt-1">{errors.title.message}</p>}
             </div>
 
             <div>
               <label htmlFor="event-description" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1">
-                Mô tả sự kiện <span className="text-danger">*</span>
+                Mô tả sự kiện <span className="text-danger-readable">*</span>
               </label>
               <textarea 
                 id="event-description"
@@ -159,7 +159,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                 className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors resize-none"
                 placeholder="Mô tả chi tiết nội dung sự kiện, khách mời, lưu ý..."
               />
-              {errors.description && <p id="event-description-error" role="alert" className="text-danger text-xs mt-1">{errors.description.message}</p>}
+              {errors.description && <p id="event-description-error" role="alert" className="text-danger-readable text-xs mt-1">{errors.description.message}</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -177,7 +177,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                     <option key={cat} value={cat} className="bg-surface-1 text-white">{cat}</option>
                   ))}
                 </select>
-                {errors.category && <p id="event-category-error" role="alert" className="text-danger text-xs mt-1">{errors.category.message}</p>}
+                {errors.category && <p id="event-category-error" role="alert" className="text-danger-readable text-xs mt-1">{errors.category.message}</p>}
               </div>
 
               <div>
@@ -196,14 +196,14 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   {watchedStatus === 'Completed' && <option value="Completed" className="bg-surface-1 text-white">Đã kết thúc (Completed)</option>}
                   {event && eventStatusToFormValue(event.status) === 'Cancelled' && <option value="Cancelled" className="bg-surface-1 text-white">Đã hủy (Cancelled)</option>}
                 </select>
-                {errors.status && <p id="event-status-error" role="alert" className="text-danger text-xs mt-1">{errors.status.message}</p>}
+                {errors.status && <p id="event-status-error" role="alert" className="text-danger-readable text-xs mt-1">{errors.status.message}</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="event-location" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1">
-                  Địa điểm / Khán đài <span className="text-danger">*</span>
+                  Địa điểm / Khán đài <span className="text-danger-readable">*</span>
                 </label>
                 <input 
                   id="event-location"
@@ -214,7 +214,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors"
                   placeholder="Ví dụ: Sân Vận Động Quốc Gia Mỹ Đình, Hà Nội"
                 />
-                {errors.location && <p id="event-location-error" role="alert" className="text-danger text-xs mt-1">{errors.location.message}</p>}
+                {errors.location && <p id="event-location-error" role="alert" className="text-danger-readable text-xs mt-1">{errors.location.message}</p>}
               </div>
 
               <div>
@@ -231,7 +231,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="event-date" className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-1">
-                  Thời gian bắt đầu <span className="text-danger">*</span>
+                  Thời gian bắt đầu <span className="text-danger-readable">*</span>
                 </label>
                 <input 
                   id="event-date"
@@ -245,7 +245,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   ].filter(Boolean).join(' ') || undefined}
                   className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors [color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                {errors.date && <p id="event-date-error" role="alert" className="text-danger text-xs mt-1">{errors.date.message}</p>}
+                {errors.date && <p id="event-date-error" role="alert" className="text-danger-readable text-xs mt-1">{errors.date.message}</p>}
               </div>
 
               <div>
@@ -264,7 +264,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   ].filter(Boolean).join(' ') || undefined}
                   className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors [color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                {errors.endDate && <p id="event-end-date-error" role="alert" className="text-danger text-xs mt-1">{errors.endDate.message}</p>}
+                {errors.endDate && <p id="event-end-date-error" role="alert" className="text-danger-readable text-xs mt-1">{errors.endDate.message}</p>}
               </div>
             </div>
 
@@ -287,7 +287,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
           <div className="pt-3 border-t border-border-subtle space-y-2">
             <label htmlFor="event-base-price" className="block text-xs font-bold uppercase tracking-wider text-text-secondary">Giá vé cơ sở (VNĐ)</label>
             <input id="event-base-price" type="number" min={1} {...register('basePrice', { valueAsNumber: true })} aria-invalid={Boolean(errors.basePrice)} aria-describedby={errors.basePrice ? 'event-base-price-error' : undefined} readOnly={Boolean(event)} disabled={isLoading} className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary" />
-            {errors.basePrice && <p id="event-base-price-error" role="alert" className="text-danger text-xs">{errors.basePrice.message}</p>}
+            {errors.basePrice && <p id="event-base-price-error" role="alert" className="text-danger-readable text-xs">{errors.basePrice.message}</p>}
             <p className="text-[11px] text-text-secondary">Giá ghế được tạo tự động theo hạng: VIP 1,75×, Standard 1×, Economy 0,75×.</p>
           </div>
 
@@ -303,7 +303,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
             <button 
               type="submit"
               disabled={isLoading}
-              className="px-5 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary shadow-md shadow-brand-glow flex items-center gap-1.5 text-xs sm:text-sm active:scale-95 disabled:opacity-50"
+              className="px-5 py-2 bg-brand-primary hover:bg-brand-secondary text-surface-0 font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary shadow-md shadow-brand-glow flex items-center gap-1.5 text-xs sm:text-sm active:scale-95 disabled:opacity-50"
             >
               {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {event ? 'Lưu Thay Đổi' : 'Tạo Sự Kiện & Khởi Tạo Ghế'}

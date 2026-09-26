@@ -35,7 +35,7 @@ export const CheckoutReleaseDialog: React.FC<CheckoutReleaseDialogProps> = React
         <p className="text-xs leading-relaxed text-text-secondary">Hệ thống sẽ xác nhận hủy liên kết thanh toán với PayOS trước khi trả ghế. Nếu chưa xác nhận được, ghế vẫn được giữ.</p>
         
         {releaseError && (
-          <p role="alert" aria-live="polite" className="text-xs text-danger">
+          <p role="alert" aria-live="polite" className="text-xs text-danger-readable">
             {releaseError}
           </p>
         )}
@@ -53,7 +53,7 @@ export const CheckoutReleaseDialog: React.FC<CheckoutReleaseDialogProps> = React
             type="button" 
             onClick={onConfirm} 
             disabled={releasing} 
-            className="rounded-xl bg-danger px-4 py-2 text-xs font-bold text-white hover:bg-danger/90 transition-colors cursor-pointer disabled:cursor-not-allowed"
+            className="rounded-xl bg-danger px-4 py-2 text-xs font-bold text-surface-0 hover:bg-red-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             {releasing ? 'Đang trả ghế…' : 'Trả ghế & đóng'}
           </button>

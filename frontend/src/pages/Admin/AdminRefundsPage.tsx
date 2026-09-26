@@ -41,7 +41,7 @@ export default function AdminRefundsPage() {
   };
 
   if (refundsQuery.isLoading) return <div className="p-8 text-text-secondary" aria-busy="true"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Đang tải yêu cầu hoàn tiền</div>;
-  if (refundsQuery.isError) return <section className="surface-panel m-6 p-6"><p role="alert" className="mb-3 text-danger">Không tải được danh sách hoàn tiền.</p><button className="rounded-lg bg-brand-primary px-4 py-2 text-white" onClick={() => void refundsQuery.refetch()}>Thử lại</button></section>;
+  if (refundsQuery.isError) return <section className="surface-panel m-6 p-6"><p role="alert" className="mb-3 text-danger-readable">Không tải được danh sách hoàn tiền.</p><button className="rounded-lg bg-brand-primary px-4 py-2 text-surface-0 hover:bg-brand-secondary" onClick={() => void refundsQuery.refetch()}>Thử lại</button></section>;
 
   const data = refundsQuery.data;
   if (!data) return null;
@@ -50,8 +50,30 @@ export default function AdminRefundsPage() {
   return (
     <main className="space-y-5 p-4 sm:p-6">
       <header><h1 className="text-2xl font-bold text-white">Hoàn tiền</h1><p className="mt-1 text-sm text-text-secondary">Theo dõi lệnh chi và xử lý các yêu cầu cần đối soát.</p></header>
-      <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface-1">
-        <table className="w-full min-w-[850px] text-left text-sm">
+      <ul aria-label="Yêu cầu hoàn tiền" className="grid gap-3 lg:hidden">
+        {data.items.map(refund => <li key={refund.id} className="surface-panel min-w-0 space-y-3 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="break-all font-medium text-white">Yêu cầu {refund.id}</p>
+              <p className="break-all text-xs text-text-secondary">Vé {refund.ticketId}</p>
+            </div>
+            <p className="shrink-0 font-semibold tabular-nums">{money.format(refund.amount)}</p>
+          </div>
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 border-t border-border-subtle pt-3 text-sm">
+            <dt className="text-text-secondary">Trạng thái</dt>
+            <dd><span className="rounded-md bg-surface-2 px-2 py-1 text-xs">{refund.status}</span></dd>
+            <dt className="text-text-secondary">PayOS</dt>
+            <dd className="min-w-0 break-words">{refund.providerStatus ?? '—'}{refund.providerReference && <p className="break-all text-xs text-text-secondary">{refund.providerReference}</p>}</dd>
+            <dt className="text-text-secondary">Lần thử</dt>
+            <dd className="tabular-nums">{refund.attempts}</dd>
+          </dl>
+          {refund.lastError && <p className="flex gap-1.5 break-words text-xs text-warning"><AlertTriangle className="h-4 w-4 shrink-0" />{refund.lastError}</p>}
+          {refund.status === 'NeedsReview' && <button type="button" disabled={retrying === refund.id} onClick={() => void retryRefund(refund.id)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-brand-primary/40 px-3 text-xs font-semibold text-brand-readable disabled:opacity-60">{retrying === refund.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Đối soát / thử lại</button>}
+        </li>)}
+        {data.items.length === 0 && <li className="surface-panel p-10 text-center text-text-secondary">Chưa có yêu cầu hoàn tiền.</li>}
+      </ul>
+      <div className="hidden overflow-x-auto rounded-xl border border-border-subtle bg-surface-1 lg:block">
+        <table className="w-full text-left text-sm">
           <thead className="border-b border-border-subtle text-xs uppercase text-text-secondary"><tr><th className="p-3">Yêu cầu / Vé</th><th className="p-3">Số tiền</th><th className="p-3">Trạng thái</th><th className="p-3">PayOS</th><th className="p-3">Lần thử</th><th className="p-3">Thao tác</th></tr></thead>
           <tbody>
             {data.items.map(refund => <tr key={refund.id} className="border-b border-border-subtle/70 align-top">
@@ -60,7 +82,7 @@ export default function AdminRefundsPage() {
               <td className="p-3"><span className="rounded-md bg-surface-2 px-2 py-1 text-xs">{refund.status}</span>{refund.lastError && <p className="mt-2 flex max-w-sm gap-1.5 text-xs text-warning"><AlertTriangle className="h-4 w-4 shrink-0" />{refund.lastError}</p>}</td>
               <td className="p-3">{refund.providerStatus ?? '—'}{refund.providerReference && <p className="mt-1 max-w-40 truncate text-xs text-text-secondary">{refund.providerReference}</p>}</td>
               <td className="p-3 tabular-nums">{refund.attempts}</td>
-              <td className="p-3">{refund.status === 'NeedsReview' && <button type="button" disabled={retrying === refund.id} onClick={() => void retryRefund(refund.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-brand-primary/40 px-3 text-xs font-semibold text-brand-primary disabled:opacity-60">{retrying === refund.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Đối soát / thử lại</button>}</td>
+              <td className="p-3">{refund.status === 'NeedsReview' && <button type="button" disabled={retrying === refund.id} onClick={() => void retryRefund(refund.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-brand-primary/40 px-3 text-xs font-semibold text-brand-readable disabled:opacity-60">{retrying === refund.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Đối soát / thử lại</button>}</td>
             </tr>)}
             {data.items.length === 0 && <tr><td colSpan={6} className="p-10 text-center text-text-secondary">Chưa có yêu cầu hoàn tiền.</td></tr>}
           </tbody>

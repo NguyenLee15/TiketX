@@ -27,7 +27,7 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
 
   const getSeatColor = (seat: Seat, isSelected: boolean) => {
     if (isSelected) {
-      return 'bg-brand-primary border-brand-primary text-white scale-105 z-20 ring-2 ring-brand-accent/60';
+      return 'bg-brand-primary border-brand-primary text-surface-0 scale-105 z-20 ring-2 ring-brand-accent/60';
     }
     if (seat.status === 1) {
       return 'bg-warning/20 border-warning/50 text-warning/50 cursor-not-allowed opacity-60'; // Locked
@@ -135,4 +135,3 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
     </div>
   );
 });
-

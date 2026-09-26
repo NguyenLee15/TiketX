@@ -17,7 +17,7 @@ export const EventInfoCard: React.FC<EventInfoCardProps> = ({ event }) => {
       <div className="relative z-10 space-y-3.5">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary/20 border border-brand-primary/30">
           <Sparkles className="w-3 h-3 text-brand-primary" />
-          <span className="text-[11px] font-bold text-brand-primary uppercase tracking-wider">{event.category}</span>
+          <span className="text-[11px] font-bold text-brand-readable uppercase tracking-wider">{event.category}</span>
         </div>
         <h1 className="text-xl sm:text-2xl font-display font-black text-white leading-snug tracking-tight">
           {event.title}
