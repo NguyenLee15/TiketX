@@ -60,8 +60,26 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResult>
 
         if (!_passwordHasher.Verify(request.Password, user.PasswordHash))
         {
-            user.RecordFailedLogin(maxFailedAccessAttempts: 5, lockoutMinutes: 15);
-            await _context.SaveChangesAsync(cancellationToken);
+            for (var concurrencyAttempt = 0; ; concurrencyAttempt++)
+            {
+                user.RecordFailedLogin(maxFailedAccessAttempts: 5, lockoutMinutes: 15);
+                try
+                {
+                    await _context.SaveChangesAsync(cancellationToken);
+                    break;
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (_context is not DbContext dbContext || concurrencyAttempt >= 15)
+                        throw;
+
+                    var entry = dbContext.Entry(user);
+                    await entry.ReloadAsync(cancellationToken);
+                    if (entry.State == EntityState.Detached || user.IsBlocked || user.IsLockedOut())
+                        return new AuthResult(false, string.Empty, GenericErrorMessage);
+                }
+            }
+
             _logger.LogWarning("Login failed: Invalid password for user {UserId}. Failed count: {Count}.", user.Id, user.AccessFailedCount);
             return new AuthResult(false, string.Empty, GenericErrorMessage);
         }

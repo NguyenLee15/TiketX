@@ -10,13 +10,11 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
 {
     private readonly IApplicationDbContext _context;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly IRefreshTokenStore? _refreshTokens;
 
-    public ChangePasswordCommandHandler(IApplicationDbContext context, IPasswordHasher passwordHasher, IRefreshTokenStore? refreshTokens = null)
+    public ChangePasswordCommandHandler(IApplicationDbContext context, IPasswordHasher passwordHasher)
     {
         _context = context;
         _passwordHasher = passwordHasher;
-        _refreshTokens = refreshTokens;
     }
 
     public async Task<bool> Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
@@ -33,9 +31,13 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
         }
 
         user.ChangePassword(_passwordHasher.Hash(request.NewPassword));
+        var activeRefreshTokens = await _context.RefreshTokens
+            .Where(token => token.UserId == user.Id && token.RevokedAtUtc == null)
+            .ToListAsync(cancellationToken);
+        foreach (var token in activeRefreshTokens)
+            token.Revoke();
+
         await _context.SaveChangesAsync(cancellationToken);
-        if (_refreshTokens is not null)
-            await _refreshTokens.RevokeAllForUserAsync(user.Id, cancellationToken);
 
         return true;
     }

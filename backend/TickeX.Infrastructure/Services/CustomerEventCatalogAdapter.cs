@@ -47,6 +47,9 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
         if (request.DateTo.HasValue) query = query.Where(e => e.Date <= request.DateTo.Value);
 
         var totalCount = await query.CountAsync(cancellationToken);
+        if (offset >= totalCount)
+            return new PagedResult<EventDto>(new List<EventDto>(), totalCount, page, pageSize);
+
         query = request.SortBy switch
         {
             "date_desc" => query.OrderByDescending(e => e.Date).ThenBy(e => e.Id),

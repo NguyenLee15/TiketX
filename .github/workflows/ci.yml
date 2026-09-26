@@ -60,6 +60,8 @@ jobs:
     needs: [backend-build-and-test, frontend-build-and-typecheck]
     env:
       MSSQL_SA_PASSWORD: CiOnly!2026Password
+      MSSQL_MIGRATOR_USER: tickex_migrator
+      MSSQL_MIGRATOR_PASSWORD: CiOnly!2026Password
       RABBITMQ_DEFAULT_USER: tickex-ci
       RABBITMQ_DEFAULT_PASS: CiOnly!2026Password
       REDIS_PASSWORD: CiOnly!2026Password
@@ -84,7 +86,9 @@ jobs:
       run: docker compose --env-file .env.example up -d --build sqlserver redis rabbitmq
 
     - name: Apply migrations once
-      run: docker compose --env-file .env.example run --rm backend --migrate
+      env:
+        MIGRATION_CONNECTION_STRING: ${{ format('Server=sqlserver,1433;Database=TickeXDb;User Id={0};Password={1};TrustServerCertificate=True;', env.MSSQL_MIGRATOR_USER, env.MSSQL_MIGRATOR_PASSWORD) }}
+      run: docker compose --env-file .env.example run --rm -e ConnectionStrings__MigrationConnection="$MIGRATION_CONNECTION_STRING" backend --migrate
 
     - name: Start application and verify readiness
       run: |
@@ -104,7 +108,7 @@ jobs:
     - name: Scan production images (Backend)
       uses: aquasecurity/trivy-action@v0.33.1
       with:
-        image-ref: tickex-backend:latest
+        image-ref: tickex-api:latest
         format: table
         exit-code: '1'
         severity: CRITICAL,HIGH

@@ -1,6 +1,8 @@
 using FluentAssertions;
+using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -51,6 +53,32 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
             .Handle(new GetEventsQuery(), CancellationToken.None);
 
         result.Items.Select(x => x.Title).Should().Equal("Future");
+    }
+
+    [Fact]
+    public async Task PublicCatalog_OutOfRangePageReturnsEmptyWithoutSelectingEventRows()
+    {
+        var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync();
+        var commands = new EventSelectCounter();
+        var context = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(commands)
+            .Options);
+        await context.Database.EnsureCreatedAsync();
+        context.Events.Add(CreateEvent("Future", DateTime.UtcNow.AddDays(2)));
+        await context.SaveChangesAsync();
+        commands.EventSelectCount = 0;
+        var catalog = new CustomerEventCatalogAdapter(context, new UtcTimePolicy());
+
+        var result = await catalog.SearchAsync(new GetEventsQuery(Page: 2, PageSize: 1), CancellationToken.None);
+
+        result.TotalCount.Should().Be(1);
+        result.Items.Should().BeEmpty();
+        result.Page.Should().Be(2);
+        commands.EventSelectCount.Should().Be(0);
+        await context.DisposeAsync();
+        await connection.DisposeAsync();
     }
 
     [Theory]
@@ -713,6 +741,24 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
     {
         public bool IsValid => true;
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    private sealed class EventSelectCounter : DbCommandInterceptor
+    {
+        public int EventSelectCount { get; set; }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.Contains("FROM \"Events\"", StringComparison.OrdinalIgnoreCase)
+                && command.CommandText.Contains("SELECT", StringComparison.OrdinalIgnoreCase)
+                && !command.CommandText.Contains("COUNT(", StringComparison.OrdinalIgnoreCase))
+                EventSelectCount++;
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
     }
 
     public void Dispose()
