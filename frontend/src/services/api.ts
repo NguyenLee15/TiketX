@@ -76,8 +76,9 @@ api.interceptors.response.use(
       if (isAuthRefresh || originalRequest._retry) {
         processQueue(error, null);
         isRefreshing = false;
+        const hadUser = Boolean(useAuthStore.getState().user);
         useAuthStore.getState().logout();
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        if (hadUser && window.location.pathname !== '/login' && window.location.pathname !== '/register') {
           const currentUrl = window.location.pathname + window.location.search + window.location.hash;
           window.location.href = `/login?from=${encodeURIComponent(currentUrl)}`;
         }

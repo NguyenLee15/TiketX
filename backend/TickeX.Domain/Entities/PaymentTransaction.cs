@@ -47,6 +47,14 @@ public class PaymentTransaction : BaseEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void ResetPending()
+    {
+        Status = "Pending";
+        CheckoutUrl = string.Empty;
+        ProcessedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void MarkRefundInitiated(string rawPayload = "")
     {
         Status = "RefundInitiated";

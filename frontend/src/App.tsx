@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import api from './services/api';
 import { useAuthStore } from './stores/useAuthStore';
@@ -38,30 +38,47 @@ import { authRefreshResponseSchema } from './schemas/customerSchemas';
 function App() {
   const setAuth = useAuthStore(state => state.setAuth);
   const logout = useAuthStore(state => state.logout);
+  const setHydrating = useAuthStore(state => state.setHydrating);
+  const hasRequestedRef = useRef(false);
 
   useEffect(() => {
+    if (hasRequestedRef.current) return;
+    hasRequestedRef.current = true;
+
+    const existingUser = useAuthStore.getState().user;
+    if (!existingUser) {
+      setHydrating(false);
+      return;
+    }
+
     let active = true;
     api.post('/api/auth/refresh', {})
       .then(response => {
-        if (!active || !response.data?.success) return;
+        if (!active || !response.data?.success) {
+          if (active) setHydrating(false);
+          return;
+        }
         const parsed = authRefreshResponseSchema.safeParse(response.data.data);
         if (!parsed.success) {
           if (active && useAuthStore.getState().user) logout();
+          if (active) setHydrating(false);
           return;
         }
         const data = parsed.data;
         setAuth({
           id: data.userId,
           name: data.name ?? '',
-          email: data.email ?? useAuthStore.getState().user?.email ?? '',
+          email: data.email ?? existingUser.email ?? '',
           role: data.role ?? 'Customer',
         }, data.token ?? null);
       })
       .catch(() => {
         if (active && useAuthStore.getState().user) logout();
+        if (active) setHydrating(false);
       });
+
     return () => { active = false; };
-  }, [logout, setAuth]);
+  }, [logout, setAuth, setHydrating]);
 
   return (
     <BrowserRouter>

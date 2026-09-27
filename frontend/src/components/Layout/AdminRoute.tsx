@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 interface AdminRouteProps {
@@ -8,7 +9,15 @@ interface AdminRouteProps {
 
 export default function AdminRoute({ children, allowedRoles = ['Admin'] }: AdminRouteProps) {
   const location = useLocation();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, isHydrating } = useAuthStore();
+
+  if (isHydrating) {
+    return (
+      <div className="min-h-screen bg-surface-base flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-brand-primary animate-spin" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated()) {
     return <Navigate to="/login" state={{ from: location }} replace />;

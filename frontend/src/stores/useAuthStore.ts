@@ -21,9 +21,23 @@ export const isTokenExpired = (token: string | null): boolean => {
   }
 };
 
+const getInitialHydrating = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const raw = localStorage.getItem('auth-storage');
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    return Boolean(parsed?.state?.user);
+  } catch {
+    return false;
+  }
+};
+
 interface AuthState {
   user: User | null;
   token: string | null;
+  isHydrating: boolean;
+  setHydrating: (isHydrating: boolean) => void;
   setAuth: (user: User, token?: string | null) => void;
   logout: () => void;
   isAuthenticated: () => boolean;
@@ -36,21 +50,26 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       token: null,
       user: null,
+      isHydrating: getInitialHydrating(),
+      setHydrating: (isHydrating: boolean) => set({ isHydrating }),
       setAuth: (user: User, token?: string | null) => {
-        set({ user, token: token ?? null });
+        set({ user, token: token ?? null, isHydrating: false });
       },
-      logout: () => set({ token: null, user: null }),
+      logout: () => set({ token: null, user: null, isHydrating: false }),
       isAuthenticated: () => {
-        const { token, user } = get();
+        const { token, user, isHydrating } = get();
+        if (isHydrating) return false;
         if (!user) return false;
         return !token || !isTokenExpired(token);
       },
       isAdmin: () => {
-        const { user } = get();
+        const { user, isHydrating } = get();
+        if (isHydrating) return false;
         return user?.role === 'Admin';
       },
       canAccessAdmin: () => {
-        const { user } = get();
+        const { user, isHydrating } = get();
+        if (isHydrating) return false;
         return user?.role === 'Admin' || user?.role === 'Staff';
       }
     }),

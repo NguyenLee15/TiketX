@@ -81,18 +81,22 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
             if (existing.Status == "Pending" && string.IsNullOrWhiteSpace(existing.CheckoutUrl) && existing.CreatedAt > _time.UtcNow.AddSeconds(-30))
                 return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được xử lý. Vui lòng chờ giây lát.");
 
-            if (existing.Status != "Pending")
+            if (existing.Status == "Failed")
+            {
+                existing.ResetPending();
+            }
+            else if (existing.Status != "Pending")
+            {
                 return Fail("PAYMENT_LINK_CONFLICT", "Giao dịch thanh toán đã ở trạng thái kết thúc.");
+            }
         }
 
         PaymentTransaction transaction;
-        bool isNew = false;
         if (existing is null)
         {
             // Pre-persist local intent to claim atomic ownership at the DB level before external provider I/O
             transaction = new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price, "VietQR_PayOS");
             _context.PaymentTransactions.Add(transaction);
-            isNew = true;
             try
             {
                 await _context.SaveChangesAsync(cancellationToken);
@@ -110,6 +114,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         else
         {
             transaction = existing;
+            await _context.SaveChangesAsync(cancellationToken);
         }
 
         var clientId = _configuration["PayOS:ClientId"];
@@ -118,7 +123,8 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         {
             if (!_environment.IsDevelopment())
             {
-                if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
+                transaction.MarkFailed("PAYMENT_PROVIDER_UNCONFIGURED");
+                await _context.SaveChangesAsync(cancellationToken);
                 return Fail("PAYMENT_PROVIDER_UNAVAILABLE", "Cổng thanh toán chưa được cấu hình.");
             }
             checkoutUrl = $"/mock-payos?orderCode={ticket.OrderCode}";
@@ -131,20 +137,23 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
                     $"TickeX {ticket.OrderCode}", ReturnUrl(ticket.OrderCode), CancelUrl(ticket.OrderCode), cancellationToken);
                 if (result is null || string.IsNullOrWhiteSpace(result.CheckoutUrl))
                 {
-                    if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
+                    transaction.MarkFailed("PAYMENT_PROVIDER_EMPTY_URL");
+                    await _context.SaveChangesAsync(cancellationToken);
                     return Fail("PAYMENT_PROVIDER_UNAVAILABLE", "Không thể tạo liên kết thanh toán.");
                 }
                 checkoutUrl = result.CheckoutUrl;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(CancellationToken.None); }
+                transaction.MarkFailed("OPERATION_CANCELLED");
+                await _context.SaveChangesAsync(CancellationToken.None);
                 throw;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "PayOS CreatePaymentLink failed for {OrderCode}", ticket.OrderCode);
-                if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
+                transaction.MarkFailed("PAYMENT_PROVIDER_ERROR", ex.Message);
+                await _context.SaveChangesAsync(CancellationToken.None);
                 return Fail("PAYMENT_PROVIDER_ERROR", "Lỗi kết nối cổng thanh toán. Vui lòng thử lại.");
             }
         }
@@ -152,11 +161,8 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         // Re-validate that the ticket hold has not expired during external PayOS I/O
         if (ticket.CreatedAt <= _time.UtcNow.AddMinutes(-holdMinutes) || ticket.Status != TicketStatus.Pending)
         {
-            if (isNew)
-            {
-                _context.PaymentTransactions.Remove(transaction);
-                await _context.SaveChangesAsync(cancellationToken);
-            }
+            transaction.MarkFailed("RESERVATION_EXPIRED");
+            await _context.SaveChangesAsync(cancellationToken);
             return Fail("RESERVATION_EXPIRED", "Thời gian giữ vé đã hết hạn trong lúc khởi tạo thanh toán. Vui lòng chọn lại ghế.");
         }
 
