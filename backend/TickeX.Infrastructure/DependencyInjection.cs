@@ -87,6 +87,7 @@ public static class DependencyInjection
         // PayOS
         services.AddHttpClient<IPayOSService, TickeX.Infrastructure.Payments.PayOSService>();
         services.AddHttpClient<IPayOSPayoutService, TickeX.Infrastructure.Payments.PayOSPayoutService>();
+        services.AddSingleton<TickeX.Infrastructure.Payments.PayOSResilienceGate>();
         services.AddHostedService<RefundPayoutWorker>();
 
         return services;

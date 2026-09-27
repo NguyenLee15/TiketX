@@ -23,16 +23,55 @@ public class GetEventWithSeatsQueryHandler : IRequestHandler<GetEventWithSeatsQu
     public async Task<EventDetailDto?> Handle(GetEventWithSeatsQuery request, CancellationToken cancellationToken)
     {
         var e = await _context.Events
-            .Include(x => x.Seats)
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == request.EventId, cancellationToken);
+            .Where(x => x.Id == request.EventId)
+            .Select(x => new
+            {
+                x.Id,
+                x.Title,
+                x.Description,
+                x.Date,
+                x.EndDate,
+                x.Location,
+                x.VenueName,
+                x.Category,
+                x.ImageUrl,
+                x.BannerUrl,
+                x.OrganizerName,
+                x.TotalSeats,
+                x.BasePrice,
+                x.Status,
+                x.RefundCutoffHours,
+                x.IsDeleted
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (e == null || e.IsDeleted || e.Status != EventStatus.Published || e.Date <= _time.UtcNow) return null;
 
         // Treat stale locks as available immediately; the background job is only cleanup.
         var lockExpiry = _time.UtcNow.Subtract(_holdDuration);
 
-        var seats = e.Seats
+        var seatRows = await _context.Seats
+            .AsNoTracking()
+            .Where(s => s.EventId == e.Id)
+            .OrderBy(s => s.Row)
+            .ThenBy(s => s.Number)
+            .Select(s => new
+            {
+                s.Id,
+                s.EventId,
+                s.Row,
+                s.Number,
+                s.Tier,
+                s.Status,
+                s.LockedAt,
+                s.LockedByUserId,
+                s.Price,
+                s.Version
+            })
+            .ToListAsync(cancellationToken);
+
+        var seats = seatRows
             .OrderBy(s => s.Row)
             .ThenBy(s => s.Number)
             .Select(s => 

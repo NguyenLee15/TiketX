@@ -103,10 +103,8 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 }
             }
 
-            string providerTxId = !string.IsNullOrWhiteSpace(data.Reference) 
-                ? data.Reference 
-                : (!string.IsNullOrWhiteSpace(data.PaymentLinkId) ? data.PaymentLinkId : data.OrderCode.ToString());
-            var auditSummary = PaymentAudit.CreateWebhookSummary(data.OrderCode, data.Amount, providerTxId, data.Code);
+            var providerTxId = PaymentWebhookPolicy.ProviderTransactionId(data);
+            var auditSummary = PaymentWebhookPolicy.AuditSummary(data, providerTxId);
 
             // Invariant 2: Ticket must be Pending AND within the reservation hold window to process payment
             var isHoldExpired = ticket.Status == TicketStatus.Pending && (_time.UtcNow - ticket.CreatedAt > _holdDuration);
@@ -140,11 +138,13 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                             "VietQR_PayOS"
                         );
                         transaction.MarkOrphaned(reason, providerTxId, auditSummary);
+                        transaction.SetWebhookPayloadHash(data.PayloadHash);
                         _context.PaymentTransactions.Add(transaction);
                     }
                     else
                     {
                         existingTx.MarkOrphaned(reason, providerTxId, auditSummary);
+                        existingTx.SetWebhookPayloadHash(data.PayloadHash);
                     }
 
                     var audit = new AuditLog(
@@ -210,7 +210,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
             if (data.Success)
             {
                 // Invariant 3: Amount and currency validation
-                if (data.Amount != ticket.Price)
+                if (!PaymentWebhookPolicy.IsAmountValid(ticket.Price, data))
                 {
                     _logger.LogCritical("Payment amount tampering detected for ticket {TicketId}, order {OrderCode}! Expected {Expected}, got {Actual}.", 
                         ticket.Id, data.OrderCode, ticket.Price, data.Amount);
@@ -242,11 +242,13 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                         "VietQR_PayOS"
                     );
                     transaction.MarkSuccess(providerTxId, auditSummary);
+                    transaction.SetWebhookPayloadHash(data.PayloadHash);
                     _context.PaymentTransactions.Add(transaction);
                 }
                 else
                 {
                     existingTx.MarkSuccess(providerTxId, auditSummary);
+                    existingTx.SetWebhookPayloadHash(data.PayloadHash);
                 }
                 // Stage notification outbox item into the same unit of work
                 if (!await _context.NotificationOutbox.AnyAsync(x => x.TicketId == ticket.Id, cancellationToken))
@@ -282,11 +284,13 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                         "VietQR_PayOS"
                     );
                     transaction.MarkFailed("Payment rejected or cancelled by user", auditSummary);
+                    transaction.SetWebhookPayloadHash(data.PayloadHash);
                     _context.PaymentTransactions.Add(transaction);
                 }
                 else
                 {
                     existingTx.MarkFailed("Payment rejected or cancelled by user", auditSummary);
+                    existingTx.SetWebhookPayloadHash(data.PayloadHash);
                 }
 
                 if (!lease.IsValid) return false;

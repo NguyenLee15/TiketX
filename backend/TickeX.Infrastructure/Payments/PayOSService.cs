@@ -15,19 +15,21 @@ public class PayOSService : IPayOSService
     private readonly string _apiKey;
     private readonly string _checksumKey;
     private readonly ILogger<PayOSService> _logger;
+    private readonly PayOSResilienceGate _resilience;
 
     public PayOSService(HttpClient httpClient, IConfiguration configuration)
-        : this(httpClient, configuration, Microsoft.Extensions.Logging.Abstractions.NullLogger<PayOSService>.Instance)
+        : this(httpClient, configuration, Microsoft.Extensions.Logging.Abstractions.NullLogger<PayOSService>.Instance, new PayOSResilienceGate())
     {
     }
 
-    public PayOSService(HttpClient httpClient, IConfiguration configuration, ILogger<PayOSService> logger)
+    public PayOSService(HttpClient httpClient, IConfiguration configuration, ILogger<PayOSService> logger, PayOSResilienceGate? resilience = null)
     {
         _httpClient = httpClient;
         _clientId = configuration["PayOS:ClientId"] ?? throw new ArgumentNullException("PayOS:ClientId");
         _apiKey = configuration["PayOS:ApiKey"] ?? throw new ArgumentNullException("PayOS:ApiKey");
         _checksumKey = configuration["PayOS:ChecksumKey"] ?? throw new ArgumentNullException("PayOS:ChecksumKey");
         _logger = logger;
+        _resilience = resilience ?? new PayOSResilienceGate();
         
         var baseUrl = configuration["PayOS:BaseUrl"]?.Trim() ?? "https://api-merchant.payos.vn/";
         if (!baseUrl.EndsWith('/')) baseUrl += "/";
@@ -39,6 +41,7 @@ public class PayOSService : IPayOSService
 
     public async Task<CreatePaymentResult?> CreatePaymentLink(long orderCode, int amount, string description, string returnUrl, string cancelUrl, CancellationToken cancellationToken = default)
     {
+        if (!_resilience.TryEnter()) return null;
         var requestData = new
         {
             orderCode = orderCode,
@@ -63,10 +66,25 @@ public class PayOSService : IPayOSService
         };
 
         var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync("v2/payment-requests", content, cancellationToken);
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.PostAsync("v2/payment-requests", content, cancellationToken);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _resilience.RecordFailure();
+            throw;
+        }
+        catch (HttpRequestException)
+        {
+            _resilience.RecordFailure();
+            throw;
+        }
 
         if (response.IsSuccessStatusCode)
         {
+            _resilience.RecordSuccess();
             var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
             var jsonDoc = JsonDocument.Parse(responseString);
             var dataElement = jsonDoc.RootElement.GetProperty("data");
@@ -76,8 +94,43 @@ public class PayOSService : IPayOSService
         }
 
         var error = await response.Content.ReadAsStringAsync(cancellationToken);
+        _resilience.RecordFailure();
         _logger.LogWarning("PayOS payment-link request failed with HTTP status {StatusCode}.", (int)response.StatusCode);
         return null;
+    }
+
+    public async Task<PaymentLinkLookupResult?> GetPaymentLinkAsync(long orderCode, CancellationToken cancellationToken = default)
+    {
+        if (!_resilience.TryEnter()) return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
+        using var response = await _httpClient.GetAsync($"v2/payment-requests/{orderCode}", cancellationToken);
+        if ((int)response.StatusCode == 404)
+        {
+            _resilience.RecordSuccess();
+            return new PaymentLinkLookupResult(PaymentLinkLookupState.NotFound);
+        }
+        if (!response.IsSuccessStatusCode)
+        {
+            _resilience.RecordFailure();
+            return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
+        }
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+        if (!document.RootElement.TryGetProperty("data", out var data)
+            || !data.TryGetProperty("checkoutUrl", out var checkoutUrl))
+        {
+            _resilience.RecordFailure();
+            return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
+        }
+
+        var value = checkoutUrl.GetString();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            _resilience.RecordFailure();
+            return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
+        }
+
+        _resilience.RecordSuccess();
+        return new PaymentLinkLookupResult(PaymentLinkLookupState.Found, value);
     }
 
     public PayOSWebhookData? VerifyPaymentWebhookData(string webhookBody, string signature)
@@ -128,7 +181,6 @@ public class PayOSService : IPayOSService
             decimal amount = dataElement.GetProperty("amount").GetDecimal();
             long orderCode = dataElement.GetProperty("orderCode").GetInt64();
             string description = dataElement.TryGetProperty("description", out var d) ? d.GetString() ?? "" : "";
-            string accountNumber = dataElement.TryGetProperty("accountNumber", out var an) ? an.GetString() ?? "" : "";
             string reference = dataElement.TryGetProperty("reference", out var r) ? r.GetString() ?? "" : "";
             string transactionDateTime = dataElement.TryGetProperty("transactionDateTime", out var tdt) ? tdt.GetString() ?? "" : "";
             string currency = dataElement.TryGetProperty("currency", out var curr) ? curr.GetString() ?? "VND" : "VND";
@@ -144,14 +196,13 @@ public class PayOSService : IPayOSService
                 OrderCode = orderCode,
                 Amount = amount,
                 Description = description,
-                AccountNumber = accountNumber,
                 Reference = reference,
                 TransactionDateTime = transactionDateTime,
                 Currency = currency,
                 PaymentLinkId = paymentLinkId,
                 Code = code,
                 Success = success,
-                RawPayload = webhookBody
+                PayloadHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(webhookBody))).ToLowerInvariant()
             };
         }
         catch

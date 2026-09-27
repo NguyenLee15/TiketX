@@ -117,9 +117,11 @@ public class ChangeUserRoleCommandHandler : IRequestHandler<ChangeUserRoleComman
             try
             {
                 if (!lease.IsValid) return AdminOperationResult.Conflict("Khóa thao tác đã hết hạn. Vui lòng thử lại.", "ADMIN_LOCK_LOST");
+                await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
                 await _context.SaveChangesAsync(cancellationToken);
                 if (_refreshTokens is not null)
                     await _refreshTokens.RevokeAllForUserAsync(user.Id, cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
             }
             catch (DbUpdateConcurrencyException)
             {

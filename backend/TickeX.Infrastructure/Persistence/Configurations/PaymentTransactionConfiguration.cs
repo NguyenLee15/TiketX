@@ -16,6 +16,7 @@ public class PaymentTransactionConfiguration : IEntityTypeConfiguration<PaymentT
         builder.Property(p => p.ProviderTransactionId).HasMaxLength(150);
         builder.Property(p => p.Status).IsRequired().HasMaxLength(50);
         builder.Property(p => p.RawWebhookPayload).HasMaxLength(4000);
+        builder.Property(p => p.WebhookPayloadHash).HasMaxLength(64);
         builder.Property(p => p.CheckoutUrl).HasMaxLength(2048);
 
         builder.HasIndex(p => p.OrderCode).IsUnique();

@@ -147,6 +147,68 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
     }
 
     [Fact]
+    public async Task CreatePaymentLink_WhenExistingIntentIsStaleAndProviderHasLink_ReusesProviderLink()
+    {
+        var user = new User("Customer", "reconcile-link@test.local", "hash");
+        var @event = new Event("Future", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(2), "HCM", "Venue", 1);
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        var pendingIntent = new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price, "VietQR_PayOS");
+        _context.PaymentTransactions.Add(pendingIntent);
+        await _context.SaveChangesAsync();
+        _context.Entry(pendingIntent).Property(nameof(BaseEntity.CreatedAt)).CurrentValue = DateTime.UtcNow.AddMinutes(-2);
+        await _context.SaveChangesAsync();
+
+        var payos = new Mock<IPayOSService>();
+        payos.Setup(x => x.GetPaymentLinkAsync(ticket.OrderCode, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentLinkLookupResult(PaymentLinkLookupState.Found, "https://pay.example/reconciled"));
+
+        var result = await CreateOperations(payos.Object).CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        result.CheckoutUrl.Should().Be("https://pay.example/reconciled");
+        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreatePaymentLink_WhenProviderStateIsUnknown_DoesNotCreateDuplicateLink()
+    {
+        var user = new User("Customer", "unknown-link@test.local", "hash");
+        var @event = new Event("Future", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(2), "HCM", "Venue", 1);
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        var pendingIntent = new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price, "VietQR_PayOS");
+        _context.PaymentTransactions.Add(pendingIntent);
+        await _context.SaveChangesAsync();
+        _context.Entry(pendingIntent).Property(nameof(BaseEntity.CreatedAt)).CurrentValue = DateTime.UtcNow.AddMinutes(-2);
+        await _context.SaveChangesAsync();
+
+        var payos = new Mock<IPayOSService>();
+        payos.Setup(x => x.GetPaymentLinkAsync(ticket.OrderCode, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown));
+
+        var result = await CreateOperations(payos.Object).CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.Code.Should().Be("PAYMENT_LINK_IN_PROGRESS");
+        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task GetPaymentStatus_OnlyReturnsTheOwnerOrder()
     {
         var owner = new User("Owner", "owner@test.local", "hash");

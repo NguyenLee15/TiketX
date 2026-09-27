@@ -101,6 +101,32 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
             if (existing.Status == "Pending" && string.IsNullOrWhiteSpace(existing.CheckoutUrl) && existing.CreatedAt > _time.UtcNow.AddSeconds(-30))
                 return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được xử lý. Vui lòng chờ giây lát.");
 
+            if (existing.Status == "Pending" && string.IsNullOrWhiteSpace(existing.CheckoutUrl))
+            {
+                PaymentLinkLookupResult? lookup;
+                try
+                {
+                    lookup = await _payOS.GetPaymentLinkAsync(ticket.OrderCode, cancellationToken);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được đối soát. Vui lòng thử lại sau.");
+                }
+                catch (HttpRequestException)
+                {
+                    return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được đối soát. Vui lòng thử lại sau.");
+                }
+                if (lookup?.State == PaymentLinkLookupState.Found && !string.IsNullOrWhiteSpace(lookup.CheckoutUrl))
+                {
+                    existing.SetCheckoutUrl(lookup.CheckoutUrl);
+                    await _context.SaveChangesAsync(cancellationToken);
+                    return Link(ticket, lookup.CheckoutUrl);
+                }
+
+                if (lookup?.State != PaymentLinkLookupState.NotFound)
+                    return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được đối soát. Vui lòng thử lại sau.");
+            }
+
             if (existing.Status != "Pending")
                 return Fail("PAYMENT_LINK_CONFLICT", "Giao dịch thanh toán đã ở trạng thái kết thúc.");
         }
@@ -200,7 +226,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         if (!_environment.IsDevelopment()) return Fail("PAYMENT_SIMULATION_DISABLED", "Mô phỏng thanh toán chỉ có ở môi trường phát triển.");
         var ticket = await _context.Tickets.AsNoTracking().SingleOrDefaultAsync(t => t.OrderCode == orderCode && t.UserId == userId, cancellationToken);
         if (ticket is null) return Fail("PAYMENT_NOT_FOUND", "Không tìm thấy đơn hàng.");
-        var data = new PayOSWebhookData { OrderCode = ticket.OrderCode, Amount = ticket.Price, Code = "00", Success = true, RawPayload = "development-simulation" };
+        var data = new PayOSWebhookData { OrderCode = ticket.OrderCode, Amount = ticket.Price, Code = "00", Success = true };
         return await _mediator.Send(new ProcessPaymentCommand(data), cancellationToken)
             ? new(true, "PAYMENT_PROCESSED", "Đã xác nhận thanh toán.", ticket.OrderCode)
             : Fail("PAYMENT_PROCESSING_FAILED", "Không thể xác nhận thanh toán.");

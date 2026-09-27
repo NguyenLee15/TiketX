@@ -6,7 +6,11 @@ namespace TickeX.Application.Admin.Commands;
 
 public sealed record RetryRefundRequestCommand(Guid RefundRequestId) : IRequest<string>;
 
-public sealed class RetryRefundRequestCommandHandler(IApplicationDbContext context, IPayOSPayoutService payOs, IRefundBankAccountProtector protector) : IRequestHandler<RetryRefundRequestCommand, string>
+public sealed class RetryRefundRequestCommandHandler(
+    IApplicationDbContext context,
+    IPayOSPayoutService payOs,
+    IRefundBankAccountProtector protector,
+    IDistributedLockService locks) : IRequestHandler<RetryRefundRequestCommand, string>
 {
     public async Task<string> Handle(RetryRefundRequestCommand request, CancellationToken cancellationToken)
     {
@@ -14,35 +18,54 @@ public sealed class RetryRefundRequestCommandHandler(IApplicationDbContext conte
         if (refund is null) return "REFUND_NOT_FOUND";
         if (refund.Status != "NeedsReview") return "REFUND_NOT_RETRYABLE";
 
-        var stableReference = $"refund-{refund.Id:N}-{refund.ProviderRetryGeneration}";
-        var remote = (refund.ProviderStatus is "PROCESSING" or "PENDING") && refund.ProviderReference is not null
-            ? await payOs.GetStatusAsync(refund.ProviderReference, cancellationToken)
-            : await payOs.FindByReferenceAsync(stableReference, cancellationToken);
+        IDistributedLockLease? lease;
         try
         {
-            if (remote.State == "SUCCEEDED")
-            {
-                if (refund.EncryptedDestinationSnapshot is null
-                    || !remote.MatchesDestination(protector.Unprotect(refund.EncryptedDestinationSnapshot)))
-                    return "REFUND_DESTINATION_REVIEW_REQUIRED";
-                var ticket = await context.Tickets.SingleAsync(x => x.Id == refund.TicketId, cancellationToken);
-                var payment = await context.PaymentTransactions.SingleOrDefaultAsync(x => x.TicketId == refund.TicketId, cancellationToken);
-                if (ticket.Status == TickeX.Domain.Enums.TicketStatus.RefundPending) ticket.CompleteRefund(refund.Amount);
-                payment?.MarkRefunded(remote.PayoutId ?? refund.ProviderReference ?? stableReference, "PayOS payout reconciled as SUCCEEDED");
-                refund.MarkCompleted(remote.PayoutId ?? refund.ProviderReference ?? stableReference);
-                await context.SaveChangesAsync(cancellationToken);
-                return "REFUND_COMPLETED";
-            }
-            if (remote.Error is not null || remote.State is not ("FAILED" or "CANCELLED" or "REJECTED" or "ERROR"))
-                return "REFUND_PROVIDER_NOT_RECONCILED";
-
-            refund.RetryAfterReconciliation(DateTime.UtcNow, remote.State);
-            await context.SaveChangesAsync(cancellationToken);
-            return "REFUND_RETRY_QUEUED";
+            lease = await locks.AcquireLockAsync(
+                $"refund:reconcile:{refund.Id:N}", TimeSpan.FromSeconds(30), cancellationToken);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (Exception)
         {
-            return "REFUND_CONCURRENCY_CONFLICT";
+            return "REFUND_RECONCILIATION_LOCK_UNAVAILABLE";
+        }
+
+        if (lease is null)
+            return "REFUND_RECONCILIATION_IN_PROGRESS";
+
+        await using (lease)
+        {
+            if (!lease.IsValid) return "REFUND_RECONCILIATION_LOCK_LOST";
+
+            var stableReference = $"refund-{refund.Id:N}-{refund.ProviderRetryGeneration}";
+            var remote = (refund.ProviderStatus is "PROCESSING" or "PENDING") && refund.ProviderReference is not null
+                ? await payOs.GetStatusAsync(refund.ProviderReference, cancellationToken)
+                : await payOs.FindByReferenceAsync(stableReference, cancellationToken);
+            try
+            {
+                if (remote.State == "SUCCEEDED")
+                {
+                    if (refund.EncryptedDestinationSnapshot is null
+                        || !remote.MatchesDestination(protector.Unprotect(refund.EncryptedDestinationSnapshot)))
+                        return "REFUND_DESTINATION_REVIEW_REQUIRED";
+                    var ticket = await context.Tickets.SingleAsync(x => x.Id == refund.TicketId, cancellationToken);
+                    var payment = await context.PaymentTransactions.SingleOrDefaultAsync(x => x.TicketId == refund.TicketId, cancellationToken);
+                    if (ticket.Status == TickeX.Domain.Enums.TicketStatus.RefundPending) ticket.CompleteRefund(refund.Amount);
+                    payment?.MarkRefunded(remote.PayoutId ?? refund.ProviderReference ?? stableReference, "PayOS payout reconciled as SUCCEEDED");
+                    refund.MarkCompleted(remote.PayoutId ?? refund.ProviderReference ?? stableReference);
+                    await context.SaveChangesAsync(cancellationToken);
+                    return "REFUND_COMPLETED";
+                }
+                if (remote.Error is not null || remote.State is not ("FAILED" or "CANCELLED" or "REJECTED" or "ERROR"))
+                    return "REFUND_PROVIDER_NOT_RECONCILED";
+
+                refund.RetryAfterReconciliation(DateTime.UtcNow, remote.State);
+                await context.SaveChangesAsync(cancellationToken);
+                return "REFUND_RETRY_QUEUED";
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return "REFUND_CONCURRENCY_CONFLICT";
+            }
         }
     }
 }

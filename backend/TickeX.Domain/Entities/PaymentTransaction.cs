@@ -9,6 +9,7 @@ public class PaymentTransaction : BaseEntity
     public string ProviderTransactionId { get; private set; } = string.Empty;
     public string Status { get; private set; } = "Pending"; // Pending, Success, Failed, RefundInitiated, Refunded, RefundFailed
     public string RawWebhookPayload { get; private set; } = string.Empty;
+    public string WebhookPayloadHash { get; private set; } = string.Empty;
     public string CheckoutUrl { get; private set; } = string.Empty;
     public DateTime ProcessedAt { get; private set; } = DateTime.UtcNow;
 
@@ -36,6 +37,12 @@ public class PaymentTransaction : BaseEntity
     public void SetCheckoutUrl(string checkoutUrl)
     {
         CheckoutUrl = checkoutUrl;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetWebhookPayloadHash(string payloadHash)
+    {
+        WebhookPayloadHash = payloadHash.Length <= 64 ? payloadHash : payloadHash[..64];
         UpdatedAt = DateTime.UtcNow;
     }
 

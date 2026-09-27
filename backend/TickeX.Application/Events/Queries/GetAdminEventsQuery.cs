@@ -84,17 +84,28 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
                 e.BannerUrl,
                 e.OrganizerName,
                 e.TotalSeats,
-                AvailableSeats = _context.Seats.Count(s => s.EventId == e.Id && s.Status == SeatStatus.Available),
                 e.BasePrice,
                 MinPrice = e.BasePrice * 0.75m,
                 MaxPrice = e.BasePrice * 1.75m,
                 e.Status,
                 e.RefundCutoffHours,
                 e.IsDeleted,
-                HasTicketHistory = _context.Tickets.Any(t => t.EventId == e.Id),
                 e.Version
             })
             .ToListAsync(cancellationToken);
+
+        var eventIds = rawEvents.Select(e => e.Id).ToArray();
+        var availableSeats = await _context.Seats
+            .Where(s => eventIds.Contains(s.EventId) && s.Status == SeatStatus.Available)
+            .GroupBy(s => s.EventId)
+            .Select(g => new { EventId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.EventId, x => x.Count, cancellationToken);
+        var ticketHistoryIds = await _context.Tickets
+            .Where(t => eventIds.Contains(t.EventId))
+            .Select(t => t.EventId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var ticketHistory = ticketHistoryIds.ToHashSet();
 
         var events = rawEvents.Select(e => new EventDto(
             e.Id,
@@ -109,14 +120,14 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
             e.BannerUrl,
             e.OrganizerName,
             e.TotalSeats,
-            e.AvailableSeats,
+            availableSeats.GetValueOrDefault(e.Id),
             e.BasePrice,
             e.MinPrice,
             e.MaxPrice,
             e.Status,
             e.RefundCutoffHours,
             e.IsDeleted,
-            e.HasTicketHistory,
+            ticketHistory.Contains(e.Id),
             e.Version != null && e.Version.Length > 0 ? Convert.ToBase64String(e.Version) : null
         )).ToList();
 

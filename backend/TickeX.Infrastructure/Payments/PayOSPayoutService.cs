@@ -13,13 +13,15 @@ public sealed class PayOSPayoutService : IPayOSPayoutService
     private readonly string _clientId;
     private readonly string _apiKey;
     private readonly string _checksumKey;
+    private readonly PayOSResilienceGate _resilience;
 
-    public PayOSPayoutService(HttpClient client, IConfiguration configuration)
+    public PayOSPayoutService(HttpClient client, IConfiguration configuration, PayOSResilienceGate? resilience = null)
     {
         _client = client;
         _clientId = configuration["PayOS:PayoutClientId"] ?? throw new InvalidOperationException("PayOS:PayoutClientId is required for payouts.");
         _apiKey = configuration["PayOS:PayoutApiKey"] ?? throw new InvalidOperationException("PayOS:PayoutApiKey is required for payouts.");
         _checksumKey = configuration["PayOS:PayoutChecksumKey"] ?? throw new InvalidOperationException("PayOS:PayoutChecksumKey is required for payouts.");
+        _resilience = resilience ?? new PayOSResilienceGate();
         var baseUrl = configuration["PayOS:BaseUrl"]?.Trim() ?? "https://api-merchant.payos.vn/";
         _client.BaseAddress = new Uri(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/");
         _client.Timeout = TimeSpan.FromSeconds(15);
@@ -27,6 +29,7 @@ public sealed class PayOSPayoutService : IPayOSPayoutService
 
     public async Task<PayOSPayoutResult> CreateOrGetAsync(string referenceId, string idempotencyKey, long amount, RefundBankAccountDetails destination, CancellationToken cancellationToken)
     {
+        if (!_resilience.TryEnter()) return new PayOSPayoutResult(null, null, "PayOS circuit is open.");
         var payload = new
         {
             referenceId,
@@ -45,27 +48,43 @@ public sealed class PayOSPayoutService : IPayOSPayoutService
         AddHeaders(request, idempotencyKey, Sign(canonical));
         using var response = await _client.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode)
+        {
+            _resilience.RecordFailure();
             return await FindByReferenceAsync(referenceId, cancellationToken);
+        }
+        _resilience.RecordSuccess();
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
         return Parse(document.RootElement);
     }
 
     public async Task<PayOSPayoutResult> GetStatusAsync(string payoutId, CancellationToken cancellationToken)
     {
+        if (!_resilience.TryEnter()) return new PayOSPayoutResult(payoutId, null, "PayOS circuit is open.");
         using var request = new HttpRequestMessage(HttpMethod.Get, $"v1/payouts/{Uri.EscapeDataString(payoutId)}");
         AddHeaders(request, null, null);
         using var response = await _client.SendAsync(request, cancellationToken);
-        if (!response.IsSuccessStatusCode) return new PayOSPayoutResult(payoutId, null, $"PayOS status returned HTTP {(int)response.StatusCode}.");
+        if (!response.IsSuccessStatusCode)
+        {
+            _resilience.RecordFailure();
+            return new PayOSPayoutResult(payoutId, null, $"PayOS status returned HTTP {(int)response.StatusCode}.");
+        }
+        _resilience.RecordSuccess();
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
         return Parse(document.RootElement);
     }
 
     public async Task<PayOSPayoutResult> FindByReferenceAsync(string referenceId, CancellationToken cancellationToken)
     {
+        if (!_resilience.TryEnter()) return new PayOSPayoutResult(null, null, "PayOS circuit is open.");
         using var request = new HttpRequestMessage(HttpMethod.Get, $"v1/payouts?referenceId={Uri.EscapeDataString(referenceId)}&limit=10&offset=0");
         AddHeaders(request, null, null);
         using var response = await _client.SendAsync(request, cancellationToken);
-        if (!response.IsSuccessStatusCode) return new PayOSPayoutResult(null, null, $"PayOS reference lookup returned HTTP {(int)response.StatusCode}.");
+        if (!response.IsSuccessStatusCode)
+        {
+            _resilience.RecordFailure();
+            return new PayOSPayoutResult(null, null, $"PayOS reference lookup returned HTTP {(int)response.StatusCode}.");
+        }
+        _resilience.RecordSuccess();
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
         var root = document.RootElement;
         var data = root.TryGetProperty("data", out var d) ? d : default;

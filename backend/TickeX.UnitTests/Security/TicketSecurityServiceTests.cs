@@ -101,4 +101,26 @@ public class TicketSecurityServiceTests
         result.IsValid.Should().BeFalse();
         result.Message.Should().Contain("hết hạn");
     }
+
+    [Fact]
+    public void ValidateQrToken_WhenTokenStructureIsMalformed_ShouldReturnInvalid()
+    {
+        var result = _service.ValidateQrToken("not-a-valid-token");
+
+        result.IsValid.Should().BeFalse();
+        result.Message.Should().Contain("Định dạng mã QR không hợp lệ");
+    }
+
+    [Fact]
+    public void ValidateQrToken_WhenKeyIdIsUnknown_ShouldReturnInvalid()
+    {
+        var payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(
+            $"{{\"tid\":\"{Guid.NewGuid()}\",\"eid\":\"{Guid.NewGuid()}\",\"code\":123,\"exp\":{DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds()},\"kid\":\"unknown\"}}"))
+            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+        var result = _service.ValidateQrToken($"{payload}.signature");
+
+        result.IsValid.Should().BeFalse();
+        result.Message.Should().Contain("không tồn tại trong hệ thống");
+    }
 }
