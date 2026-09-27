@@ -7,6 +7,7 @@ using TickeX.Application.Admin.Commands;
 using TickeX.Application.Admin.Queries;
 using TickeX.Application.Interfaces;
 using Microsoft.AspNetCore.RateLimiting;
+using TickeX.WebApi.Filters;
 
 namespace TickeX.WebApi.Controllers;
 
@@ -49,6 +50,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("refunds/{id:guid}/retries")]
+    [Idempotent]
     public async Task<IActionResult> RetryRefund(Guid id, CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(new RetryRefundRequestCommand(id), cancellationToken);
@@ -65,6 +67,7 @@ public class AdminController : ControllerBase
     public record ChangeRoleRequest(string Role, string? ExpectedVersion = null);
 
     [HttpPut("users/{id}/role")]
+    [Idempotent]
     public async Task<IActionResult> ChangeUserRole(Guid id, [FromBody] ChangeRoleRequest? request, CancellationToken cancellationToken = default)
     {
         if (request is null)
@@ -94,6 +97,7 @@ public class AdminController : ControllerBase
     public record BlockUserRequest(bool IsBlocked, string? ExpectedVersion = null);
 
     [HttpPut("users/{id}/block")]
+    [Idempotent]
     public async Task<IActionResult> BlockUser(Guid id, [FromBody] BlockUserRequest? request, CancellationToken cancellationToken = default)
     {
         if (request is null)

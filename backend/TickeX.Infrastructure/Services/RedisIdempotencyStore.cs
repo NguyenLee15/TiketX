@@ -12,7 +12,7 @@ public sealed class RedisIdempotencyStore(IConnectionMultiplexer redis) : IIdemp
     public async Task<IdempotencyClaim> TryClaimAsync(string key, string processingRecord, TimeSpan ttl, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!redis.IsConnected) throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Redis is disconnected");
+        if (!redis.IsConnected) throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, CommandFlags.None, "Redis is disconnected", null, CommandStatus.Unknown);
         var token = Guid.NewGuid().ToString("N");
         var processing = $"{token}\n{processingRecord}";
         var result = (RedisResult[]?)await redis.GetDatabase().ScriptEvaluateAsync(
@@ -26,7 +26,7 @@ public sealed class RedisIdempotencyStore(IConnectionMultiplexer redis) : IIdemp
     public async Task CompleteAsync(string key, string ownerToken, string completedRecord, TimeSpan ttl, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!redis.IsConnected) throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Redis is disconnected");
+        if (!redis.IsConnected) throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, CommandFlags.None, "Redis is disconnected", null, CommandStatus.Unknown);
         await redis.GetDatabase().ScriptEvaluateAsync(CompleteScript, new RedisKey[] { key }, new RedisValue[] { ownerToken, $"{ownerToken}\n{completedRecord}", (long)ttl.TotalMilliseconds }).ConfigureAwait(false);
     }
 

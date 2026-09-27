@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TickeX.Application.Users.Commands;
 using TickeX.Application.Users.Queries;
+using TickeX.WebApi.Filters;
 
 namespace TickeX.WebApi.Controllers;
 
@@ -35,6 +36,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("profile")]
+    [Idempotent]
     public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken cancellationToken = default)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -51,6 +53,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("change-password")]
+    [Idempotent]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken = default)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -67,6 +70,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("me/refund-bank-account")]
+    [Idempotent]
     public async Task<IActionResult> SaveRefundBankAccount([FromBody] SaveRefundBankAccountRequest request, CancellationToken cancellationToken = default)
     {
         var userId = GetAuthenticatedUserId();
@@ -77,6 +81,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("me/refund-bank-account")]
+    [Idempotent]
     public async Task<IActionResult> DeleteRefundBankAccount(CancellationToken cancellationToken = default)
     {
         var userId = GetAuthenticatedUserId();

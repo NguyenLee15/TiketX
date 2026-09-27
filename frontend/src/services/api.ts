@@ -15,7 +15,8 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
-  if (token) {
+  const isAuthRefresh = config.url?.includes('/auth/refresh');
+  if (token && !isAuthRefresh) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   if (!['get', 'head', 'options'].includes((config.method || 'get').toLowerCase())) {
@@ -103,11 +104,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshResponse = await axios.post(
-          `${API_BASE_URL}/api/auth/refresh`,
-          {},
-          { withCredentials: true }
-        );
+        const refreshResponse = await api.post('/api/auth/refresh', {});
 
         const refreshData = refreshResponse.data?.data;
         const newToken = refreshData?.token ?? null;

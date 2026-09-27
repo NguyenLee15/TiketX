@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using TickeX.Application.Tickets.Commands;
 using TickeX.Application.Tickets.Queries;
 using TickeX.Application.Interfaces;
+using TickeX.WebApi.Filters;
 
 namespace TickeX.WebApi.Controllers;
 
@@ -43,6 +44,7 @@ public class TicketsController : ControllerBase
     public record RefundRequest(string? Reason);
 
     [HttpPost("{id}/refund")]
+    [Idempotent]
     public async Task<IActionResult> RefundTicket(Guid id, [FromBody] RefundRequest? request, CancellationToken cancellationToken = default)
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -86,6 +88,7 @@ public class TicketsController : ControllerBase
     public record CheckInRequest(string QrToken);
 
     [HttpPost("check-in")]
+    [Idempotent]
     [Authorize(Roles = "Admin,Staff")]
     [EnableRateLimiting("BookingPolicy")]
     public async Task<IActionResult> CheckIn([FromBody] CheckInRequest request, CancellationToken cancellationToken = default)

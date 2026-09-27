@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TickeX.Application.Interfaces;
+using TickeX.WebApi.Filters;
 
 namespace TickeX.WebApi.Controllers;
 
@@ -16,6 +17,7 @@ public sealed class ReservationsController : ControllerBase
     public sealed record ReleaseReservationRequest(string? Reason);
 
     [HttpPost("{ticketId:guid}/release")]
+    [Idempotent]
     public async Task<IActionResult> Release(Guid ticketId, [FromBody] ReleaseReservationRequest? request, CancellationToken cancellationToken = default)
     {
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))

@@ -174,6 +174,8 @@ if (!builder.Environment.IsDevelopment())
     var cookies = builder.Configuration.GetSection(CookieAuthenticationSettings.SectionName).Get<CookieAuthenticationSettings>();
     if (cookies?.Secure != true)
         throw new InvalidOperationException("Authentication:Cookie:Secure must be true outside Development.");
+    if (cookies.SameSite != SameSiteMode.Strict)
+        throw new InvalidOperationException("Authentication:Cookie:SameSite must be Strict outside Development.");
 }
 
 builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)

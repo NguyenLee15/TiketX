@@ -66,10 +66,25 @@ public class PayOSService : IPayOSService
         };
 
         var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        HttpResponseMessage response;
         try
         {
-            response = await _httpClient.PostAsync("v2/payment-requests", content, cancellationToken);
+            using var response = await _httpClient.PostAsync("v2/payment-requests", content, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _resilience.RecordSuccess();
+                var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
+                var jsonDoc = JsonDocument.Parse(responseString);
+                var dataElement = jsonDoc.RootElement.GetProperty("data");
+                string checkoutUrl = dataElement.GetProperty("checkoutUrl").GetString() ?? "";
+
+                return new CreatePaymentResult { CheckoutUrl = checkoutUrl };
+            }
+
+            _ = await response.Content.ReadAsStringAsync(cancellationToken);
+            _resilience.RecordFailure();
+            _logger.LogWarning("PayOS payment-link request failed with HTTP status {StatusCode}.", (int)response.StatusCode);
+            return null;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -82,21 +97,6 @@ public class PayOSService : IPayOSService
             throw;
         }
 
-        if (response.IsSuccessStatusCode)
-        {
-            _resilience.RecordSuccess();
-            var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
-            var jsonDoc = JsonDocument.Parse(responseString);
-            var dataElement = jsonDoc.RootElement.GetProperty("data");
-            string checkoutUrl = dataElement.GetProperty("checkoutUrl").GetString() ?? "";
-            
-            return new CreatePaymentResult { CheckoutUrl = checkoutUrl };
-        }
-
-        var error = await response.Content.ReadAsStringAsync(cancellationToken);
-        _resilience.RecordFailure();
-        _logger.LogWarning("PayOS payment-link request failed with HTTP status {StatusCode}.", (int)response.StatusCode);
-        return null;
     }
 
     public async Task<PaymentLinkLookupResult?> GetPaymentLinkAsync(long orderCode, CancellationToken cancellationToken = default)

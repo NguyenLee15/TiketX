@@ -177,21 +177,18 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
                     $"TickeX {ticket.OrderCode}", ReturnUrl(ticket.OrderCode), CancelUrl(ticket.OrderCode), cancellationToken);
                 if (result is null || string.IsNullOrWhiteSpace(result.CheckoutUrl))
                 {
-                    if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
-                    return Fail("PAYMENT_PROVIDER_UNAVAILABLE", "Không thể tạo liên kết thanh toán.");
+                    return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được đối soát. Vui lòng thử lại sau.");
                 }
                 checkoutUrl = result.CheckoutUrl;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(CancellationToken.None); }
                 throw;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "PayOS CreatePaymentLink failed for {OrderCode}", ticket.OrderCode);
-                if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
-                return Fail("PAYMENT_PROVIDER_ERROR", "Lỗi kết nối cổng thanh toán. Vui lòng thử lại.");
+                return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được đối soát. Vui lòng thử lại sau.");
             }
         }
 

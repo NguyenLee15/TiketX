@@ -111,7 +111,7 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
     }
 
     [Fact]
-    public async Task CreatePaymentLink_WhenProviderTimesOut_AllowsSubsequentRetryToSucceed()
+    public async Task CreatePaymentLink_WhenProviderTimesOut_PreservesIntentAndDoesNotBlindRetry()
     {
         var user = new User("Customer", "retry-link@test.local", "hash");
         var @event = new Event("Future", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(2), "HCM", "Venue", 1);
@@ -125,25 +125,22 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
         await _context.SaveChangesAsync();
 
         var payos = new Mock<IPayOSService>();
-        // First attempt times out, second succeeds
-        payos.SetupSequence(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new TimeoutException())
-            .ReturnsAsync(new CreatePaymentResult { CheckoutUrl = "https://pay.payos.vn/web/test-retry-123" });
+        payos.Setup(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException());
 
         var operations = CreateOperations(payos.Object);
 
-        // First attempt fails cleanly
         var firstResult = await operations.CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
         firstResult.Success.Should().BeFalse();
-        firstResult.Code.Should().Be("PAYMENT_PROVIDER_ERROR");
+        firstResult.Code.Should().Be("PAYMENT_LINK_IN_PROGRESS");
 
-        // Second attempt retries under the hold window and succeeds!
+        (await _context.PaymentTransactions.SingleAsync(x => x.TicketId == ticket.Id))
+            .Status.Should().Be("Pending");
+
         var secondResult = await operations.CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
-        secondResult.Success.Should().BeTrue();
-        secondResult.CheckoutUrl.Should().Be("https://pay.payos.vn/web/test-retry-123");
-        var tx = await _context.PaymentTransactions.SingleAsync(x => x.TicketId == ticket.Id);
-        tx.CheckoutUrl.Should().Be("https://pay.payos.vn/web/test-retry-123");
-        tx.Status.Should().Be("Pending");
+        secondResult.Success.Should().BeFalse();
+        secondResult.Code.Should().Be("PAYMENT_LINK_IN_PROGRESS");
+        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

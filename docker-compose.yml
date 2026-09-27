@@ -17,12 +17,9 @@ services:
   sql-bootstrap:
     image: mcr.microsoft.com/mssql/server:2022-latest
     entrypoint: ["/bin/bash", "-c"]
-    command: >-
-      /opt/mssql-tools18/bin/sqlcmd -S sqlserver,1433 -U sa -P "$$MSSQL_SA_PASSWORD" -C -b
-      -v MSSQL_APP_USER="$$MSSQL_APP_USER" MSSQL_APP_PASSWORD="$$MSSQL_APP_PASSWORD"
-      MSSQL_HANGFIRE_USER="$$MSSQL_HANGFIRE_USER" MSSQL_HANGFIRE_PASSWORD="$$MSSQL_HANGFIRE_PASSWORD"
-      MSSQL_MIGRATOR_USER="$$MSSQL_MIGRATOR_USER" MSSQL_MIGRATOR_PASSWORD="$$MSSQL_MIGRATOR_PASSWORD"
-      -i /scripts/bootstrap-sql-principals.sql
+    command:
+      - >-
+        for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do /opt/mssql-tools18/bin/sqlcmd -S sqlserver,1433 -U sa -P "$$MSSQL_SA_PASSWORD" -C -b -v MSSQL_APP_USER="$$MSSQL_APP_USER" MSSQL_APP_PASSWORD="$$MSSQL_APP_PASSWORD" MSSQL_HANGFIRE_USER="$$MSSQL_HANGFIRE_USER" MSSQL_HANGFIRE_PASSWORD="$$MSSQL_HANGFIRE_PASSWORD" MSSQL_MIGRATOR_USER="$$MSSQL_MIGRATOR_USER" MSSQL_MIGRATOR_PASSWORD="$$MSSQL_MIGRATOR_PASSWORD" -i /scripts/bootstrap-sql-principals.sql && exit 0; sleep 5; done; exit 1
     environment:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
       MSSQL_APP_USER: ${MSSQL_APP_USER:?Set MSSQL_APP_USER in .env}
@@ -46,10 +43,31 @@ services:
     command: ["--migrate"]
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__MigrationConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=True;
       ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=True;
       ConnectionStrings__HangfireConnection: Server=sqlserver,1433;Database=TickeXHangfire;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=True;
       ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD},abortConnect=false
       DataProtection__KeyRingPath: /var/tickex-dpkeys
+      Jwt__Key: ${JWT_KEY:?Set JWT_KEY in .env}
+      TicketSecurity__ActiveKeyId: key-2026-v1
+      TicketSecurity__SecretKeys__key-2026-v1: ${TICKET_SIGNING_KEY:?Set TICKET_SIGNING_KEY in .env}
+      RabbitMQ__HostName: rabbitmq
+      RabbitMQ__UserName: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
+      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
+      PayOS__ClientId: ${PAYOS_CLIENT_ID:?Set PAYOS_CLIENT_ID in .env}
+      PayOS__ApiKey: ${PAYOS_API_KEY:?Set PAYOS_API_KEY in .env}
+      PayOS__ChecksumKey: ${PAYOS_CHECKSUM_KEY:?Set PAYOS_CHECKSUM_KEY in .env}
+      PayOS__PayoutClientId: ${PAYOS_PAYOUT_CLIENT_ID:?Set PAYOS_PAYOUT_CLIENT_ID in .env}
+      PayOS__PayoutApiKey: ${PAYOS_PAYOUT_API_KEY:?Set PAYOS_PAYOUT_API_KEY in .env}
+      PayOS__PayoutChecksumKey: ${PAYOS_PAYOUT_CHECKSUM_KEY:?Set PAYOS_PAYOUT_CHECKSUM_KEY in .env}
+      PayOS__ReturnUrl: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN in .env}/payment-result
+      PayOS__CancelUrl: ${PUBLIC_ORIGIN}/my-tickets
+      Smtp__Server: ${SMTP_SERVER:?Set SMTP_SERVER in .env}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__Username: ${SMTP_USERNAME:?Set SMTP_USERNAME in .env}
+      Smtp__Password: ${SMTP_PASSWORD:?Set SMTP_PASSWORD in .env}
+      Smtp__FromEmail: ${SMTP_FROM_EMAIL:?Set SMTP_FROM_EMAIL in .env}
+      Cors__AllowedOrigins__0: ${PUBLIC_ORIGIN}
     volumes:
       - tickex_dpkeys:/var/tickex-dpkeys
     networks: [private]

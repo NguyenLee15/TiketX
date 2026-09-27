@@ -86,11 +86,27 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
         var localToday = _time.LocalNow.Date;
         var cutoffLocal = localToday.AddDays(-6);
         var cutoffUtc = _time.ToUtc(cutoffLocal);
-        var recentPaid = await operationalTickets
-            .Where(t => paidStates.Contains(t.Status) && t.PaidAt.HasValue && t.PaidAt.Value >= cutoffUtc)
-            .Select(t => new { PaidAt = t.PaidAt!.Value, t.Price }).ToListAsync(cancellationToken);
-        var grouped = recentPaid.GroupBy(x => _time.ToLocal(x.PaidAt).Date)
-            .ToDictionary(g => g.Key, g => new { Revenue = g.Sum(x => x.Price), Count = g.Count() });
+        Dictionary<DateTime, (decimal Revenue, int Count)> grouped;
+        if (isSqlite)
+        {
+            var recentPaid = await operationalTickets
+                .Where(t => paidStates.Contains(t.Status) && t.PaidAt.HasValue && t.PaidAt.Value >= cutoffUtc)
+                .Select(t => new { t.PaidAt, t.Price }).ToListAsync(cancellationToken);
+            grouped = recentPaid
+                .GroupBy(x => _time.ToLocal(x.PaidAt!.Value).Date)
+                .ToDictionary(g => g.Key, g => (g.Sum(x => x.Price), g.Count()));
+        }
+        else
+        {
+            var sqlServerGroups = await operationalTickets
+                .Where(t => paidStates.Contains(t.Status) && t.PaidAt.HasValue && t.PaidAt.Value >= cutoffUtc)
+                .GroupBy(t => EF.Functions.DateDiffDay(cutoffUtc, t.PaidAt!.Value))
+                .Select(g => new { Offset = g.Key, Revenue = g.Sum(t => t.Price), Count = g.Count() })
+                .ToListAsync(cancellationToken);
+            grouped = sqlServerGroups.ToDictionary(
+                x => cutoffLocal.AddDays(x.Offset),
+                x => (x.Revenue, x.Count));
+        }
         var dailyStats = Enumerable.Range(0, 7).Select(i =>
         {
             var date = cutoffLocal.AddDays(i);

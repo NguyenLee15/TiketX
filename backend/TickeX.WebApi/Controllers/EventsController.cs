@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using TickeX.Application.Events.Queries;
 using TickeX.Application.Events.Commands;
 using TickeX.Application.Interfaces;
+using TickeX.WebApi.Filters;
 
 namespace TickeX.WebApi.Controllers;
 
@@ -62,6 +63,7 @@ public class EventsController : ControllerBase
     }
 
     [HttpPost]
+    [Idempotent]
     [Authorize(Roles = "Admin")]
     [EnableRateLimiting("AdminPolicy")]
     public async Task<IActionResult> CreateEvent([FromBody] CreateEventRequest? request, CancellationToken cancellationToken = default)
@@ -135,6 +137,7 @@ public class EventsController : ControllerBase
         string? ExpectedVersion = null);
 
     [HttpPut("{id}")]
+    [Idempotent]
     [Authorize(Roles = "Admin")]
     [EnableRateLimiting("AdminPolicy")]
     public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] UpdateEventRequest? request, CancellationToken cancellationToken = default)
@@ -179,6 +182,7 @@ public class EventsController : ControllerBase
     public record CancelEventRequest(string Reason);
 
     [HttpPost("{id}/cancel")]
+    [Idempotent]
     [Authorize(Roles = "Admin")]
     [EnableRateLimiting("AdminPolicy")]
     public async Task<IActionResult> CancelEvent(Guid id, [FromBody] CancelEventRequest? request, CancellationToken cancellationToken = default)
@@ -198,6 +202,7 @@ public class EventsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Idempotent]
     [Authorize(Roles = "Admin")]
     [EnableRateLimiting("AdminPolicy")]
     public async Task<IActionResult> DeleteEvent(Guid id, CancellationToken cancellationToken = default)

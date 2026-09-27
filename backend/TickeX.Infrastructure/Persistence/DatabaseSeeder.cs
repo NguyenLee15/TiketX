@@ -21,9 +21,10 @@ public static class DatabaseSeeder
                 logger.LogInformation("Seeding default users...");
 
                 var configuration = scope.ServiceProvider.GetService<Microsoft.Extensions.Configuration.IConfiguration>();
-                var defaultPassword = configuration?["Seed:AdminPassword"] 
-                    ?? Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD") 
-                    ?? "Admin@123";
+                var defaultPassword = configuration?["Seed:AdminPassword"]
+                    ?? Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD");
+                if (string.IsNullOrWhiteSpace(defaultPassword))
+                    throw new InvalidOperationException("Development database seeding requires Seed:AdminPassword or SEED_ADMIN_PASSWORD.");
 
                 var hasher = scope.ServiceProvider.GetService<TickeX.Application.Interfaces.IPasswordHasher>();
                 var adminPassword = hasher != null ? hasher.Hash(defaultPassword) : BCrypt.Net.BCrypt.HashPassword(defaultPassword);

@@ -45,7 +45,7 @@ export class ErrorBoundary extends Component<Props, State> {
               {this.props.fallbackTitle || 'Đã có lỗi xảy ra'}
             </h2>
             <p className="text-sm text-text-secondary mb-6 leading-relaxed">
-              {this.props.fallbackMessage || this.state.error?.message || 'Giao diện gặp sự cố ngoài dự kiến. Vui lòng tải lại trang hoặc quay lại trang chủ.'}
+              {this.props.fallbackMessage || 'Giao diện gặp sự cố ngoài dự kiến. Vui lòng tải lại trang hoặc quay lại trang chủ.'}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
