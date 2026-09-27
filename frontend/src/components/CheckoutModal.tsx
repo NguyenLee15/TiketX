@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Sparkles, Loader2, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { EventDetail, Seat } from '../types';
 import api from '../services/api';
 import { CheckoutInvoice } from './Checkout/CheckoutInvoice';
 import { CheckoutVietQrView, PaymentInfo } from './Checkout/CheckoutVietQrView';
 import { CheckoutReleaseDialog } from './Checkout/CheckoutReleaseDialog';
+import { CheckoutModalHeader } from './Checkout/CheckoutModalHeader';
+import { CheckoutStatusView } from './Checkout/CheckoutStatusView';
 import { useModalAccessibility } from './Admin/useModalAccessibility';
 import { checkoutLinkResponseSchema } from '../schemas/customerSchemas';
 
@@ -206,20 +207,7 @@ export default function CheckoutModal({
 
       <div ref={modalRef} className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-surface-1 border border-border-subtle shadow-2xl p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-200 text-text-primary z-10 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-border-subtle">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 id="checkout-modal-title" className="text-lg font-bold text-white leading-tight">Thanh Toán Giữ Chỗ</h2>
-              <p className="text-[11px] text-text-secondary">Xác nhận chuyển khoản VietQR hoặc cổng PayOS</p>
-            </div>
-          </div>
-          <button onClick={() => setShowCloseConfirm(true)} className="p-1.5 rounded-xl hover:bg-surface-2 text-text-secondary hover:text-white transition-colors cursor-pointer" aria-label="Đóng thanh toán">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        <CheckoutModalHeader onRequestClose={() => setShowCloseConfirm(true)} />
 
         {/* Content Body */}
         {status === 'idle' && (
@@ -263,35 +251,7 @@ export default function CheckoutModal({
           </div>
         )}
 
-        {status === 'verifying' && (
-          <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
-            <div className="w-16 h-16 bg-surface-2 rounded-2xl flex items-center justify-center border border-brand-primary/30">
-              <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
-            </div>
-            <h3 className="text-xl font-bold text-white">Đang Xác Nhận Giao Dịch</h3>
-            <p className="text-text-secondary text-xs max-w-xs">
-              Hệ thống đang đối soát mã đơn hàng và ký chữ ký số mã QR cho vé của bạn...
-            </p>
-          </div>
-        )}
-
-        {status === 'error' && (
-          <div className="flex flex-col items-center justify-center py-12 space-y-4 text-center">
-            <div className="w-16 h-16 bg-danger/10 rounded-2xl flex items-center justify-center border border-danger/30 text-danger">
-              <XCircle className="w-8 h-8" />
-            </div>
-            <h3 className="text-xl font-bold text-white">Hết Thời Gian Giữ Chỗ</h3>
-            <p className="text-text-secondary text-xs max-w-xs leading-relaxed">
-              Thời gian giữ chỗ trên hệ thống đã kết thúc. Ghế đã được giải phóng tự động để đảm bảo công bằng cho khán giả khác.
-            </p>
-            <button 
-              onClick={onClose}
-              className="px-6 py-3 bg-surface-2 hover:bg-surface-3 text-white text-xs font-bold rounded-xl transition-colors border border-border-subtle cursor-pointer"
-            >
-              Đóng & Quay Lại Sơ Đồ Ghế
-            </button>
-          </div>
-        )}
+        <CheckoutStatusView status={status} onClose={onClose} />
 
         {/* Release Confirmation Dialog */}
         <CheckoutReleaseDialog
