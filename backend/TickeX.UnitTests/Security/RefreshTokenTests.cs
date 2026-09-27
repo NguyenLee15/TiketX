@@ -28,6 +28,14 @@ public sealed class RefreshTokenTests
     }
 
     [Fact]
+    public void RefreshToken_SnapshotsUserSecurityStamp()
+    {
+        var token = new RefreshToken(Guid.NewGuid(), "hash", DateTime.UtcNow.AddDays(1), "security-stamp");
+
+        token.SecurityStamp.Should().Be("security-stamp");
+    }
+
+    [Fact]
     public async Task RotateAsync_WhenConcurrentRotationAttempted_ThrowsDbUpdateConcurrencyException()
     {
         using var connection = new Microsoft.Data.Sqlite.SqliteConnection("DataSource=:memory:");
@@ -95,7 +103,7 @@ public sealed class RefreshTokenTests
 
         // Reload user from dbContext
         mockTokens.Setup(x => x.FindAsync(hash, Moq.It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RefreshToken(user.Id, hash, DateTime.UtcNow.AddDays(1)));
+            .ReturnsAsync(new RefreshToken(user.Id, hash, DateTime.UtcNow.AddDays(1), user.SecurityStamp));
 
         mockTokens.Setup(x => x.RotateAsync(Moq.It.IsAny<RefreshToken>(), Moq.It.IsAny<RefreshToken>(), Moq.It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException("Concurrency conflict"));
@@ -106,6 +114,85 @@ public sealed class RefreshTokenTests
         result.Success.Should().BeFalse();
         result.Message.Should().Be("Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
         mockTokens.Verify(x => x.RevokeAllForUserAsync(user.Id, Moq.It.IsAny<CancellationToken>()), Moq.Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenRefreshTokenSecurityStampIsStale_ReturnsInvalidWithoutRotation()
+    {
+        using var connection = new Microsoft.Data.Sqlite.SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TickeX.Infrastructure.Persistence.ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        using var dbContext = new TickeX.Infrastructure.Persistence.ApplicationDbContext(options);
+        dbContext.Database.EnsureCreated();
+        var user = new User("Test User", "stale-stamp@test.local", "hash");
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync();
+
+        var rawToken = "raw-stale-stamp-token";
+        var hash = RefreshTokenCrypto.Hash(rawToken);
+        var tokens = new Moq.Mock<TickeX.Application.Interfaces.IRefreshTokenStore>();
+        tokens.Setup(x => x.FindAsync(hash, Moq.It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RefreshToken(user.Id, hash, DateTime.UtcNow.AddDays(1), "old-security-stamp"));
+        var jwt = new Moq.Mock<TickeX.Application.Interfaces.IJwtService>();
+
+        var handler = new RefreshTokenCommandHandler(tokens.Object, dbContext, jwt.Object);
+        var result = await handler.Handle(new RefreshTokenCommand(rawToken), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        tokens.Verify(x => x.RotateAsync(
+            Moq.It.IsAny<RefreshToken>(),
+            Moq.It.IsAny<RefreshToken>(),
+            Moq.It.IsAny<CancellationToken>()), Moq.Times.Never);
+    }
+
+    [Fact]
+    public async Task RevokeAllForUserAsync_WhenTrackedTokenIsStale_StillRevokesEveryActiveToken()
+    {
+        using var connection = new Microsoft.Data.Sqlite.SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TickeX.Infrastructure.Persistence.ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        var userId = Guid.NewGuid();
+        using (var setupContext = new TickeX.Infrastructure.Persistence.ApplicationDbContext(options))
+        {
+            setupContext.Database.EnsureCreated();
+            setupContext.Users.Add(new User("Test User", "stale-token@test.local", "hash"));
+            await setupContext.SaveChangesAsync();
+            var user = await setupContext.Users.SingleAsync();
+            userId = user.Id;
+            setupContext.RefreshTokens.AddRange(
+                new RefreshToken(userId, "stale-token", DateTime.UtcNow.AddDays(1)),
+                new RefreshToken(userId, "fresh-token", DateTime.UtcNow.AddDays(1)));
+            await setupContext.SaveChangesAsync();
+        }
+
+        using var staleContext = new TickeX.Infrastructure.Persistence.ApplicationDbContext(options);
+        using var competingContext = new TickeX.Infrastructure.Persistence.ApplicationDbContext(options);
+        var staleToken = await staleContext.RefreshTokens.SingleAsync(x => x.TokenHash == "stale-token");
+        var competingToken = await competingContext.RefreshTokens.SingleAsync(x => x.TokenHash == "stale-token");
+        var staleStore = new TickeX.Infrastructure.Services.RefreshTokenStore(staleContext);
+        var competingStore = new TickeX.Infrastructure.Services.RefreshTokenStore(competingContext);
+
+        await competingStore.RotateAsync(
+            competingToken,
+            new RefreshToken(userId, "replacement-token", DateTime.UtcNow.AddDays(1)),
+            CancellationToken.None);
+
+        await FluentActions.Invoking(() => staleStore.RotateAsync(
+                staleToken,
+                new RefreshToken(userId, "second-replacement-token", DateTime.UtcNow.AddDays(1)),
+                CancellationToken.None))
+            .Should().ThrowAsync<Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException>();
+
+        await staleStore.RevokeAllForUserAsync(userId, CancellationToken.None);
+
+        var tokens = await staleContext.RefreshTokens.AsNoTracking().ToListAsync();
+        tokens.All(x => x.RevokedAtUtc.HasValue).Should().BeTrue();
     }
 
     [Theory]

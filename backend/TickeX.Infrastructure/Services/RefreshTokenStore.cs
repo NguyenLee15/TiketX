@@ -40,9 +40,12 @@ public sealed class RefreshTokenStore : IRefreshTokenStore
 
     public async Task RevokeAllForUserAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var tokens = await _db.RefreshTokens.Where(x => x.UserId == userId && x.RevokedAtUtc == null).ToListAsync(cancellationToken);
-        foreach (var token in tokens) token.Revoke();
-        if (tokens.Count > 0) await _db.SaveChangesAsync(cancellationToken);
+        var revokedAt = DateTime.UtcNow;
+        await _db.RefreshTokens
+            .Where(x => x.UserId == userId && x.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.RevokedAtUtc, revokedAt)
+                .SetProperty(x => x.UpdatedAt, revokedAt), cancellationToken);
     }
 
 }

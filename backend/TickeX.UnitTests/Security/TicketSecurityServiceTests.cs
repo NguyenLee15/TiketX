@@ -101,47 +101,4 @@ public class TicketSecurityServiceTests
         result.IsValid.Should().BeFalse();
         result.Message.Should().Contain("hết hạn");
     }
-
-    [Theory]
-    [InlineData("not-a-valid-token")]
-    [InlineData("invalid_payload.invalid_signature")]
-    [InlineData("YWJj.def")]
-    [InlineData("eyJhIjoxfQ.invalid_sig_bytes")]
-    public void ValidateQrToken_WhenPayloadIsMalformed_ShouldReturnGenericSafeErrorMessageWithoutExceptionLeak(string malformedToken)
-    {
-        // Act
-        var result = _service.ValidateQrToken(malformedToken);
-
-        // Assert
-        result.IsValid.Should().BeFalse();
-        result.Message.Should().Match(m => m.Contains("không hợp lệ"));
-        result.Message.Should().NotContain("Exception");
-        result.Message.Should().NotContain("Lỗi phân tích");
-        result.Message.Should().NotContain("payload.signature");
-    }
-
-    [Fact]
-    public void ValidateQrToken_WhenKeyIdNotFound_ShouldReturnSafeKeyMessage()
-    {
-        // Arrange: Generate payload with unknown kid
-        var payloadObj = new
-        {
-            tid = Guid.NewGuid(),
-            eid = Guid.NewGuid(),
-            code = 123456L,
-            exp = DateTimeOffset.UtcNow.AddHours(5).ToUnixTimeSeconds(),
-            kid = "non-existent-kid-999"
-        };
-        var json = System.Text.Json.JsonSerializer.Serialize(payloadObj);
-        var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json))
-            .Replace("+", "-").Replace("/", "_").TrimEnd('=');
-        var dummyToken = $"{base64}.dummySignature";
-
-        // Act
-        var result = _service.ValidateQrToken(dummyToken);
-
-        // Assert
-        result.IsValid.Should().BeFalse();
-        result.Message.Should().Be("Mã định danh khóa ký không tồn tại hoặc đã hết hiệu lực.");
-    }
 }

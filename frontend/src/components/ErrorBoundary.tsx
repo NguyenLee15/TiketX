@@ -23,7 +23,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[TickeX ErrorBoundary] Caught unhandled render exception:', error, errorInfo);
+    if (import.meta.env.DEV) {
+      console.error('[TickeX ErrorBoundary] Caught unhandled render exception:', error, errorInfo);
+    }
   }
 
   public handleReset = () => {

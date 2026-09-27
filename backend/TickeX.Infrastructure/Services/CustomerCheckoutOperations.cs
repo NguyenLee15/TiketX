@@ -19,6 +19,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
     private readonly IHostEnvironment _environment;
     private readonly ILogger<CustomerCheckoutOperations> _logger;
     private readonly ITimePolicy _time;
+    private readonly IDistributedLockService? _locks;
 
     public CustomerCheckoutOperations(IApplicationDbContext context, IPayOSService payOS, IMediator mediator,
         IConfiguration configuration, IHostEnvironment environment, ILogger<CustomerCheckoutOperations> logger)
@@ -28,6 +29,13 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
 
     public CustomerCheckoutOperations(IApplicationDbContext context, IPayOSService payOS, IMediator mediator,
         IConfiguration configuration, IHostEnvironment environment, ILogger<CustomerCheckoutOperations> logger, ITimePolicy? time)
+        : this(context, payOS, mediator, configuration, environment, logger, null, time)
+    {
+    }
+
+    public CustomerCheckoutOperations(IApplicationDbContext context, IPayOSService payOS, IMediator mediator,
+        IConfiguration configuration, IHostEnvironment environment, ILogger<CustomerCheckoutOperations> logger,
+        IDistributedLockService? locks, ITimePolicy? time = null)
     {
         _context = context;
         _payOS = payOS;
@@ -35,6 +43,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         _configuration = configuration;
         _environment = environment;
         _logger = logger;
+        _locks = locks;
         _time = time ?? new UtcTimePolicy();
     }
 
@@ -70,6 +79,17 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         if (ticket.Event is null || ticket.Event.IsDeleted || ticket.Event.Status != EventStatus.Published || ticket.Event.Date <= _time.UtcNow)
             return Fail("EVENT_NOT_ON_SALE", "Sự kiện không còn mở bán.");
 
+        IDistributedLockLease? paymentLinkLease = null;
+        if (_locks is not null)
+        {
+            paymentLinkLease = await _locks.AcquireLockAsync(
+                $"payment-link:{ticket.OrderCode}", TimeSpan.FromSeconds(30), cancellationToken);
+            if (paymentLinkLease is null)
+                return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được xử lý. Vui lòng chờ giây lát.");
+        }
+
+        await using var heldLease = paymentLinkLease;
+
         var existing = await _context.PaymentTransactions
             .SingleOrDefaultAsync(x => x.OrderCode == ticket.OrderCode, cancellationToken);
 
@@ -81,22 +101,18 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
             if (existing.Status == "Pending" && string.IsNullOrWhiteSpace(existing.CheckoutUrl) && existing.CreatedAt > _time.UtcNow.AddSeconds(-30))
                 return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được xử lý. Vui lòng chờ giây lát.");
 
-            if (existing.Status == "Failed")
-            {
-                existing.ResetPending();
-            }
-            else if (existing.Status != "Pending")
-            {
+            if (existing.Status != "Pending")
                 return Fail("PAYMENT_LINK_CONFLICT", "Giao dịch thanh toán đã ở trạng thái kết thúc.");
-            }
         }
 
         PaymentTransaction transaction;
+        bool isNew = false;
         if (existing is null)
         {
             // Pre-persist local intent to claim atomic ownership at the DB level before external provider I/O
             transaction = new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price, "VietQR_PayOS");
             _context.PaymentTransactions.Add(transaction);
+            isNew = true;
             try
             {
                 await _context.SaveChangesAsync(cancellationToken);
@@ -114,7 +130,6 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         else
         {
             transaction = existing;
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
         var clientId = _configuration["PayOS:ClientId"];
@@ -123,8 +138,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         {
             if (!_environment.IsDevelopment())
             {
-                transaction.MarkFailed("PAYMENT_PROVIDER_UNCONFIGURED");
-                await _context.SaveChangesAsync(cancellationToken);
+                if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
                 return Fail("PAYMENT_PROVIDER_UNAVAILABLE", "Cổng thanh toán chưa được cấu hình.");
             }
             checkoutUrl = $"/mock-payos?orderCode={ticket.OrderCode}";
@@ -137,23 +151,20 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
                     $"TickeX {ticket.OrderCode}", ReturnUrl(ticket.OrderCode), CancelUrl(ticket.OrderCode), cancellationToken);
                 if (result is null || string.IsNullOrWhiteSpace(result.CheckoutUrl))
                 {
-                    transaction.MarkFailed("PAYMENT_PROVIDER_EMPTY_URL");
-                    await _context.SaveChangesAsync(cancellationToken);
+                    if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
                     return Fail("PAYMENT_PROVIDER_UNAVAILABLE", "Không thể tạo liên kết thanh toán.");
                 }
                 checkoutUrl = result.CheckoutUrl;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                transaction.MarkFailed("OPERATION_CANCELLED");
-                await _context.SaveChangesAsync(CancellationToken.None);
+                if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(CancellationToken.None); }
                 throw;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "PayOS CreatePaymentLink failed for {OrderCode}", ticket.OrderCode);
-                transaction.MarkFailed("PAYMENT_PROVIDER_ERROR", ex.Message);
-                await _context.SaveChangesAsync(CancellationToken.None);
+                if (isNew) { _context.PaymentTransactions.Remove(transaction); await _context.SaveChangesAsync(cancellationToken); }
                 return Fail("PAYMENT_PROVIDER_ERROR", "Lỗi kết nối cổng thanh toán. Vui lòng thử lại.");
             }
         }
@@ -161,8 +172,11 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         // Re-validate that the ticket hold has not expired during external PayOS I/O
         if (ticket.CreatedAt <= _time.UtcNow.AddMinutes(-holdMinutes) || ticket.Status != TicketStatus.Pending)
         {
-            transaction.MarkFailed("RESERVATION_EXPIRED");
-            await _context.SaveChangesAsync(cancellationToken);
+            if (isNew)
+            {
+                _context.PaymentTransactions.Remove(transaction);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
             return Fail("RESERVATION_EXPIRED", "Thời gian giữ vé đã hết hạn trong lúc khởi tạo thanh toán. Vui lòng chọn lại ghế.");
         }
 
@@ -175,14 +189,10 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
     {
         var data = _payOS.VerifyPaymentWebhookData(payload, signature);
         if (data is null) return Fail("INVALID_PAYMENT_WEBHOOK", "Dữ liệu thanh toán không hợp lệ.");
-        var result = await _mediator.Send(new ProcessPaymentCommand(data), cancellationToken);
-        if (result.Success)
-            return new(true, result.Code, result.Message, data.OrderCode);
-
-        if (result.IsTransient)
-            return Fail("PAYMENT_TRANSIENT_ERROR", result.Message, data.OrderCode);
-
-        return Fail(result.Code, result.Message, data.OrderCode);
+        var processed = await _mediator.Send(new ProcessPaymentCommand(data), cancellationToken);
+        return processed
+            ? new(true, "PAYMENT_PROCESSED", "Payment processed.", data.OrderCode)
+            : Fail("PAYMENT_PROCESSING_FAILED", "Không thể xử lý thanh toán cho đơn hàng này.");
     }
 
     public async Task<CustomerCheckoutResult> SimulateSuccessAsync(long orderCode, Guid userId, CancellationToken cancellationToken)
@@ -191,17 +201,16 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         var ticket = await _context.Tickets.AsNoTracking().SingleOrDefaultAsync(t => t.OrderCode == orderCode && t.UserId == userId, cancellationToken);
         if (ticket is null) return Fail("PAYMENT_NOT_FOUND", "Không tìm thấy đơn hàng.");
         var data = new PayOSWebhookData { OrderCode = ticket.OrderCode, Amount = ticket.Price, Code = "00", Success = true, RawPayload = "development-simulation" };
-        var result = await _mediator.Send(new ProcessPaymentCommand(data), cancellationToken);
-        return result.Success
-            ? new(true, result.Code, result.Message, ticket.OrderCode)
-            : Fail(result.Code, result.Message, ticket.OrderCode);
+        return await _mediator.Send(new ProcessPaymentCommand(data), cancellationToken)
+            ? new(true, "PAYMENT_PROCESSED", "Đã xác nhận thanh toán.", ticket.OrderCode)
+            : Fail("PAYMENT_PROCESSING_FAILED", "Không thể xác nhận thanh toán.");
     }
 
     private CustomerCheckoutResult Link(Ticket ticket, string checkoutUrl) =>
         new(true, "PAYMENT_LINK_CREATED", "Đã tạo liên kết thanh toán.", ticket.OrderCode, ticket.Price, checkoutUrl, "Pending", ticket.Id);
     private string ReturnUrl(long orderCode) => $"{_configuration["PayOS:ReturnUrl"] ?? "http://localhost:5173/payment-result"}?orderCode={orderCode}";
     private string CancelUrl(long orderCode) => $"{_configuration["PayOS:CancelUrl"] ?? "http://localhost:5173/my-tickets"}?orderCode={orderCode}";
-    private static CustomerCheckoutResult Fail(string code, string message, long? orderCode = null) => new(false, code, message, OrderCode: orderCode);
+    private static CustomerCheckoutResult Fail(string code, string message) => new(false, code, message);
     private static string ToPublicStatus(TicketStatus status) => status switch
     {
         TicketStatus.Pending => "Pending",

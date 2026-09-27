@@ -21,7 +21,8 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
 
     public async Task<bool> Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6 || request.NewPassword.Length > 128)
+        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8 || request.NewPassword.Length > 128
+            || !request.NewPassword.Any(char.IsLetter) || !request.NewPassword.Any(char.IsDigit))
             return false;
 
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
@@ -32,10 +33,12 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
             return false;
         }
 
+        await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
         user.ChangePassword(_passwordHasher.Hash(request.NewPassword));
         await _context.SaveChangesAsync(cancellationToken);
         if (_refreshTokens is not null)
             await _refreshTokens.RevokeAllForUserAsync(user.Id, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return true;
     }

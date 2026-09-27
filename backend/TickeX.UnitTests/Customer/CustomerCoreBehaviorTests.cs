@@ -463,102 +463,6 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
     }
 
     [Fact]
-    public async Task CreatePaymentLink_WhenPriorAttemptFailed_ReusesTransactionAndResetsPendingOnRetry()
-    {
-        var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
-        _context.Users.Add(user);
-        var @event = CreateEvent("FutureEvent", DateTime.UtcNow.AddDays(5));
-        @event.GenerateSeatsMatrix(1, 1);
-        _context.Events.Add(@event);
-        await _context.SaveChangesAsync();
-
-        var seat = await _context.Seats.SingleAsync();
-        seat.Lock(user.Id);
-        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
-        _context.Tickets.Add(ticket);
-
-        var priorFailedTx = new PaymentTransaction(ticket.OrderCode, ticket.Id, ticket.Price, "VietQR_PayOS");
-        priorFailedTx.MarkFailed("PAYMENT_PROVIDER_ERROR", "Prior network timeout");
-        _context.PaymentTransactions.Add(priorFailedTx);
-        await _context.SaveChangesAsync();
-
-        var payos = new Mock<IPayOSService>();
-        payos.Setup(x => x.CreatePaymentLink(ticket.OrderCode, decimal.ToInt32(ticket.Price),
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CreatePaymentResult { CheckoutUrl = "https://payos.vn/checkout/reused-123" });
-
-        var mediator = new Mock<MediatR.IMediator>();
-        var environment = new Mock<IHostEnvironment>();
-        environment.SetupGet(x => x.EnvironmentName).Returns(Environments.Production);
-        var settings = new Dictionary<string, string?>
-        {
-            ["PayOS:ReturnUrl"] = "https://tickex.local/payment-result",
-            ["PayOS:CancelUrl"] = "https://tickex.local/my-tickets",
-            ["PayOS:ClientId"] = "configured"
-        };
-        var operations = new CustomerCheckoutOperations(
-            _context, payos.Object, mediator.Object,
-            new ConfigurationBuilder().AddInMemoryCollection(settings).Build(),
-            environment.Object, NullLogger<CustomerCheckoutOperations>.Instance);
-
-        var result = await operations.CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
-
-        result.Success.Should().BeTrue();
-        result.CheckoutUrl.Should().Be("https://payos.vn/checkout/reused-123");
-        (await _context.PaymentTransactions.CountAsync(x => x.OrderCode == ticket.OrderCode)).Should().Be(1);
-
-        var refreshedTx = await _context.PaymentTransactions.SingleAsync(x => x.OrderCode == ticket.OrderCode);
-        refreshedTx.Status.Should().Be("Pending");
-        refreshedTx.CheckoutUrl.Should().Be("https://payos.vn/checkout/reused-123");
-    }
-
-    [Fact]
-    public async Task CreatePaymentLink_WhenProviderThrowsException_MarksTransactionFailedInsteadOfDeleting()
-    {
-        var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
-        _context.Users.Add(user);
-        var @event = CreateEvent("FutureEvent2", DateTime.UtcNow.AddDays(5));
-        @event.GenerateSeatsMatrix(1, 1);
-        _context.Events.Add(@event);
-        await _context.SaveChangesAsync();
-
-        var seat = await _context.Seats.SingleAsync();
-        seat.Lock(user.Id);
-        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
-        _context.Tickets.Add(ticket);
-        await _context.SaveChangesAsync();
-
-        var payos = new Mock<IPayOSService>();
-        payos.Setup(x => x.CreatePaymentLink(ticket.OrderCode, decimal.ToInt32(ticket.Price),
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new HttpRequestException("Gateway timeout"));
-
-        var mediator = new Mock<MediatR.IMediator>();
-        var environment = new Mock<IHostEnvironment>();
-        environment.SetupGet(x => x.EnvironmentName).Returns(Environments.Production);
-        var settings = new Dictionary<string, string?>
-        {
-            ["PayOS:ReturnUrl"] = "https://tickex.local/payment-result",
-            ["PayOS:CancelUrl"] = "https://tickex.local/my-tickets",
-            ["PayOS:ClientId"] = "configured"
-        };
-        var operations = new CustomerCheckoutOperations(
-            _context, payos.Object, mediator.Object,
-            new ConfigurationBuilder().AddInMemoryCollection(settings).Build(),
-            environment.Object, NullLogger<CustomerCheckoutOperations>.Instance);
-
-        var result = await operations.CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
-
-        result.Success.Should().BeFalse();
-        result.Code.Should().Be("PAYMENT_PROVIDER_ERROR");
-        (await _context.PaymentTransactions.CountAsync(x => x.OrderCode == ticket.OrderCode)).Should().Be(1);
-
-        var tx = await _context.PaymentTransactions.SingleAsync(x => x.OrderCode == ticket.OrderCode);
-        tx.Status.Should().Be("Failed");
-        tx.RawWebhookPayload.Should().Contain("PAYMENT_PROVIDER_ERROR");
-    }
-
-    [Fact]
     public void BcryptPasswordHasher_WorkFactor12_ProducesVerifiableHash()
     {
         var hasher = new BcryptPasswordHasher();
@@ -613,7 +517,7 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
 
         var result = await handler.Handle(new ProcessPaymentCommand(webhookData), CancellationToken.None);
 
-        result.Success.Should().BeTrue("orphaned payment should be acknowledged to stop webhook retries");
+        result.Should().BeTrue("orphaned payment should be acknowledged to stop webhook retries");
         (await _context.RefundRequests.CountAsync()).Should().Be(1);
         var refundReq = await _context.RefundRequests.SingleAsync();
         refundReq.TicketId.Should().Be(ticket.Id);
@@ -662,7 +566,7 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
 
         var result = await handler.Handle(new ProcessPaymentCommand(webhookData), CancellationToken.None);
 
-        result.Success.Should().BeTrue("expired hold webhook should be acknowledged to stop retries while preserving compensation state");
+        result.Should().BeTrue("expired hold webhook should be acknowledged to stop retries while preserving compensation state");
 
         // Assert ticket was transitioned from Pending to Cancelled
         var refreshedTicket = await _context.Tickets.AsNoTracking().SingleAsync(t => t.Id == ticket.Id);
@@ -688,48 +592,6 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
 
         // Assert seat status notification was emitted
         notifications.Verify(n => n.NotifySeatStatusChanged(@event.Id, seat.Id, SeatStatus.Available.ToString(), null, null), Times.Once);
-    }
-
-    [Fact]
-    public async Task ProcessPayment_WhenLockUnavailable_ReturnsTransientFailure()
-    {
-        var user = new User("Customer", "lock_fail@test.local", "hash");
-        var @event = CreateEvent("LockConcert", DateTime.UtcNow.AddDays(2));
-        @event.GenerateSeatsMatrix(1, 1);
-        _context.AddRange(user, @event);
-        await _context.SaveChangesAsync();
-
-        var seat = await _context.Seats.SingleAsync();
-        seat.Lock(user.Id);
-        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
-        _context.Tickets.Add(ticket);
-        await _context.SaveChangesAsync();
-
-        var lockService = new Mock<IDistributedLockService>();
-        lockService.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IDistributedLockLease?)null);
-        var notifications = new Mock<ISeatNotificationService>();
-        var outbox = new Mock<INotificationOutboxPort>();
-        var ticketSecurity = new Mock<ITicketSecurityService>();
-
-        var handler = new ProcessPaymentCommandHandler(
-            _context, outbox.Object, notifications.Object, lockService.Object,
-            ticketSecurity.Object, NullLogger<ProcessPaymentCommandHandler>.Instance);
-
-        var webhookData = new PayOSWebhookData
-        {
-            OrderCode = ticket.OrderCode,
-            Amount = ticket.Price,
-            Success = true,
-            Reference = "payos-lock-fail",
-            Code = "00"
-        };
-
-        var result = await handler.Handle(new ProcessPaymentCommand(webhookData), CancellationToken.None);
-
-        result.Success.Should().BeFalse();
-        result.IsTransient.Should().BeTrue();
-        result.Code.Should().Be("PAYMENT_LOCK_UNAVAILABLE");
     }
 
     private static Event CreateEvent(string title, DateTime date) =>

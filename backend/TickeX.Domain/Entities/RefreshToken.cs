@@ -5,6 +5,7 @@ public sealed class RefreshToken : BaseEntity
 {
     public Guid UserId { get; private set; }
     public string TokenHash { get; private set; } = string.Empty;
+    public string SecurityStamp { get; private set; } = string.Empty;
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime ExpiresAtUtc { get; private set; }
     public DateTime? RevokedAtUtc { get; private set; }
@@ -13,9 +14,15 @@ public sealed class RefreshToken : BaseEntity
     private RefreshToken() { }
 
     public RefreshToken(Guid userId, string tokenHash, DateTime expiresAtUtc)
+        : this(userId, tokenHash, expiresAtUtc, string.Empty)
+    {
+    }
+
+    public RefreshToken(Guid userId, string tokenHash, DateTime expiresAtUtc, string securityStamp)
     {
         UserId = userId;
         TokenHash = tokenHash;
+        SecurityStamp = securityStamp;
         CreatedAtUtc = DateTime.UtcNow;
         ExpiresAtUtc = expiresAtUtc;
     }

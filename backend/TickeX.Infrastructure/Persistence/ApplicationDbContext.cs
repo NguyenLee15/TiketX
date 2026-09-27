@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using TickeX.Application.Interfaces;
 using TickeX.Domain.Entities;
 
@@ -21,6 +22,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<RefundBankAccount> RefundBankAccounts => Set<RefundBankAccount>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<NotificationOutboxItem> NotificationOutbox => Set<NotificationOutboxItem>();
+
+    public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken) =>
+        Database.BeginTransactionAsync(cancellationToken);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

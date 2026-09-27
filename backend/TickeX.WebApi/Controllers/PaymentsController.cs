@@ -100,11 +100,8 @@ public class PaymentsController : ControllerBase
             return NotFound(new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
         if (result.Code == "PAYMENT_FORBIDDEN")
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
-        if (result.Code == "PAYMENT_PROVIDER_UNAVAILABLE" || result.Code == "PAYMENT_TRANSIENT_ERROR")
-        {
-            Response.Headers.Append("Retry-After", "5");
+        if (result.Code == "PAYMENT_PROVIDER_UNAVAILABLE")
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
-        }
         return BadRequest(new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
     }
 }

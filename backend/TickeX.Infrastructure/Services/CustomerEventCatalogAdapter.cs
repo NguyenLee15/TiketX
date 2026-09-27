@@ -25,6 +25,7 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim();
+            if (search.Length > 100) search = search[..100];
             query = query.Where(e => EF.Functions.Like(e.Title, $"%{search}%")
                 || EF.Functions.Like(e.Description, $"%{search}%")
                 || EF.Functions.Like(e.Location, $"%{search}%")

@@ -54,7 +54,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
       const { generateTicketPdf } = await import('../../utils/ticketPdfGenerator');
       await generateTicketPdf(ticket as unknown as Parameters<typeof generateTicketPdf>[0]);
     } catch (err) {
-      console.error('Failed to generate ticket PDF', err);
+      if (import.meta.env.DEV) console.error('Failed to generate ticket PDF', err);
     } finally {
       setIsDownloadingPdf(false);
     }

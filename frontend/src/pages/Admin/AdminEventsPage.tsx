@@ -1,17 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
 import { Event } from '../../types';
 import api from '../../services/api';
-import EventModal, { EventFormValues } from '../../components/Admin/EventModal';
-import ConfirmModal from '../../components/Admin/ConfirmModal';
-import CancelEventModal from '../../components/Admin/CancelEventModal';
+import { EventFormValues } from '../../components/Admin/EventModal';
 import { formValueToEventStatus } from '../../utils/adminEventState';
 import { AdminEventsFilterBar } from './Events/AdminEventsFilterBar';
 import { AdminEventsTable } from './Events/AdminEventsTable';
 import { AdminEventsSkeleton } from './Events/AdminEventsSkeleton';
 import { adminEventsPagedResponseSchema } from '../../schemas/adminSchemas';
+import { AdminEventsHeader } from './Events/AdminEventsHeader';
+import { AdminEventsModals } from './Events/AdminEventsModals';
 
 export default function AdminEventsPage() {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
@@ -227,22 +226,7 @@ export default function AdminEventsPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-8 animate-in fade-in duration-500">
-      {/* Top Header & Actions */}
-      <div className="surface-panel flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Quản Lý Sự Kiện & Sơ Đồ Ghế</h1>
-          <p className="text-text-secondary text-xs sm:text-sm mt-0.5">
-            Quản trị danh mục sự kiện, kiểm soát trạng thái phát hành và khởi tạo ma trận ghế tự động.
-          </p>
-        </div>
-        <button 
-          onClick={handleOpenCreateModal}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary shadow-md shadow-brand-glow text-xs sm:text-sm shrink-0 active:scale-95 whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tạo Sự Kiện Mới</span>
-        </button>
-      </div>
+      <AdminEventsHeader onCreate={handleOpenCreateModal} />
 
       {/* Filter & Search Bar */}
       <AdminEventsFilterBar
@@ -277,34 +261,18 @@ export default function AdminEventsPage() {
         />
       )}
 
-      {/* Modal Create / Edit */}
-      <EventModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleModalSubmit}
-        event={selectedEvent}
-        isLoading={isSubmitting}
-      />
-
-      {/* Custom Confirm Deletion Modal */}
-      <ConfirmModal 
-        isOpen={!!deleteEventTarget}
-        onClose={() => setDeleteEventTarget(null)}
-        onConfirm={handleConfirmDeleteEvent}
-        title="Xóa vĩnh viễn sự kiện"
-        message={`Bạn có chắc chắn muốn xóa sự kiện "${deleteEventTarget?.title}"? Hành động này sẽ chuyển trạng thái sự kiện sang Đã xóa.`}
-        confirmText="Xác nhận xóa"
-        type="danger"
-        isLoading={isSubmitting}
-      />
-
-      {/* Custom Cancel Event Modal */}
-      <CancelEventModal
-        isOpen={!!cancelEventTarget}
-        onClose={() => setCancelEventTarget(null)}
-        onConfirm={handleConfirmCancelEvent}
-        eventTitle={cancelEventTarget?.title || ''}
-        isLoading={isSubmitting}
+      <AdminEventsModals
+        isModalOpen={isModalOpen}
+        selectedEvent={selectedEvent}
+        deleteEventTarget={deleteEventTarget}
+        cancelEventTarget={cancelEventTarget}
+        isSubmitting={isSubmitting}
+        onCloseForm={() => setIsModalOpen(false)}
+        onSubmitForm={handleModalSubmit}
+        onCloseDelete={() => setDeleteEventTarget(null)}
+        onConfirmDelete={handleConfirmDeleteEvent}
+        onCloseCancel={() => setCancelEventTarget(null)}
+        onConfirmCancel={handleConfirmCancelEvent}
       />
     </div>
   );

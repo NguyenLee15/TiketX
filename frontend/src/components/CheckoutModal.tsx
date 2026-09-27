@@ -178,7 +178,7 @@ export default function CheckoutModal({
   };
 
   const handleSimulatePayment = async () => {
-    if (!paymentData?.orderCode) return;
+    if (status === 'verifying' || !paymentData?.orderCode) return;
     setStatus('verifying');
     try {
       await api.post(`/api/payments/simulate-success/${paymentData.orderCode}`);
@@ -198,6 +198,8 @@ export default function CheckoutModal({
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
+
+  const isSimulating = status === 'verifying';
 
   if (!isOpen) return null;
 
@@ -234,9 +236,11 @@ export default function CheckoutModal({
               {import.meta.env.DEV && paymentData?.checkoutUrl && (
                 <button 
                   onClick={handleSimulatePayment}
-                  className="w-full py-2 bg-warning/10 hover:bg-warning/20 border border-warning/30 text-warning text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                  disabled={isSimulating}
+                  aria-busy={isSimulating}
+                  className="w-full py-2 bg-warning/10 hover:bg-warning/20 border border-warning/30 text-warning text-xs font-bold rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  ⚡ [DEV] Giả lập Thanh Toán Thành Công
+                  {isSimulating ? 'Đang xác nhận thanh toán…' : '⚡ [DEV] Giả lập Thanh Toán Thành Công'}
                 </button>
               )}
 

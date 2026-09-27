@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { SeatStatus, SeatStatusChangedPayload } from '../types';
 import { API_BASE_URL } from '../services/api';
-import { useAuthStore } from '../stores/useAuthStore';
 
 export type SeatConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
@@ -26,7 +25,6 @@ export const useSeatSignalR = (
     let connection: signalR.HubConnection | null = new signalR.HubConnectionBuilder()
       .withUrl(`${API_BASE_URL}/hubs/seat`, {
         withCredentials: true,
-        accessTokenFactory: () => useAuthStore.getState().token ?? '',
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .build();
@@ -73,7 +71,7 @@ export const useSeatSignalR = (
       try {
         await connection.invoke('JoinEventGroup', eventId);
       } catch (err) {
-        console.error('Failed to rejoin event group after SignalR reconnect', err);
+        if (import.meta.env.DEV) console.error('Failed to rejoin event group after SignalR reconnect', err);
       }
       onReconnected?.();
     });

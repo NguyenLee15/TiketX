@@ -27,11 +27,11 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
             return Invalid();
         }
         var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == current.UserId, cancellationToken);
-        if (user is null || user.IsBlocked || user.IsLockedOut()) return Invalid();
+        if (user is null || user.IsBlocked || user.IsLockedOut() || current.SecurityStamp != user.SecurityStamp) return Invalid();
 
         var replacementRaw = RefreshTokenCrypto.Generate();
         var replacement = new TickeX.Domain.Entities.RefreshToken(
-            user.Id, RefreshTokenCrypto.Hash(replacementRaw), DateTime.UtcNow.AddDays(30));
+            user.Id, RefreshTokenCrypto.Hash(replacementRaw), DateTime.UtcNow.AddDays(30), user.SecurityStamp);
         try
         {
             await _tokens.RotateAsync(current, replacement, cancellationToken);
@@ -40,6 +40,8 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
         {
             // Another concurrent request rotated this token simultaneously.
             // Invalidate all sessions for this account to defend against race/reuse.
+            if (_db is DbContext dbContext)
+                dbContext.ChangeTracker.Clear();
             await _tokens.RevokeAllForUserAsync(current.UserId, cancellationToken);
             return Invalid();
         }

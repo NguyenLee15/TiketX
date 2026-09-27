@@ -262,11 +262,6 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer
                 // receive the same signed access token only from the HttpOnly cookie.
                 if (!string.IsNullOrWhiteSpace(context.Request.Headers.Authorization))
                     return Task.CompletedTask;
-                if (context.HttpContext.Request.Path.StartsWithSegments("/hubs/seat"))
-                {
-                    var hubToken = context.Request.Query["access_token"].ToString();
-                    if (!string.IsNullOrWhiteSpace(hubToken)) context.Token = hubToken;
-                }
                 if (string.IsNullOrWhiteSpace(context.Token))
                 {
                     var cookieName = builder.Configuration[$"{CookieAuthenticationSettings.SectionName}:AccessCookieName"] ?? "tickex_access";

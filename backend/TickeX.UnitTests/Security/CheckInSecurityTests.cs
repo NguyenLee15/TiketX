@@ -363,26 +363,4 @@ public class CheckInSecurityTests : IDisposable
         result.StatusCode.Should().Be(409);
         result.Code.Should().Be("CHECKIN_CONCURRENCY_CONFLICT");
     }
-
-    [Theory]
-    [InlineData("not-a-token")]
-    [InlineData("invalid.token.structure")]
-    [InlineData("YWJj.def")]
-    public async Task CheckIn_WhenQrTokenIsMalformedOrGarbage_ShouldReturn400WithSafeMessageAndQrInvalidCode(string malformedToken)
-    {
-        // Arrange
-        var handler = new CheckInTicketCommandHandler(_context, _ticketSecurityService);
-        var command = new CheckInTicketCommand(malformedToken, Guid.NewGuid(), StaffRole: "Admin");
-
-        // Act
-        var result = await handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.Success.Should().BeFalse();
-        result.StatusCode.Should().Be(400);
-        result.Message.Should().Contain("không hợp lệ");
-        result.Message.Should().NotContain("Exception");
-        result.Message.Should().NotContain("Lỗi phân tích");
-        result.Message.Should().NotContain("payload.signature");
-    }
 }

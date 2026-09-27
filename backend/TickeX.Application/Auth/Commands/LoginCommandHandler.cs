@@ -70,7 +70,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResult>
         user.ResetFailedLogin();
         var refreshToken = RefreshTokenCrypto.Generate();
         var refreshTokenEntity = new TickeX.Domain.Entities.RefreshToken(
-            user.Id, RefreshTokenCrypto.Hash(refreshToken), DateTime.UtcNow.AddDays(30));
+            user.Id, RefreshTokenCrypto.Hash(refreshToken), DateTime.UtcNow.AddDays(30), user.SecurityStamp);
 
         _context.RefreshTokens.Add(refreshTokenEntity);
         await _context.SaveChangesAsync(cancellationToken);

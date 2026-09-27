@@ -39,7 +39,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthResul
         
         var refreshToken = RefreshTokenCrypto.Generate();
         var refreshTokenEntity = new TickeX.Domain.Entities.RefreshToken(
-            user.Id, RefreshTokenCrypto.Hash(refreshToken), DateTime.UtcNow.AddDays(30));
+            user.Id, RefreshTokenCrypto.Hash(refreshToken), DateTime.UtcNow.AddDays(30), user.SecurityStamp);
 
         // Persist both user and refresh token in one atomic database operation
         _context.Users.Add(user);

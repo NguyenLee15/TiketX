@@ -22,7 +22,9 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
 
     public async Task<DashboardStatsResult> GetAsync(CancellationToken cancellationToken)
     {
-        var operationalTickets = _context.Tickets.Where(t => t.Event != null && !t.Event.IsDeleted);
+        var operationalTickets = _context.Tickets
+            .AsNoTracking()
+            .Where(t => t.Event != null && !t.Event.IsDeleted);
         var totalUsers = await _context.Users.CountAsync(cancellationToken);
         var totalEvents = await _context.Events.CountAsync(e => !e.IsDeleted, cancellationToken);
         var paidStates = new[] { TicketStatus.Paid, TicketStatus.Used };
@@ -47,20 +49,18 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
 
         var isSqlite = (_context as DbContext)?.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true;
         List<TopEventAggregate> topAggregates;
-
         if (isSqlite)
         {
-            var paidTickets = await operationalTickets
+            var sqliteAggregates = await operationalTickets
                 .Where(t => paidStates.Contains(t.Status))
-                .Select(t => new { t.EventId, t.Price })
-                .ToListAsync(cancellationToken);
-
-            topAggregates = paidTickets
                 .GroupBy(t => t.EventId)
-                .Select(g => new TopEventAggregate(g.Key, g.Count(), g.Sum(t => t.Price)))
+                .Select(g => new { g.Key, TicketsSold = g.Count(), Revenue = g.Sum(t => (double)t.Price) })
                 .OrderByDescending(x => x.Revenue)
-                .ThenBy(x => x.EventId)
+                .ThenBy(x => x.Key)
                 .Take(5)
+                .ToListAsync(cancellationToken);
+            topAggregates = sqliteAggregates
+                .Select(x => new TopEventAggregate(x.Key, x.TicketsSold, (decimal)x.Revenue))
                 .ToList();
         }
         else
@@ -75,7 +75,7 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
                 .ToListAsync(cancellationToken);
         }
         var eventIds = topAggregates.Select(x => x.EventId).ToList();
-        var eventDetails = await _context.Events.Where(e => eventIds.Contains(e.Id))
+        var eventDetails = await _context.Events.AsNoTracking().Where(e => eventIds.Contains(e.Id))
             .Select(e => new { e.Id, e.Title, e.Category, e.TotalSeats }).ToListAsync(cancellationToken);
         var topEvents = topAggregates.Select(x =>
         {

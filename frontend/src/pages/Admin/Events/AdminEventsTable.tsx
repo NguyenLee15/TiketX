@@ -1,10 +1,9 @@
 import React from 'react';
-import { 
-  Edit2, Trash2, Calendar as CalendarIcon, MapPin, 
-  ChevronLeft, ChevronRight, XCircle, Grid3X3, Clock 
-} from 'lucide-react';
-import { Event, EventStatus } from '../../../types';
+import { Calendar as CalendarIcon, MapPin, ChevronLeft, ChevronRight, Grid3X3, Clock } from 'lucide-react';
+import { Event } from '../../../types';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
+import { EventStatusBadge } from './EventStatusBadge';
+import { AdminEventActions } from './AdminEventActions';
 
 interface AdminEventsTableProps {
   events: Event[];
@@ -27,43 +26,6 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
   onCancel,
   onDelete
 }) => {
-  const getStatusBadge = (status: EventStatus | string | number, isDeleted = false) => {
-    if (isDeleted) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface-3 text-text-tertiary border border-border-subtle uppercase tracking-wider whitespace-nowrap shrink-0">
-          Đã xóa
-        </span>
-      );
-    }
-    const s = String(status).toLowerCase();
-    if (s === 'published' || s === '1') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success/15 text-success border border-success/30 whitespace-nowrap">
-          Đang mở bán
-        </span>
-      );
-    }
-    if (s === 'draft' || s === '0') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-primary/15 text-brand-primary border border-brand-primary/30 whitespace-nowrap">
-          Bản nháp
-        </span>
-      );
-    }
-    if (s === 'completed' || s === '2') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/30 whitespace-nowrap">
-          Đã kết thúc
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-danger/15 text-danger border border-danger/30 whitespace-nowrap">
-        Đã hủy
-      </span>
-    );
-  };
-
   return (
     <>
       {/* Desktop Table View */}
@@ -89,9 +51,6 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                 </tr>
               ) : (
                 events.map(event => {
-                  const isCancelled = String(event.status) === '3' || String(event.status).toLowerCase() === 'cancelled';
-                  const isCompleted = String(event.status) === '2' || String(event.status).toLowerCase() === 'completed';
-
                   return (
                     <tr key={event.id} className="hover:bg-surface-2/20 transition-colors group">
                       <td className="px-5 py-3.5">
@@ -120,7 +79,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                         </div>
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
-                        {getStatusBadge(event.status, event.isDeleted)}
+                        <EventStatusBadge status={event.status} isDeleted={event.isDeleted} />
                       </td>
                       <td className="px-5 py-3.5 font-bold text-white font-mono whitespace-nowrap">
                         {formatCurrency(event.basePrice)}
@@ -145,38 +104,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                         </div>
                       </td>
                       <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5 shrink-0">
-                          <button
-                            onClick={() => onEdit(event)}
-                            disabled={event.isDeleted || isCompleted || isCancelled}
-                            aria-label={`Chỉnh sửa sự kiện ${event.title}`}
-                            className="p-2 bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white rounded-xl transition-colors border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed"
-                            title={isCancelled ? "Không thể sửa sự kiện đã hủy" : isCompleted ? "Không thể sửa sự kiện đã kết thúc" : "Sửa sự kiện"}
-                          >
-                            <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />
-                          </button>
-
-                          {!isCancelled && !isCompleted && (
-                            <button
-                              onClick={() => onCancel(event)}
-                              aria-label={`Hủy sự kiện & Hoàn tiền vé ${event.title}`}
-                              className="p-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl transition-colors border border-amber-500/20"
-                              title="Hủy sự kiện & Hoàn tiền vé"
-                            >
-                              <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => onDelete(event)}
-                            disabled={event.isDeleted}
-                            aria-label={`Xóa sự kiện ${event.title}`}
-                            className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-xl transition-colors border border-danger/20"
-                            title="Xóa sự kiện"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                          </button>
-                        </div>
+                        <AdminEventActions event={event} onEdit={onEdit} onCancel={onCancel} onDelete={onDelete} />
                       </td>
                     </tr>
                   );
@@ -190,9 +118,6 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
       {/* Mobile Card View (< md) */}
       <div className="block md:hidden space-y-3.5">
         {events.map(event => {
-          const isCancelled = String(event.status) === '3' || String(event.status).toLowerCase() === 'cancelled';
-          const isCompleted = String(event.status) === '2' || String(event.status).toLowerCase() === 'completed';
-
           return (
             <div key={event.id} className="surface-panel p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -210,7 +135,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                     <p className="text-xs text-text-secondary">{event.category} • {event.totalSeats} Ghế</p>
                   </div>
                 </div>
-                {getStatusBadge(event.status, event.isDeleted)}
+                <EventStatusBadge status={event.status} isDeleted={event.isDeleted} />
               </div>
 
               <div className="space-y-1.5 text-xs text-text-secondary pt-1 border-t border-border-subtle">
@@ -230,36 +155,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-subtle">
-                <button
-                  onClick={() => onEdit(event)}
-                  disabled={event.isDeleted || isCompleted || isCancelled}
-                  className="px-3 py-1.5 bg-surface-2 hover:bg-surface-3 text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary border border-border-subtle flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  Sửa
-                </button>
-
-                {!isCancelled && !isCompleted && (
-                  <button
-                    onClick={() => onCancel(event)}
-                    disabled={event.isDeleted}
-                    className="px-3 py-1.5 bg-amber-500/15 text-amber-400 hover:bg-amber-500 hover:text-black rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 border border-amber-500/30 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <XCircle className="w-3.5 h-3.5" />
-                    Hủy
-                  </button>
-                )}
-
-                <button
-                  onClick={() => onDelete(event)}
-                  disabled={event.isDeleted}
-                  className="px-3 py-1.5 bg-danger/15 text-danger hover:bg-danger hover:text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger border border-danger/30 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Xóa
-                </button>
-              </div>
+              <AdminEventActions event={event} onEdit={onEdit} onCancel={onCancel} onDelete={onDelete} compact />
             </div>
           );
         })}

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using TickeX.Domain.Entities;
 
 namespace TickeX.Application.Interfaces;
@@ -18,4 +19,5 @@ public interface IApplicationDbContext
     DbSet<NotificationOutboxItem> NotificationOutbox { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
 }

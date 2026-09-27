@@ -25,11 +25,30 @@ public sealed class SaveRefundBankAccountCommandHandler(
         if (account is null) context.RefundBankAccounts.Add(new RefundBankAccount(request.UserId, encrypted, details.AccountNumber[^4..]));
         else account.Replace(encrypted, details.AccountNumber[^4..]);
 
-        var waitingRefunds = await context.RefundRequests
-            .Where(x => x.TicketId != Guid.Empty && x.EncryptedDestinationSnapshot == null && x.Status == "AwaitingDestination")
-            .Join(context.Tickets.Where(x => x.UserId == request.UserId), r => r.TicketId, t => t.Id, (refund, _) => refund)
-            .ToListAsync(cancellationToken);
-        foreach (var refund in waitingRefunds) refund.SetDestinationSnapshot(encrypted);
+        const int batchSize = 500;
+        while (true)
+        {
+            var refundIds = await context.RefundRequests
+                .Where(x => x.TicketId != Guid.Empty && x.EncryptedDestinationSnapshot == null && x.Status == "AwaitingDestination")
+                .Where(r => context.Tickets.Any(t => t.Id == r.TicketId && t.UserId == request.UserId))
+                .OrderBy(x => x.Id)
+                .Select(x => x.Id)
+                .Take(batchSize)
+                .ToListAsync(cancellationToken);
+            if (refundIds.Count == 0) break;
+
+            var waitingRefunds = await context.RefundRequests
+                .Where(x => refundIds.Contains(x.Id))
+                .ToListAsync(cancellationToken);
+            foreach (var refund in waitingRefunds) refund.SetDestinationSnapshot(encrypted);
+            await context.SaveChangesAsync(cancellationToken);
+
+            if (context is DbContext dbContext)
+            {
+                foreach (var entry in dbContext.ChangeTracker.Entries<RefundRequest>().ToList())
+                    entry.State = EntityState.Detached;
+            }
+        }
 
         context.AuditLogs.Add(new AuditLog(request.UserId, string.Empty, "REFUND_BANK_ACCOUNT_UPDATED", nameof(RefundBankAccount), request.UserId.ToString(), "Configured", "Updated"));
         await context.SaveChangesAsync(cancellationToken);

@@ -71,7 +71,7 @@ public class TicketSecurityService : ITicketSecurityService
         var parts = qrToken.Split('.');
         if (parts.Length != 2)
         {
-            return new QrValidationResult(false, "Định dạng mã QR không hợp lệ hoặc sai cấu trúc bảo mật.");
+            return new QrValidationResult(false, "Định dạng mã QR không hợp lệ (sai cấu trúc payload.signature).");
         }
 
         string payloadBase64 = parts[0];
@@ -92,7 +92,7 @@ public class TicketSecurityService : ITicketSecurityService
 
             if (!_keyRotationMap.TryGetValue(kid, out var secret))
             {
-                return new QrValidationResult(false, "Mã định danh khóa ký không tồn tại hoặc đã hết hiệu lực.");
+                return new QrValidationResult(false, $"Mã định danh khóa ký (kid: {kid}) không tồn tại trong hệ thống.");
             }
 
             // Verify signature
@@ -114,9 +114,9 @@ public class TicketSecurityService : ITicketSecurityService
             var payload = new TicketQrPayload(ticketId, eventId, orderCode, expiresAt, kid);
             return new QrValidationResult(true, "Mã QR vé hợp lệ.", payload);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return new QrValidationResult(false, "Mã vé QR không hợp lệ hoặc sai định dạng chữ ký bảo mật.");
+            return new QrValidationResult(false, $"Lỗi phân tích mã QR: {ex.Message}");
         }
     }
 
