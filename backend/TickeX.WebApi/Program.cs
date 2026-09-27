@@ -361,14 +361,13 @@ if (app.Environment.IsDevelopment())
 // Configure the HTTP request pipeline.
 app.UseForwardedHeaders();
 app.UseMiddleware<TickeX.WebApi.Middleware.CorrelationIdMiddleware>();
+app.UseMiddleware<TickeX.WebApi.Middleware.GlobalExceptionMiddleware>();
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
     app.UseHttpsRedirection();
 }
-
-app.UseMiddleware<TickeX.WebApi.Middleware.GlobalExceptionMiddleware>();
 
 app.Use(async (context, next) =>
 {

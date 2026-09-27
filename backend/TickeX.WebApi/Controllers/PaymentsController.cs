@@ -35,6 +35,7 @@ public class PaymentsController : ControllerBase
     }
 
     [AllowAnonymous]
+    [RequestSizeLimit(65_536)]
     [HttpPost("webhook")]
     public async Task<IActionResult> Webhook(CancellationToken cancellationToken)
     {
@@ -46,8 +47,21 @@ public class PaymentsController : ControllerBase
                 message = "Dữ liệu thanh toán vượt quá kích thước cho phép.",
                 error = new { code = "PAYMENT_WEBHOOK_TOO_LARGE", message = "Dữ liệu thanh toán vượt quá kích thước cho phép.", details = (object?)null }
             });
-        using var reader = new StreamReader(Request.Body);
-        var body = await reader.ReadToEndAsync(cancellationToken);
+
+        using var reader = new StreamReader(Request.Body, System.Text.Encoding.UTF8);
+        var buffer = new char[65_537];
+        var read = await reader.ReadBlockAsync(buffer, 0, buffer.Length);
+        if (read > 65_536 || !reader.EndOfStream)
+        {
+            return StatusCode(StatusCodes.Status413PayloadTooLarge, new
+            {
+                success = false,
+                code = "PAYMENT_WEBHOOK_TOO_LARGE",
+                message = "Dữ liệu thanh toán vượt quá kích thước cho phép.",
+                error = new { code = "PAYMENT_WEBHOOK_TOO_LARGE", message = "Dữ liệu thanh toán vượt quá kích thước cho phép.", details = (object?)null }
+            });
+        }
+        var body = new string(buffer, 0, read);
         var signature = Request.Headers["x-payos-signature"].FirstOrDefault()
             ?? Request.Headers["X-PayOS-Signature"].FirstOrDefault() ?? string.Empty;
         return Respond(await _checkout.ProcessWebhookAsync(body, signature, cancellationToken));

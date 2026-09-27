@@ -276,4 +276,91 @@ public class CheckInSecurityTests : IDisposable
         result.StatusCode.Should().Be(400);
         result.Message.Should().Contain("Chưa đến thời gian mở cổng soát vé");
     }
+
+    [Fact]
+    public async Task CheckIn_WhenQrSignatureDoesNotMatchStoredSignature_ShouldFailWithSignatureMismatch()
+    {
+        // Arrange: Ticket has an active signature stored, but an older/re-issued QR token is presented
+        var (ev, _, _, ticket) = await SeedTicketAsync(status: TicketStatus.Paid);
+        var oldToken = _ticketSecurityService.GenerateSignedQrToken(
+            ticket.Id,
+            ev.Id,
+            ticket.OrderCode,
+            DateTime.UtcNow.AddHours(2)
+        );
+        // Stored signature in DB is different (representing a re-issued ticket QR)
+        ticket.SetQrSignature("NEW_REISSUED_TOKEN_SIGNATURE_ABCD1234");
+        await _context.SaveChangesAsync();
+
+        var handler = new CheckInTicketCommandHandler(_context, _ticketSecurityService);
+        var command = new CheckInTicketCommand(oldToken, Guid.NewGuid(), StaffRole: "Admin");
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.Code.Should().Be("QR_SIGNATURE_MISMATCH");
+        result.Message.Should().Contain("Mã QR không khớp với bản phát hành hiện tại");
+    }
+
+    [Fact]
+    public async Task CheckIn_WhenQrSignatureMatchesStoredSignature_ShouldSucceed()
+    {
+        // Arrange: Ticket signature in DB matches the presented QR token exactly
+        var (ev, _, _, ticket) = await SeedTicketAsync(status: TicketStatus.Paid);
+        var validToken = _ticketSecurityService.GenerateSignedQrToken(
+            ticket.Id,
+            ev.Id,
+            ticket.OrderCode,
+            DateTime.UtcNow.AddHours(2)
+        );
+        ticket.SetQrSignature(validToken);
+        await _context.SaveChangesAsync();
+
+        var handler = new CheckInTicketCommandHandler(_context, _ticketSecurityService);
+        var command = new CheckInTicketCommand(validToken, Guid.NewGuid(), StaffRole: "Admin");
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+    }
+
+    [Fact]
+    public async Task CheckIn_WhenConcurrentScanModifiesTicket_Returns409Conflict()
+    {
+        // Arrange: Seed paid ticket with matching QR signature
+        var (ev, _, _, ticket) = await SeedTicketAsync(status: TicketStatus.Paid);
+        var validToken = _ticketSecurityService.GenerateSignedQrToken(
+            ticket.Id,
+            ev.Id,
+            ticket.OrderCode,
+            DateTime.UtcNow.AddHours(2)
+        );
+        ticket.SetQrSignature(validToken);
+        await _context.SaveChangesAsync();
+
+        var handler = new CheckInTicketCommandHandler(_context, _ticketSecurityService);
+        var command = new CheckInTicketCommand(validToken, Guid.NewGuid(), StaffRole: "Admin");
+
+        // Act: Competing gate station completes check-in right before this handler saves
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+        using var competingContext = new ApplicationDbContext(options);
+        var competingTicket = await competingContext.Tickets.FindAsync(ticket.Id);
+        competingTicket!.CheckIn(Guid.NewGuid());
+        await competingContext.SaveChangesAsync();
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(409);
+        result.Code.Should().Be("CHECKIN_CONCURRENCY_CONFLICT");
+    }
 }

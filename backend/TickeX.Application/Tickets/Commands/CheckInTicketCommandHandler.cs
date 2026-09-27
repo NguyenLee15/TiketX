@@ -56,6 +56,11 @@ public class CheckInTicketCommandHandler : IRequestHandler<CheckInTicketCommand,
                 return new CheckInResult(false, "Thông tin mã vé không khớp với sự kiện hoặc mã đơn hàng trên hệ thống.", StatusCode: 400, Code: "QR_TICKET_MISMATCH");
             }
 
+            if (!string.IsNullOrEmpty(ticket.QrCodeSignature) && !string.Equals(ticket.QrCodeSignature, request.QrToken.Trim(), StringComparison.Ordinal))
+            {
+                return new CheckInResult(false, "Mã QR không khớp với bản phát hành hiện tại của vé hoặc đã bị thu hồi.", StatusCode: 400, Code: "QR_SIGNATURE_MISMATCH");
+            }
+
             // 4. Event lifecycle and timeframe validation
             if (ticket.Event == null)
             {
