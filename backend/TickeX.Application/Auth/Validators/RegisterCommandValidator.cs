@@ -19,7 +19,9 @@ public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Mật khẩu không được để trống.")
-            .MinimumLength(6).WithMessage("Mật khẩu phải có ít nhất 6 ký tự.")
+            .MinimumLength(8).WithMessage("Mật khẩu phải có ít nhất 8 ký tự.")
+            .Matches(@"[A-Za-z]").WithMessage("Mật khẩu phải chứa ít nhất một chữ cái.")
+            .Matches(@"[0-9]").WithMessage("Mật khẩu phải chứa ít nhất một chữ số.")
             .Must(p => Encoding.UTF8.GetByteCount(p ?? string.Empty) <= 72)
             .WithMessage("Mật khẩu không được vượt quá 72 bytes.");
     }

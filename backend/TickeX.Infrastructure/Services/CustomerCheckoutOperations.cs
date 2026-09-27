@@ -169,10 +169,14 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
     {
         var data = _payOS.VerifyPaymentWebhookData(payload, signature);
         if (data is null) return Fail("INVALID_PAYMENT_WEBHOOK", "Dữ liệu thanh toán không hợp lệ.");
-        var processed = await _mediator.Send(new ProcessPaymentCommand(data), cancellationToken);
-        return processed
-            ? new(true, "PAYMENT_PROCESSED", "Payment processed.", data.OrderCode)
-            : Fail("PAYMENT_PROCESSING_FAILED", "Không thể xử lý thanh toán cho đơn hàng này.");
+        var result = await _mediator.Send(new ProcessPaymentCommand(data), cancellationToken);
+        if (result.Success)
+            return new(true, result.Code, result.Message, data.OrderCode);
+
+        if (result.IsTransient)
+            return Fail("PAYMENT_TRANSIENT_ERROR", result.Message, data.OrderCode);
+
+        return Fail(result.Code, result.Message, data.OrderCode);
     }
 
     public async Task<CustomerCheckoutResult> SimulateSuccessAsync(long orderCode, Guid userId, CancellationToken cancellationToken)
@@ -181,16 +185,17 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         var ticket = await _context.Tickets.AsNoTracking().SingleOrDefaultAsync(t => t.OrderCode == orderCode && t.UserId == userId, cancellationToken);
         if (ticket is null) return Fail("PAYMENT_NOT_FOUND", "Không tìm thấy đơn hàng.");
         var data = new PayOSWebhookData { OrderCode = ticket.OrderCode, Amount = ticket.Price, Code = "00", Success = true, RawPayload = "development-simulation" };
-        return await _mediator.Send(new ProcessPaymentCommand(data), cancellationToken)
-            ? new(true, "PAYMENT_PROCESSED", "Đã xác nhận thanh toán.", ticket.OrderCode)
-            : Fail("PAYMENT_PROCESSING_FAILED", "Không thể xác nhận thanh toán.");
+        var result = await _mediator.Send(new ProcessPaymentCommand(data), cancellationToken);
+        return result.Success
+            ? new(true, result.Code, result.Message, ticket.OrderCode)
+            : Fail(result.Code, result.Message, ticket.OrderCode);
     }
 
     private CustomerCheckoutResult Link(Ticket ticket, string checkoutUrl) =>
         new(true, "PAYMENT_LINK_CREATED", "Đã tạo liên kết thanh toán.", ticket.OrderCode, ticket.Price, checkoutUrl, "Pending", ticket.Id);
     private string ReturnUrl(long orderCode) => $"{_configuration["PayOS:ReturnUrl"] ?? "http://localhost:5173/payment-result"}?orderCode={orderCode}";
     private string CancelUrl(long orderCode) => $"{_configuration["PayOS:CancelUrl"] ?? "http://localhost:5173/my-tickets"}?orderCode={orderCode}";
-    private static CustomerCheckoutResult Fail(string code, string message) => new(false, code, message);
+    private static CustomerCheckoutResult Fail(string code, string message, long? orderCode = null) => new(false, code, message, OrderCode: orderCode);
     private static string ToPublicStatus(TicketStatus status) => status switch
     {
         TicketStatus.Pending => "Pending",

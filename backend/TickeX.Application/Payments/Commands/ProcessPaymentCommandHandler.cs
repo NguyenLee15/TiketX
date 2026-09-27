@@ -10,7 +10,7 @@ using TickeX.Domain.Enums;
 
 namespace TickeX.Application.Payments.Commands;
 
-public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentCommand, bool>
+public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentCommand, ProcessPaymentResult>
 {
     private readonly IApplicationDbContext _context;
     private readonly INotificationOutboxPort _notificationOutbox;
@@ -41,7 +41,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         _holdDuration = TimeSpan.FromMinutes(reservationOptions?.Value.HoldMinutes ?? new ReservationOptions().HoldMinutes);
     }
 
-    public async Task<bool> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
+    public async Task<ProcessPaymentResult> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
     {
         var data = request.PaymentData;
         var initialTicket = await _context.Tickets
@@ -50,7 +50,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         if (initialTicket == null)
         {
             _logger.LogWarning("Payment webhook received for non-existent order {OrderCode}", data.OrderCode);
-            return false;
+            return ProcessPaymentResult.Permanent("PAYMENT_NOT_FOUND", "Không tìm thấy vé tương ứng với đơn hàng.");
         }
 
         string lockKey = $"payment:lock:{initialTicket.OrderCode}";
@@ -62,13 +62,13 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Required payment lock is unavailable for {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
-            return false;
+            return ProcessPaymentResult.Transient("PAYMENT_LOCK_UNAVAILABLE", "Không thể lấy khóa phân tán cho đơn hàng. Vui lòng gửi lại webhook.");
         }
 
         if (lease is null)
         {
             _logger.LogWarning("Could not acquire payment lock for {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
-            return false;
+            return ProcessPaymentResult.Transient("PAYMENT_LOCK_UNAVAILABLE", "Không thể lấy khóa phân tán cho đơn hàng. Vui lòng gửi lại webhook.");
         }
 
         await using (lease)
@@ -81,7 +81,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
 
             if (ticket == null)
             {
-                return false;
+                return ProcessPaymentResult.Permanent("PAYMENT_NOT_FOUND", "Không tìm thấy vé trong phiên xử lý.");
             }
 
             // 1. Check existing PaymentTransaction for idempotency
@@ -94,12 +94,12 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 if (data.Success)
                 {
                     _logger.LogInformation("Idempotent webhook: Ticket {TicketId} for order {OrderCode} is already marked as Paid.", ticket.Id, data.OrderCode);
-                    return true;
+                    return ProcessPaymentResult.Ok("PAYMENT_ALREADY_PAID", "Vé đã được thanh toán trước đó.");
                 }
                 else
                 {
                     _logger.LogWarning("Security invariant preserved: Webhook requested cancellation for already Paid ticket {TicketId}, order {OrderCode}. Ignoring failure transition.", ticket.Id, data.OrderCode);
-                    return true; // Acknowledge webhook without downgrading status
+                    return ProcessPaymentResult.Ok("PAYMENT_ALREADY_PAID", "Bỏ qua yêu cầu hủy cho vé đã thanh toán."); // Acknowledge webhook without downgrading status
                 }
             }
 
@@ -175,15 +175,24 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                         _context.RefundRequests.Add(refundReq);
                     }
 
-                    if (!lease.IsValid) return false;
-                    await _context.SaveChangesAsync(cancellationToken);
+                    if (!lease.IsValid) 
+                        return ProcessPaymentResult.Transient("PAYMENT_LOCK_EXPIRED", "Khóa phân tán hết hạn.");
+                    try
+                    {
+                        await _context.SaveChangesAsync(cancellationToken);
+                    }
+                    catch (DbUpdateException ex)
+                    {
+                        _logger.LogError(ex, "Database error saving orphaned payment for order {OrderCode}", data.OrderCode);
+                        return ProcessPaymentResult.Transient("PAYMENT_DB_ERROR", "Lỗi cơ sở dữ liệu tạm thời. Vui lòng gửi lại webhook.");
+                    }
 
                     if (isHoldExpired && ticket.Seat != null)
                     {
                         await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString());
                     }
 
-                    return true; // Acknowledge webhook to avoid endless retries while preserving compensation state
+                    return ProcessPaymentResult.Ok("ORPHANED_PAYMENT_ACKNOWLEDGED", "Đã ghi nhận thanh toán mồ côi và tạo yêu cầu bồi hoàn.");
                 }
 
                 if (isHoldExpired)
@@ -195,7 +204,14 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                     }
                     if (lease.IsValid)
                     {
-                        await _context.SaveChangesAsync(cancellationToken);
+                        try
+                        {
+                            await _context.SaveChangesAsync(cancellationToken);
+                        }
+                        catch (DbUpdateException ex)
+                        {
+                            _logger.LogWarning(ex, "Database error saving cancelled ticket for expired order {OrderCode}", data.OrderCode);
+                        }
                         if (ticket.Seat != null)
                         {
                             await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString());
@@ -204,7 +220,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 }
 
                 _logger.LogWarning("Cannot process failed payment webhook for ticket {TicketId} with status {Status}.", ticket.Id, ticket.Status);
-                return false;
+                return ProcessPaymentResult.Permanent("PAYMENT_STATUS_INVALID", "Không thể xử lý thất bại cho vé đã hết hạn hoặc không hợp lệ.");
             }
 
             if (data.Success)
@@ -214,7 +230,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 {
                     _logger.LogCritical("Payment amount tampering detected for ticket {TicketId}, order {OrderCode}! Expected {Expected}, got {Actual}.", 
                         ticket.Id, data.OrderCode, ticket.Price, data.Amount);
-                    return false;
+                    return ProcessPaymentResult.Permanent("PAYMENT_AMOUNT_MISMATCH", "Số tiền thanh toán không khớp với giá vé.");
                 }
 
                 // 2. Generate cryptographically signed QR code token
@@ -255,8 +271,17 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 }
 
                 // Explicitly commit financial, seat state, and outbox atomically into database
-                if (!lease.IsValid) return false;
-                await _context.SaveChangesAsync(cancellationToken);
+                if (!lease.IsValid) 
+                    return ProcessPaymentResult.Transient("PAYMENT_LOCK_EXPIRED", "Khóa phân tán hết hạn.");
+                try
+                {
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+                catch (DbUpdateException ex)
+                {
+                    _logger.LogError(ex, "Database error saving paid status for order {OrderCode}", data.OrderCode);
+                    return ProcessPaymentResult.Transient("PAYMENT_DB_ERROR", "Lỗi cơ sở dữ liệu tạm thời. Vui lòng gửi lại webhook.");
+                }
 
                 if (ticket.Seat != null)
                 {
@@ -289,8 +314,17 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                     existingTx.MarkFailed("Payment rejected or cancelled by user", auditSummary);
                 }
 
-                if (!lease.IsValid) return false;
-                await _context.SaveChangesAsync(cancellationToken);
+                if (!lease.IsValid) 
+                    return ProcessPaymentResult.Transient("PAYMENT_LOCK_EXPIRED", "Khóa phân tán hết hạn.");
+                try
+                {
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+                catch (DbUpdateException ex)
+                {
+                    _logger.LogError(ex, "Database error saving failed status for order {OrderCode}", data.OrderCode);
+                    return ProcessPaymentResult.Transient("PAYMENT_DB_ERROR", "Lỗi cơ sở dữ liệu tạm thời. Vui lòng gửi lại webhook.");
+                }
 
                 if (ticket.Seat != null)
                 {
@@ -298,7 +332,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 }
             }
 
-            return true;
+            return ProcessPaymentResult.Ok("PAYMENT_PROCESSED", "Xử lý thanh toán thành công.");
         }
     }
 }

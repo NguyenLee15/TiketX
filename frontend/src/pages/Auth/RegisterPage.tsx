@@ -11,7 +11,11 @@ import { useAuthStore } from '../../stores/useAuthStore';
 const registerSchema = z.object({
   name: z.string().min(2, 'Họ và tên phải có ít nhất 2 ký tự').max(100, 'Họ và tên tối đa 100 ký tự'),
   email: z.string().min(1, 'Email không được để trống').email('Địa chỉ email không đúng định dạng'),
-  password: z.string().min(6, 'Mật khẩu phải chứa ít nhất 6 ký tự'),
+  password: z
+    .string()
+    .min(8, 'Mật khẩu phải chứa ít nhất 8 ký tự')
+    .regex(/[A-Za-z]/, 'Mật khẩu phải chứa ít nhất một chữ cái')
+    .regex(/[0-9]/, 'Mật khẩu phải chứa ít nhất một chữ số'),
   confirmPassword: z.string().min(1, 'Vui lòng xác nhận mật khẩu')
 }).refine(data => data.password === data.confirmPassword, {
   message: 'Mật khẩu xác nhận không khớp',
@@ -163,7 +167,7 @@ export default function RegisterPage() {
                   className={`block w-full pl-10 pr-3.5 py-2.5 bg-surface-2 border ${
                     errors.password ? 'border-danger focus:border-danger focus:ring-danger' : 'border-border-subtle focus:border-brand-primary focus:ring-brand-primary'
                   } rounded-xl text-white placeholder-text-tertiary focus:outline-none focus-visible:ring-2 transition-[colors,box-shadow] text-xs sm:text-sm`}
-                  placeholder="Mật khẩu (tối thiểu 6 ký tự)"
+                  placeholder="Mật khẩu (tối thiểu 8 ký tự, gồm chữ và số)"
                 />
               </div>
               {errors.password && (

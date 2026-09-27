@@ -192,6 +192,24 @@ public class AuthSecurityTests
         result.IsValid.Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData("short1", "Mật khẩu phải có ít nhất 8 ký tự.")]
+    [InlineData("abcdefgh", "Mật khẩu phải chứa ít nhất một chữ số.")]
+    [InlineData("12345678", "Mật khẩu phải chứa ít nhất một chữ cái.")]
+    public void RegisterCommandValidator_WhenPasswordFailsPolicy_ShouldFailWithExpectedMessage(string password, string expectedError)
+    {
+        // Arrange
+        var validator = new RegisterCommandValidator();
+        var command = new RegisterCommand("Valid Name", "valid@example.com", password);
+
+        // Act
+        var result = validator.Validate(command);
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Password" && e.ErrorMessage.Contains(expectedError));
+    }
+
     [Fact]
     public void CookieAuthenticationSupport_DefaultSettings_ShouldUseStrictSameSite()
     {
