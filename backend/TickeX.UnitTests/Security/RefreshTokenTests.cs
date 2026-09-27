@@ -107,4 +107,23 @@ public sealed class RefreshTokenTests
         result.Message.Should().Be("Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
         mockTokens.Verify(x => x.RevokeAllForUserAsync(user.Id, Moq.It.IsAny<CancellationToken>()), Moq.Times.Once);
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task Handle_WithEmptyOrNullToken_ReturnsInvalidImmediatelyWithoutStoreOrDbCall(string? invalidToken)
+    {
+        var mockTokens = new Moq.Mock<TickeX.Application.Interfaces.IRefreshTokenStore>();
+        var mockDb = new Moq.Mock<TickeX.Application.Interfaces.IApplicationDbContext>();
+        var mockJwt = new Moq.Mock<TickeX.Application.Interfaces.IJwtService>();
+
+        var handler = new RefreshTokenCommandHandler(mockTokens.Object, mockDb.Object, mockJwt.Object);
+        var result = await handler.Handle(new RefreshTokenCommand(invalidToken!), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.Message.Should().Be("Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
+        mockTokens.Verify(x => x.FindAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<CancellationToken>()), Moq.Times.Never);
+    }
 }
+

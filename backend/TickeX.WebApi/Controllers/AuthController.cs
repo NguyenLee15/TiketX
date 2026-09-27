@@ -76,8 +76,19 @@ public class AuthController : ControllerBase
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshRequest? request, CancellationToken cancellationToken)
     {
-        var raw = Request.Cookies[_cookieSettings.RefreshCookieName] ?? request?.Token;
-        var result = await _mediator.Send(new RefreshTokenCommand(raw ?? string.Empty), cancellationToken);
+        var raw = Request.Cookies[_cookieSettings.RefreshCookieName];
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return Unauthorized(new 
+            { 
+                success = false, 
+                code = "REFRESH_COOKIE_MISSING", 
+                message = "Không tìm thấy token làm mới hợp lệ trong cookie phiên làm việc.",
+                error = new { code = "REFRESH_COOKIE_MISSING", message = "Không tìm thấy token làm mới hợp lệ trong cookie phiên làm việc." }
+            });
+        }
+
+        var result = await _mediator.Send(new RefreshTokenCommand(raw), cancellationToken);
         if (!result.Success) 
             return Unauthorized(new 
             { 
