@@ -77,7 +77,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-surface-1 flex items-center justify-center p-4 relative overflow-hidden text-text-primary py-12">
+    <div className="min-h-dvh bg-surface-1 flex items-center justify-center p-4 relative overflow-hidden text-text-primary py-12">
       {/* Decorative Grid */}
       <div className="w-full max-w-md relative z-10 animate-scale-in">
         {/* Sleek Floating Panel */}
