@@ -101,36 +101,71 @@ public class PayOSService : IPayOSService
 
     public async Task<PaymentLinkLookupResult?> GetPaymentLinkAsync(long orderCode, CancellationToken cancellationToken = default)
     {
-        if (!_resilience.TryEnter()) return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
-        using var response = await _httpClient.GetAsync($"v2/payment-requests/{orderCode}", cancellationToken);
-        if ((int)response.StatusCode == 404)
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            _resilience.RecordSuccess();
-            return new PaymentLinkLookupResult(PaymentLinkLookupState.NotFound);
-        }
-        if (!response.IsSuccessStatusCode)
-        {
-            _resilience.RecordFailure();
-            return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
+            if (!_resilience.TryEnter()) return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
+
+            try
+            {
+                using var response = await _httpClient.GetAsync($"v2/payment-requests/{orderCode}", cancellationToken);
+                if ((int)response.StatusCode == 404)
+                {
+                    _resilience.RecordSuccess();
+                    return new PaymentLinkLookupResult(PaymentLinkLookupState.NotFound);
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    if ((int)response.StatusCode >= 500 && attempt == 0)
+                    {
+                        await Task.Delay(PayOSResilienceGate.RetryDelay(attempt), cancellationToken);
+                        continue;
+                    }
+
+                    _resilience.RecordFailure();
+                    return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
+                }
+
+                using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                if (!document.RootElement.TryGetProperty("data", out var data)
+                    || !data.TryGetProperty("checkoutUrl", out var checkoutUrl))
+                {
+                    _resilience.RecordFailure();
+                    return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
+                }
+
+                var value = checkoutUrl.GetString();
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    _resilience.RecordFailure();
+                    return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
+                }
+
+                _resilience.RecordSuccess();
+                return new PaymentLinkLookupResult(PaymentLinkLookupState.Found, value);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && attempt == 0)
+            {
+                await Task.Delay(PayOSResilienceGate.RetryDelay(attempt), cancellationToken);
+            }
+            catch (HttpRequestException) when (attempt == 0)
+            {
+                await Task.Delay(PayOSResilienceGate.RetryDelay(attempt), cancellationToken);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                _resilience.RecordFailure();
+                return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
+            }
+            catch (HttpRequestException)
+            {
+                _resilience.RecordFailure();
+                return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
+            }
         }
 
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-        if (!document.RootElement.TryGetProperty("data", out var data)
-            || !data.TryGetProperty("checkoutUrl", out var checkoutUrl))
-        {
-            _resilience.RecordFailure();
-            return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
-        }
-
-        var value = checkoutUrl.GetString();
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            _resilience.RecordFailure();
-            return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
-        }
-
-        _resilience.RecordSuccess();
-        return new PaymentLinkLookupResult(PaymentLinkLookupState.Found, value);
+        _resilience.RecordFailure();
+        return new PaymentLinkLookupResult(PaymentLinkLookupState.Unknown);
     }
 
     public PayOSWebhookData? VerifyPaymentWebhookData(string webhookBody, string signature)

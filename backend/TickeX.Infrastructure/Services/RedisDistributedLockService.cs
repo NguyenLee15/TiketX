@@ -52,7 +52,7 @@ public sealed class RedisDistributedLockService : IDistributedLockService
 
         private async Task RenewUntilStoppedAsync()
         {
-            var interval = TimeSpan.FromTicks(Math.Max(TimeSpan.FromMilliseconds(100).Ticks, _leaseDuration.Ticks / 3));
+            var interval = TimeSpan.FromTicks(Math.Max(TimeSpan.FromMilliseconds(100).Ticks, _leaseDuration.Ticks / 10));
             try
             {
                 while (true)

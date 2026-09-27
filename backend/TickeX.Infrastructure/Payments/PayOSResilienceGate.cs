@@ -32,4 +32,7 @@ public sealed class PayOSResilienceGate
                 _openUntilUtc = DateTime.UtcNow.AddSeconds(30);
         }
     }
+
+    public static TimeSpan RetryDelay(int attempt) =>
+        TimeSpan.FromMilliseconds(100 * Math.Pow(2, attempt) + Random.Shared.Next(0, 100));
 }

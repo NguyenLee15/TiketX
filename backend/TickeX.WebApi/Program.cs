@@ -9,6 +9,7 @@ using TickeX.Infrastructure;
 using TickeX.Infrastructure.Persistence;
 using TickeX.Infrastructure.Services;
 using TickeX.WebApi.Health;
+using TickeX.WebApi.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,71 +78,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     }
 });
 
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-    options.OnRejected = async (context, token) =>
-    {
-        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-        context.HttpContext.Response.Headers.Append("Retry-After", "60");
-        context.HttpContext.Response.ContentType = "application/json";
-        await context.HttpContext.Response.WriteAsync(
-            System.Text.Json.JsonSerializer.Serialize(new
-            {
-                success = false,
-                code = "TOO_MANY_REQUESTS",
-                message = "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 1 phút.",
-                error = new { code = "TOO_MANY_REQUESTS", message = "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 1 phút.", details = (object?)null }
-            }), token);
-    };
-
-    // 1. Auth policy partitioned by authenticated user + trusted client identity.
-    options.AddPolicy("AuthPolicy", httpContext =>
-    {
-        var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString();
-        var partitionKey = httpContext.RequestServices.GetRequiredService<TickeX.Application.Interfaces.IClientIdentityResolver>()
-            .Resolve(userId, clientIp);
-        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = 15,
-            Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0
-        });
-    });
-
-    // 2. Booking policy partitioned by authenticated user + trusted client identity.
-    options.AddPolicy("BookingPolicy", httpContext =>
-    {
-        var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString();
-        var partitionKey = httpContext.RequestServices.GetRequiredService<TickeX.Application.Interfaces.IClientIdentityResolver>()
-            .Resolve(userId, clientIp);
-        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = 30,
-            Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0
-        });
-    });
-
-    // 3. Admin policy partitioned by authenticated admin user + trusted client identity.
-    options.AddPolicy("AdminPolicy", httpContext =>
-    {
-        var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString();
-        var partitionKey = httpContext.RequestServices.GetRequiredService<TickeX.Application.Interfaces.IClientIdentityResolver>()
-            .Resolve(userId, clientIp);
-        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = 60,
-            Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0
-        });
-    });
-});
-
+builder.Services.AddTickeXRateLimiting();
 var hangfireConnection = builder.Configuration.GetConnectionString("HangfireConnection");
 if (string.IsNullOrWhiteSpace(hangfireConnection) && !builder.Environment.IsDevelopment())
     throw new InvalidOperationException("ConnectionStrings:HangfireConnection is required outside Development; in-memory Hangfire storage is not safe for production.");
