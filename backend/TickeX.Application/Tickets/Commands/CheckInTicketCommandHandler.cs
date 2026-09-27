@@ -30,7 +30,10 @@ public class CheckInTicketCommandHandler : IRequestHandler<CheckInTicketCommand,
         var qrResult = _ticketSecurityService.ValidateQrToken(request.QrToken.Trim());
         if (!qrResult.IsValid || qrResult.Payload == null)
         {
-            return new CheckInResult(false, qrResult.Message, StatusCode: 400, Code: "QR_INVALID");
+            var errorMessage = string.IsNullOrWhiteSpace(qrResult.Message)
+                ? "Mã vé QR không hợp lệ hoặc sai định dạng chữ ký bảo mật."
+                : qrResult.Message;
+            return new CheckInResult(false, errorMessage, StatusCode: 400, Code: "QR_INVALID");
         }
 
         var payload = qrResult.Payload;

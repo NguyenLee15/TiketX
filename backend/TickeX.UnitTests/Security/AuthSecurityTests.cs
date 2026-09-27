@@ -193,6 +193,19 @@ public class AuthSecurityTests
     }
 
     [Fact]
+    public void CookieAuthenticationSupport_DefaultSettings_ShouldUseStrictSameSite()
+    {
+        var defaultSettings = new CookieAuthenticationSettings();
+        defaultSettings.SameSite.Should().Be(Microsoft.AspNetCore.Http.SameSiteMode.Strict);
+        defaultSettings.Secure.Should().BeTrue();
+
+        var cookie = CookieAuthenticationSupport.CreateAccessCookie(defaultSettings);
+        cookie.SameSite.Should().Be(Microsoft.AspNetCore.Http.SameSiteMode.Strict);
+        cookie.HttpOnly.Should().BeTrue();
+        cookie.Secure.Should().BeTrue();
+    }
+
+    [Fact]
     public void CookieAuthenticationSupport_UsesHttpOnlySecureAccessCookie_AndValidatesDoubleSubmitCsrf()
     {
         var settings = new CookieAuthenticationSettings
@@ -200,14 +213,14 @@ public class AuthSecurityTests
             AccessCookieName = "tickex_access",
             CsrfCookieName = "XSRF-TOKEN",
             Secure = true,
-            SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax
+            SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict
         };
 
         var cookie = CookieAuthenticationSupport.CreateAccessCookie(settings);
 
         cookie.HttpOnly.Should().BeTrue();
         cookie.Secure.Should().BeTrue();
-        cookie.SameSite.Should().Be(Microsoft.AspNetCore.Http.SameSiteMode.Lax);
+        cookie.SameSite.Should().Be(Microsoft.AspNetCore.Http.SameSiteMode.Strict);
         CookieAuthenticationSupport.HasValidCsrfToken("known", "known").Should().BeTrue();
         CookieAuthenticationSupport.HasValidCsrfToken("known", "other").Should().BeFalse();
     }

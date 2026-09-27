@@ -9,7 +9,7 @@ public sealed class CookieAuthenticationSettings
     public string CsrfCookieName { get; set; } = "XSRF-TOKEN";
     public string RefreshCookieName { get; set; } = "tickex_refresh";
     public bool Secure { get; set; } = true;
-    public SameSiteMode SameSite { get; set; } = SameSiteMode.Lax;
+    public SameSiteMode SameSite { get; set; } = SameSiteMode.Strict;
     public int LifetimeMinutes { get; set; } = 60;
     public int RefreshLifetimeDays { get; set; } = 30;
 }
