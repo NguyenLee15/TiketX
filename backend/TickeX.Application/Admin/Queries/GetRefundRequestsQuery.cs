@@ -12,12 +12,50 @@ public sealed class GetRefundRequestsQueryHandler(IApplicationDbContext context)
 {
     public async Task<RefundRequestPage> Handle(GetRefundRequestsQuery request, CancellationToken cancellationToken)
     {
-        if (request.Page < 1 || request.PageSize is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(request), "page must be positive and pageSize must be between 1 and 100.");
+        var page = Math.Clamp(request.Page > 0 ? request.Page : 1, 1, 10000);
+        var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 25, 1, 100);
+
         var query = context.RefundRequests.AsNoTracking().OrderByDescending(x => x.CreatedAt);
         var count = await query.CountAsync(cancellationToken);
-        var items = await query.Skip(checked((request.Page - 1) * request.PageSize)).Take(request.PageSize)
-            .Select(x => new RefundRequestRow(x.Id, x.EventId, x.TicketId, x.Amount, x.Status, x.AttemptCount, x.ProviderStatus, x.ProviderReference, x.LastError, x.CreatedAt, x.NextAttemptAt))
+        var rawItems = await query.Skip((page - 1) * pageSize).Take(pageSize)
+            .Select(x => new
+            {
+                x.Id,
+                x.EventId,
+                x.TicketId,
+                x.Amount,
+                x.Status,
+                x.AttemptCount,
+                x.ProviderStatus,
+                x.ProviderReference,
+                x.LastError,
+                x.CreatedAt,
+                x.NextAttemptAt
+            })
             .ToListAsync(cancellationToken);
-        return new RefundRequestPage(items, request.Page, request.PageSize, count);
+
+        var items = rawItems.Select(x => new RefundRequestRow(
+            x.Id,
+            x.EventId,
+            x.TicketId,
+            x.Amount,
+            x.Status,
+            x.AttemptCount,
+            x.ProviderStatus,
+            x.ProviderReference,
+            SanitizeError(x.LastError),
+            x.CreatedAt,
+            x.NextAttemptAt
+        )).ToList();
+
+        return new RefundRequestPage(items, page, pageSize, count);
+    }
+
+    public static string? SanitizeError(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var firstLine = raw.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim();
+        if (string.IsNullOrWhiteSpace(firstLine)) return null;
+        return firstLine.Length > 200 ? firstLine[..200] + "..." : firstLine;
     }
 }
