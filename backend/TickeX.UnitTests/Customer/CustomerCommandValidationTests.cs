@@ -32,13 +32,24 @@ public class CustomerCommandValidationTests
 
     [Theory]
     [InlineData("", "Mật khẩu không được để trống")]
-    [InlineData("12345", "ít nhất 6 ký tự")]
-    public void ChangePasswordCommandValidator_ShortOrEmptyPassword_FailsValidation(string newPass, string _)
+    [InlineData("12345", "ít nhất 8 ký tự")]
+    [InlineData("1234567", "ít nhất 8 ký tự")]
+    [InlineData("abcdefgh", "ít nhất một chữ số")]
+    [InlineData("12345678", "ít nhất một chữ cái")]
+    public void ChangePasswordCommandValidator_ShortOrEmptyOrWeakPassword_FailsValidation(string newPass, string _)
     {
         var command = new ChangePasswordCommand(Guid.NewGuid(), "oldPassword123", newPass);
         var result = _changePasswordValidator.Validate(command);
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "NewPassword");
+    }
+
+    [Fact]
+    public void ChangePasswordCommandValidator_StrongPassword_PassesValidation()
+    {
+        var command = new ChangePasswordCommand(Guid.NewGuid(), "oldPassword123", "StrongPass2026");
+        var result = _changePasswordValidator.Validate(command);
+        result.IsValid.Should().BeTrue();
     }
 
     [Fact]

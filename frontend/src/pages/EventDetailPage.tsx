@@ -149,10 +149,19 @@ export default function EventDetailPage() {
         
         // Sync timer with server expiresAt
         if (res.data.data.expiresAt) {
-          setLockExpiresAt(res.data.data.expiresAt);
           const expiresMs = new Date(res.data.data.expiresAt).getTime();
-          const remainingSecs = Math.max(0, Math.floor((expiresMs - Date.now()) / 1000));
-          setLockTimeLeft(remainingSecs > 0 ? remainingSecs : 300);
+          const remainingSecs = Math.floor((expiresMs - Date.now()) / 1000);
+          if (remainingSecs <= 0) {
+            setTicketId(null);
+            setLockExpiresAt(null);
+            setLockTimeLeft(0);
+            setIsCheckoutOpen(false);
+            toast.error('Thời gian giữ chỗ đã hết hạn. Vui lòng chọn lại ghế.');
+            void refetchEvent();
+            return;
+          }
+          setLockExpiresAt(res.data.data.expiresAt);
+          setLockTimeLeft(remainingSecs);
         } else {
           setLockExpiresAt(null);
           setLockTimeLeft(300);
