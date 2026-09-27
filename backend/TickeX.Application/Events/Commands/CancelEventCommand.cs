@@ -38,6 +38,9 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
         if (ev.Status == EventStatus.Cancelled)
             return AdminOperationResult.BadRequest("Sự kiện này đã ở trạng thái Đã Hủy trước đó.", "EVENT_ALREADY_CANCELLED");
 
+        if (ev.Status == EventStatus.Completed)
+            return AdminOperationResult.BadRequest("Không thể hủy sự kiện đã kết thúc.", "EVENT_ALREADY_COMPLETED");
+
         var beforeStatus = ev.Status.ToString();
         ev.Cancel();
 
@@ -114,7 +117,16 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
         }
         else
         {
-            await _context.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return AdminOperationResult.Conflict(
+                    "Sự kiện vừa được cập nhật bởi quản trị viên khác. Vui lòng tải lại dữ liệu mới nhất.",
+                    "EVENT_CONCURRENCY_CONFLICT");
+            }
         }
 
         return AdminOperationResult.Ok($"Hủy sự kiện thành công. Đã tạo yêu cầu hoàn tiền cho {refundedCount} vé và giải phóng {seats.Count} ghế chưa bán.");

@@ -5,6 +5,7 @@ using TickeX.Application.Events.Commands;
 using TickeX.Domain.Entities;
 using TickeX.Domain.Enums;
 using TickeX.Infrastructure.Persistence;
+using TickeX.Infrastructure.Services;
 using Xunit;
 
 namespace TickeX.UnitTests.Admin;
@@ -151,5 +152,79 @@ public class EventConcurrencyAndAdminAuditTests : IDisposable
         auditLog.UserId.Should().Be(adminId);
         auditLog.UserEmail.Should().Be(adminEmail);
         auditLog.IpAddress.Should().Be(clientIp);
+    }
+
+    [Fact]
+    public async Task UpdateEvent_WhenEventIsCompleted_ReturnsBadRequestCannotEditCompleted()
+    {
+        // Arrange
+        var ev = new Event(
+            "Completed Concert",
+            "Concert Description",
+            DateTime.UtcNow.AddDays(-10),
+            DateTime.UtcNow.AddDays(-10).AddHours(3),
+            "Hanoi",
+            "Opera House",
+            60,
+            status: EventStatus.Completed
+        );
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var handler = new UpdateEventCommandHandler(_context);
+        var command = new UpdateEventCommand(
+            ev.Id,
+            "Attempted Title Update",
+            ev.Description,
+            ev.Date,
+            ev.EndDate,
+            ev.Location,
+            ev.VenueName,
+            ev.TotalSeats,
+            ev.Category,
+            ev.ImageUrl,
+            ev.BannerUrl,
+            ev.OrganizerName,
+            ev.BasePrice,
+            ev.Status,
+            ev.RefundCutoffHours
+        );
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.ErrorCode.Should().Be("CANNOT_EDIT_COMPLETED_EVENT");
+    }
+
+    [Fact]
+    public async Task CancelEvent_WhenEventIsCompleted_ReturnsBadRequestAlreadyCompleted()
+    {
+        // Arrange
+        var ev = new Event(
+            "Completed Music Festival",
+            "Festival Description",
+            DateTime.UtcNow.AddDays(-5),
+            DateTime.UtcNow.AddDays(-5).AddHours(4),
+            "HCMC",
+            "Saigon Stadium",
+            100,
+            status: EventStatus.Completed
+        );
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var handler = new CancelEventCommandHandler(_context, new RefundRequestPort(_context));
+        var command = new CancelEventCommand(ev.Id, "Cancel reason test");
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.ErrorCode.Should().Be("EVENT_ALREADY_COMPLETED");
     }
 }

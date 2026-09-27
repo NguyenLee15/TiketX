@@ -57,6 +57,7 @@ public class AdminController : ControllerBase
             "REFUND_NOT_FOUND" => NotFound(new { success = false, code = result, message = "Không tìm thấy yêu cầu hoàn tiền." }),
             "REFUND_RETRY_QUEUED" => Accepted(new { success = true, code = result }),
             "REFUND_COMPLETED" => Ok(new { success = true, code = result }),
+            "REFUND_CONCURRENCY_CONFLICT" => StatusCode(StatusCodes.Status409Conflict, new { success = false, code = result, message = "Yêu cầu hoàn tiền đang được xử lý đồng thời bởi tác vụ khác. Vui lòng tải lại dữ liệu mới nhất." }),
             _ => Conflict(new { success = false, code = result, message = "Chưa thể retry cho đến khi trạng thái PayOS được đối soát." })
         };
     }

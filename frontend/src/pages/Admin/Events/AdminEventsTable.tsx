@@ -72,12 +72,12 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-subtle bg-surface-2/30 text-[11px] font-bold text-text-tertiary uppercase tracking-wider">
-                <th className="px-5 py-3.5 whitespace-nowrap">Sự Kiện</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Trạng Thái</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Giá Vé Cơ Bản</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Thời Gian Diễn Ra</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Địa Điểm</th>
-                <th className="px-5 py-3.5 text-right whitespace-nowrap">Thao Tác</th>
+                <th scope="col" className="px-5 py-3.5 whitespace-nowrap">Sự Kiện</th>
+                <th scope="col" className="px-5 py-3.5 whitespace-nowrap">Trạng Thái</th>
+                <th scope="col" className="px-5 py-3.5 whitespace-nowrap">Giá Vé Cơ Bản</th>
+                <th scope="col" className="px-5 py-3.5 whitespace-nowrap">Thời Gian Diễn Ra</th>
+                <th scope="col" className="px-5 py-3.5 whitespace-nowrap">Địa Điểm</th>
+                <th scope="col" className="px-5 py-3.5 text-right whitespace-nowrap">Thao Tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle text-xs sm:text-sm">

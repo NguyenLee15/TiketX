@@ -56,7 +56,16 @@ public class DeleteEventCommandHandler : IRequestHandler<DeleteEventCommand, Adm
         );
         _context.AuditLogs.Add(audit);
 
-        await _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return AdminOperationResult.Conflict(
+                "Sự kiện vừa được cập nhật bởi quản trị viên khác. Vui lòng tải lại dữ liệu mới nhất.",
+                "EVENT_CONCURRENCY_CONFLICT");
+        }
 
         return AdminOperationResult.Ok("Xóa sự kiện thành công.");
     }

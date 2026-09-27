@@ -54,6 +54,9 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
         if (ev.Status == EventStatus.Cancelled)
             return AdminOperationResult.BadRequest("Không thể chỉnh sửa sự kiện đã bị hủy.", "CANNOT_EDIT_CANCELLED_EVENT");
 
+        if (ev.Status == EventStatus.Completed)
+            return AdminOperationResult.BadRequest("Không thể chỉnh sửa sự kiện đã kết thúc.", "CANNOT_EDIT_COMPLETED_EVENT");
+
         if (request.Status == EventStatus.Cancelled)
             return AdminOperationResult.BadRequest(
                 "Không thể chuyển sự kiện sang trạng thái Đã hủy qua biểu mẫu cập nhật. Vui lòng sử dụng tính năng Hủy sự kiện chuyên dụng để đảm bảo bồi hoàn cho khách hàng.",
