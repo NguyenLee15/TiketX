@@ -51,6 +51,14 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
         if (ev.IsDeleted)
             return AdminOperationResult.BadRequest("Không thể cập nhật sự kiện đã bị xóa.", "EVENT_DELETED");
 
+        if (ev.Status == EventStatus.Cancelled)
+            return AdminOperationResult.BadRequest("Không thể chỉnh sửa sự kiện đã bị hủy.", "CANNOT_EDIT_CANCELLED_EVENT");
+
+        if (request.Status == EventStatus.Cancelled)
+            return AdminOperationResult.BadRequest(
+                "Không thể chuyển sự kiện sang trạng thái Đã hủy qua biểu mẫu cập nhật. Vui lòng sử dụng tính năng Hủy sự kiện chuyên dụng để đảm bảo bồi hoàn cho khách hàng.",
+                "USE_DEDICATED_CANCEL_WORKFLOW");
+
         if (!string.IsNullOrWhiteSpace(request.ExpectedVersion))
         {
             if (AdminMutationVersionPolicy.TryDecodeRequiredVersion(request.ExpectedVersion, out var expectedBytes))
@@ -130,7 +138,16 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
         );
         _context.AuditLogs.Add(audit);
 
-        await _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return AdminOperationResult.Conflict(
+                "Sự kiện vừa được cập nhật bởi quản trị viên khác. Vui lòng tải lại dữ liệu mới nhất.",
+                "EVENT_CONCURRENCY_CONFLICT");
+        }
 
         return AdminOperationResult.Ok("Cập nhật sự kiện thành công.");
     }

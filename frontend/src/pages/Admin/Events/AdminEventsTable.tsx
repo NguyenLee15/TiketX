@@ -148,9 +148,9 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                         <div className="flex items-center justify-end gap-1.5 shrink-0">
                           <button
                             onClick={() => onEdit(event)}
-                            disabled={event.isDeleted}
-                            className="p-2 bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white rounded-xl transition-colors border border-border-subtle"
-                            title="Sửa sự kiện"
+                            disabled={event.isDeleted || isCompleted || isCancelled}
+                            className="p-2 bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white rounded-xl transition-colors border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={isCancelled ? "Không thể sửa sự kiện đã hủy" : isCompleted ? "Không thể sửa sự kiện đã kết thúc" : "Sửa sự kiện"}
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -230,8 +230,8 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-subtle">
                 <button
                   onClick={() => onEdit(event)}
-                  disabled={event.isDeleted}
-                  className="px-3 py-1.5 bg-surface-2 hover:bg-surface-3 text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary border border-border-subtle flex items-center gap-1"
+                  disabled={event.isDeleted || isCompleted || isCancelled}
+                  className="px-3 py-1.5 bg-surface-2 hover:bg-surface-3 text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary border border-border-subtle flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   Sửa
@@ -241,7 +241,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                   <button
                     onClick={() => onCancel(event)}
                     disabled={event.isDeleted}
-                    className="px-3 py-1.5 bg-amber-500/15 text-amber-400 hover:bg-amber-500 hover:text-black rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 border border-amber-500/30 flex items-center gap-1"
+                    className="px-3 py-1.5 bg-amber-500/15 text-amber-400 hover:bg-amber-500 hover:text-black rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 border border-amber-500/30 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <XCircle className="w-3.5 h-3.5" />
                     Hủy
@@ -250,7 +250,8 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
 
                 <button
                   onClick={() => onDelete(event)}
-                  className="px-3 py-1.5 bg-danger/15 text-danger hover:bg-danger hover:text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger border border-danger/30 flex items-center gap-1"
+                  disabled={event.isDeleted}
+                  className="px-3 py-1.5 bg-danger/15 text-danger hover:bg-danger hover:text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger border border-danger/30 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Xóa

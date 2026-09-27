@@ -86,7 +86,7 @@ export const adminEventsPagedResponseSchema = z.object({
 export const adminUserItemSchema = z.object({
   id: z.string().min(1),
   name: z.string().default(''),
-  email: z.string().email().or(z.string()),
+  email: z.string().default(''),
   role: z.string().default('Customer'),
   isBlocked: z.boolean().default(false),
   avatarUrl: z.string().optional().nullable(),

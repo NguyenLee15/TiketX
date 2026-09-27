@@ -34,7 +34,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PagedResult<U
 
     public async Task<PagedResult<UserDto>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
-        var page = request.Page > 0 ? request.Page : 1;
+        var page = Math.Clamp(request.Page > 0 ? request.Page : 1, 1, 10000);
         var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 10, 1, 100);
 
         var query = _context.Users.AsNoTracking();

@@ -26,7 +26,7 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
 
     public async Task<PagedResult<EventDto>> Handle(GetAdminEventsQuery request, CancellationToken cancellationToken)
     {
-        var page = request.Page < 1 ? 1 : request.Page;
+        var page = Math.Clamp(request.Page > 0 ? request.Page : 1, 1, 10000);
         var pageSize = request.PageSize switch
         {
             < 1 => 10,

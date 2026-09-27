@@ -129,6 +129,12 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
           {event ? 'Chỉnh Sửa Sự Kiện' : 'Tạo Sự Kiện Mới & Thiết Lập Ghế'}
         </h2>
 
+        {event?.status === 'Cancelled' && (
+          <div role="alert" className="p-3 bg-danger/10 border border-danger/30 rounded-xl text-xs text-danger mb-4">
+            Sự kiện này đã bị hủy và không thể chỉnh sửa thông tin.
+          </div>
+        )}
+
         <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
           <div className="space-y-3.5">
             <div>
@@ -183,14 +189,14 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                 <select
                   id="event-status"
                   {...register('status')}
-                  disabled={watchedStatus === 'Completed' || isLoading}
+                  disabled={watchedStatus === 'Completed' || watchedStatus === 'Cancelled' || isLoading}
                   aria-label="Trạng thái sự kiện"
-                  className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors cursor-pointer"
+                  className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <option value="Published" className="bg-surface-1 text-white">Đang mở bán (Published)</option>
                   <option value="Draft" className="bg-surface-1 text-white">Bản nháp (Draft)</option>
                   {watchedStatus === 'Completed' && <option value="Completed" className="bg-surface-1 text-white">Đã kết thúc (Completed)</option>}
-                  <option value="Cancelled" className="bg-surface-1 text-white">Đã hủy (Cancelled)</option>
+                  {watchedStatus === 'Cancelled' && <option value="Cancelled" className="bg-surface-1 text-white">Đã hủy (Cancelled)</option>}
                 </select>
                 {errors.status && <p className="text-danger text-xs mt-1">{errors.status.message}</p>}
               </div>
@@ -289,7 +295,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
             </button>
             <button 
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || event?.status === 'Cancelled'}
               className="px-5 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary shadow-md shadow-brand-glow flex items-center gap-1.5 text-xs sm:text-sm active:scale-95 disabled:opacity-50"
             >
               {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
