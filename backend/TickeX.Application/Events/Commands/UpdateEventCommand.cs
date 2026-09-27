@@ -69,24 +69,25 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
             return AdminOperationResult.BadRequest(
                 "Không thể chuyển sự kiện từ Bản nháp sang Đã kết thúc mà chưa qua Mở bán.",
                 "INVALID_STATUS_TRANSITION");
-
-        if (!string.IsNullOrWhiteSpace(request.ExpectedVersion))
+        if (string.IsNullOrWhiteSpace(request.ExpectedVersion))
         {
-            if (AdminMutationVersionPolicy.TryDecodeRequiredVersion(request.ExpectedVersion, out var expectedBytes))
-            {
-                if (!ev.Version.SequenceEqual(expectedBytes))
-                {
-                    return AdminOperationResult.Conflict(
-                        "Sự kiện vừa được cập nhật bởi quản trị viên khác. Vui lòng tải lại dữ liệu mới nhất.",
-                        "EVENT_CONCURRENCY_CONFLICT");
-                }
-            }
-            else
-            {
-                return AdminOperationResult.BadRequest(
-                    "Phiên bản dữ liệu sự kiện không hợp lệ.",
-                    "INVALID_VERSION");
-            }
+            return AdminOperationResult.BadRequest(
+                "Phiên bản dữ liệu sự kiện (ExpectedVersion) là bắt buộc.",
+                "VERSION_REQUIRED");
+        }
+
+        if (!AdminMutationVersionPolicy.TryDecodeRequiredVersion(request.ExpectedVersion, out var expectedBytes))
+        {
+            return AdminOperationResult.BadRequest(
+                "Phiên bản dữ liệu sự kiện không hợp lệ.",
+                "INVALID_VERSION");
+        }
+
+        if (ev.Version != null && !ev.Version.SequenceEqual(expectedBytes))
+        {
+            return AdminOperationResult.Conflict(
+                "Sự kiện vừa được cập nhật bởi quản trị viên khác. Vui lòng tải lại dữ liệu mới nhất.",
+                "EVENT_CONCURRENCY_CONFLICT");
         }
 
         // Invariant check: any ticket/reservation history freezes financial and seat geometry fields.

@@ -42,6 +42,10 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PagedResult<U
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim();
+            if (search.Length > 100)
+            {
+                search = search.Substring(0, 100);
+            }
             var pattern = $"%{search}%";
             query = query.Where(u => EF.Functions.Like(u.Name, pattern) || EF.Functions.Like(u.Email, pattern));
         }

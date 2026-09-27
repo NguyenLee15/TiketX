@@ -281,8 +281,9 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
             disabled={page <= 1}
             className="p-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-white border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             title="Trang trước"
+            aria-label="Trang trước"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4" aria-hidden="true" />
           </button>
           
           <span className="px-3 py-1 rounded-xl bg-surface-2 border border-border-subtle text-white font-mono">
@@ -294,8 +295,9 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
             disabled={page >= totalPages}
             className="p-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-white border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             title="Trang sau"
+            aria-label="Trang sau"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </div>

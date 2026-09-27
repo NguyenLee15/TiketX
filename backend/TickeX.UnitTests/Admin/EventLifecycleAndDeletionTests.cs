@@ -247,7 +247,8 @@ public class EventLifecycleAndDeletionTests : IDisposable
         var cmd1 = new UpdateEventCommand(
             ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate, ev.Location, ev.VenueName,
             TotalSeats: 200, // modified
-            Category: ev.Category, ImageUrl: ev.ImageUrl, BasePrice: ev.BasePrice
+            Category: ev.Category, ImageUrl: ev.ImageUrl, BasePrice: ev.BasePrice,
+            ExpectedVersion: Convert.ToBase64String(ev.Version)
         );
         var res1 = await handler.Handle(cmd1, CancellationToken.None);
 
@@ -261,7 +262,8 @@ public class EventLifecycleAndDeletionTests : IDisposable
             ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate, ev.Location, ev.VenueName,
             TotalSeats: ev.TotalSeats,
             Category: ev.Category, ImageUrl: ev.ImageUrl, 
-            BasePrice: 350000m // modified
+            BasePrice: 350000m, // modified
+            ExpectedVersion: Convert.ToBase64String(ev.Version)
         );
         var res2 = await handler.Handle(cmd2, CancellationToken.None);
 
@@ -286,7 +288,8 @@ public class EventLifecycleAndDeletionTests : IDisposable
 
         var result = await new UpdateEventCommandHandler(_context).Handle(new UpdateEventCommand(
             ev.Id, ev.Title, ev.Description, ev.Date.AddHours(1), ev.EndDate.AddHours(1), ev.Location, ev.VenueName,
-            ev.TotalSeats, ev.Category, ev.ImageUrl, BasePrice: ev.BasePrice), CancellationToken.None);
+            ev.TotalSeats, ev.Category, ev.ImageUrl, BasePrice: ev.BasePrice,
+            ExpectedVersion: Convert.ToBase64String(ev.Version)), CancellationToken.None);
 
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be("CANNOT_MODIFY_DATE_AFTER_SALES");
@@ -302,7 +305,8 @@ public class EventLifecycleAndDeletionTests : IDisposable
         var handler = new UpdateEventCommandHandler(_context);
         var command = new UpdateEventCommand(
             ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate, ev.Location, ev.VenueName,
-            ev.TotalSeats, ev.Category, ev.ImageUrl, Status: EventStatus.Completed, BasePrice: ev.BasePrice);
+            ev.TotalSeats, ev.Category, ev.ImageUrl, Status: EventStatus.Completed, BasePrice: ev.BasePrice,
+            ExpectedVersion: Convert.ToBase64String(ev.Version));
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -329,7 +333,8 @@ public class EventLifecycleAndDeletionTests : IDisposable
         var handler = new UpdateEventCommandHandler(_context);
         var command = new UpdateEventCommand(
             ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate, ev.Location, ev.VenueName,
-            ev.TotalSeats, ev.Category, ev.ImageUrl, Status: EventStatus.Draft, BasePrice: ev.BasePrice);
+            ev.TotalSeats, ev.Category, ev.ImageUrl, Status: EventStatus.Draft, BasePrice: ev.BasePrice,
+            ExpectedVersion: Convert.ToBase64String(ev.Version));
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -348,7 +353,8 @@ public class EventLifecycleAndDeletionTests : IDisposable
         var handler = new UpdateEventCommandHandler(_context);
         var command = new UpdateEventCommand(
             ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate, ev.Location, ev.VenueName,
-            ev.TotalSeats, ev.Category, ev.ImageUrl, Status: EventStatus.Published, BasePrice: ev.BasePrice);
+            ev.TotalSeats, ev.Category, ev.ImageUrl, Status: EventStatus.Published, BasePrice: ev.BasePrice,
+            ExpectedVersion: Convert.ToBase64String(ev.Version));
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -357,5 +363,45 @@ public class EventLifecycleAndDeletionTests : IDisposable
 
         var updated = await _context.Events.FindAsync(ev.Id);
         updated!.Status.Should().Be(EventStatus.Published);
+    }
+
+    [Fact]
+    public async Task UpdateEvent_WhenExpectedVersionMissing_ShouldReturnBadRequest()
+    {
+        var ev = new Event("Version Test Event", "Desc", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(2), "Loc", "Venue", 100, basePrice: 150000m);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var handler = new UpdateEventCommandHandler(_context);
+        var command = new UpdateEventCommand(
+            ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate, ev.Location, ev.VenueName,
+            ev.TotalSeats, ev.Category, ev.ImageUrl, Status: ev.Status, BasePrice: ev.BasePrice,
+            ExpectedVersion: null);
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.ErrorCode.Should().Be("VERSION_REQUIRED");
+    }
+
+    [Fact]
+    public async Task UpdateEvent_WhenExpectedVersionInvalidFormat_ShouldReturnBadRequest()
+    {
+        var ev = new Event("Invalid Version Event", "Desc", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(2), "Loc", "Venue", 100, basePrice: 150000m);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var handler = new UpdateEventCommandHandler(_context);
+        var command = new UpdateEventCommand(
+            ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate, ev.Location, ev.VenueName,
+            ev.TotalSeats, ev.Category, ev.ImageUrl, Status: ev.Status, BasePrice: ev.BasePrice,
+            ExpectedVersion: "not-base64-content!!!");
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.ErrorCode.Should().Be("INVALID_VERSION");
     }
 }

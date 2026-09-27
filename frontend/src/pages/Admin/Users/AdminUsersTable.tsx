@@ -47,11 +47,11 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-subtle bg-surface-2/50 text-[11px] font-bold uppercase tracking-wider text-text-secondary">
-                <th className="p-4 sm:p-5 whitespace-nowrap">Thông Tin Người Dùng</th>
-                <th className="p-4 sm:p-5 whitespace-nowrap">Liên Hệ</th>
-                <th className="p-4 sm:p-5 whitespace-nowrap">Vai Trò</th>
-                <th className="p-4 sm:p-5 whitespace-nowrap">Trạng Thái</th>
-                <th className="p-4 sm:p-5 text-right whitespace-nowrap">Thao Tác</th>
+                <th scope="col" className="p-4 sm:p-5 whitespace-nowrap">Thông Tin Người Dùng</th>
+                <th scope="col" className="p-4 sm:p-5 whitespace-nowrap">Liên Hệ</th>
+                <th scope="col" className="p-4 sm:p-5 whitespace-nowrap">Vai Trò</th>
+                <th scope="col" className="p-4 sm:p-5 whitespace-nowrap">Trạng Thái</th>
+                <th scope="col" className="p-4 sm:p-5 text-right whitespace-nowrap">Thao Tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle text-xs sm:text-sm">
@@ -238,8 +238,9 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
             disabled={page <= 1}
             className="p-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-white border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             title="Trang trước"
+            aria-label="Trang trước"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4" aria-hidden="true" />
           </button>
           
           <span className="px-3 py-1 rounded-xl bg-surface-2 border border-border-subtle text-white font-mono">
@@ -251,8 +252,9 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
             disabled={page >= totalPages}
             className="p-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-white border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             title="Trang sau"
+            aria-label="Trang sau"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </div>

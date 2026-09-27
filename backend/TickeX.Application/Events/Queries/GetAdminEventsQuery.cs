@@ -46,6 +46,10 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim();
+            if (search.Length > 100)
+            {
+                search = search.Substring(0, 100);
+            }
             var pattern = $"%{search}%";
             query = query.Where(e => EF.Functions.Like(e.Title, pattern) || EF.Functions.Like(e.Location, pattern));
         }
