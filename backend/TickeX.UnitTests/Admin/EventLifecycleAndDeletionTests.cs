@@ -291,4 +291,71 @@ public class EventLifecycleAndDeletionTests : IDisposable
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be("CANNOT_MODIFY_DATE_AFTER_SALES");
     }
+
+    [Fact]
+    public async Task UpdateEvent_WhenTransitioningFromDraftToCompleted_ShouldReturnBadRequest()
+    {
+        var ev = new Event("Draft Event", "Desc", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(2), "Loc", "Venue", 100, basePrice: 150000m, status: EventStatus.Draft);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var handler = new UpdateEventCommandHandler(_context);
+        var command = new UpdateEventCommand(
+            ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate, ev.Location, ev.VenueName,
+            ev.TotalSeats, ev.Category, ev.ImageUrl, Status: EventStatus.Completed, BasePrice: ev.BasePrice);
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.ErrorCode.Should().Be("INVALID_STATUS_TRANSITION");
+    }
+
+    [Fact]
+    public async Task UpdateEvent_WhenDemotingPublishedEventWithTicketsToDraft_ShouldReturnBadRequest()
+    {
+        var user = new User("Customer", "buyer@example.com", "hash", "Customer");
+        _context.Users.Add(user);
+        var ev = new Event("Live Concert", "Desc", DateTime.UtcNow.AddDays(3), DateTime.UtcNow.AddDays(3).AddHours(3), "Loc", "Venue", 2, basePrice: 200000m, status: EventStatus.Published);
+        ev.GenerateSeatsMatrix(1, 2);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var ticket = new Ticket(ev.Id, ev.Seats.First().Id, user.Id, 200000m);
+        ticket.MarkAsPaid();
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        var handler = new UpdateEventCommandHandler(_context);
+        var command = new UpdateEventCommand(
+            ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate, ev.Location, ev.VenueName,
+            ev.TotalSeats, ev.Category, ev.ImageUrl, Status: EventStatus.Draft, BasePrice: ev.BasePrice);
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.ErrorCode.Should().Be("CANNOT_DEMOTE_PUBLISHED_EVENT_WITH_TICKETS");
+    }
+
+    [Fact]
+    public async Task UpdateEvent_WhenTransitioningDraftToPublished_ShouldSucceed()
+    {
+        var ev = new Event("Upcoming Fest", "Desc", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(2), "Loc", "Venue", 100, basePrice: 150000m, status: EventStatus.Draft);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var handler = new UpdateEventCommandHandler(_context);
+        var command = new UpdateEventCommand(
+            ev.Id, ev.Title, ev.Description, ev.Date, ev.EndDate, ev.Location, ev.VenueName,
+            ev.TotalSeats, ev.Category, ev.ImageUrl, Status: EventStatus.Published, BasePrice: ev.BasePrice);
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+
+        var updated = await _context.Events.FindAsync(ev.Id);
+        updated!.Status.Should().Be(EventStatus.Published);
+    }
 }

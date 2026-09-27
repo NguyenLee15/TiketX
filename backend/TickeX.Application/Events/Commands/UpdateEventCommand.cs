@@ -57,10 +57,18 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
         if (ev.Status == EventStatus.Completed)
             return AdminOperationResult.BadRequest("Không thể chỉnh sửa sự kiện đã kết thúc.", "CANNOT_EDIT_COMPLETED_EVENT");
 
+        if (!Enum.IsDefined(typeof(EventStatus), request.Status))
+            return AdminOperationResult.BadRequest("Trạng thái sự kiện không hợp lệ.", "INVALID_EVENT_STATUS");
+
         if (request.Status == EventStatus.Cancelled)
             return AdminOperationResult.BadRequest(
                 "Không thể chuyển sự kiện sang trạng thái Đã hủy qua biểu mẫu cập nhật. Vui lòng sử dụng tính năng Hủy sự kiện chuyên dụng để đảm bảo bồi hoàn cho khách hàng.",
                 "USE_DEDICATED_CANCEL_WORKFLOW");
+
+        if (ev.Status == EventStatus.Draft && request.Status == EventStatus.Completed)
+            return AdminOperationResult.BadRequest(
+                "Không thể chuyển sự kiện từ Bản nháp sang Đã kết thúc mà chưa qua Mở bán.",
+                "INVALID_STATUS_TRANSITION");
 
         if (!string.IsNullOrWhiteSpace(request.ExpectedVersion))
         {
@@ -87,6 +95,13 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
 
         if (hasSoldTickets)
         {
+            if (ev.Status == EventStatus.Published && request.Status == EventStatus.Draft)
+            {
+                return AdminOperationResult.BadRequest(
+                    "Không thể chuyển sự kiện đã mở bán về Bản nháp khi đã có vé hoặc lịch sử giao dịch.",
+                    "CANNOT_DEMOTE_PUBLISHED_EVENT_WITH_TICKETS");
+            }
+
             if (request.Date != default && request.Date != ev.Date)
             {
                 return AdminOperationResult.BadRequest(

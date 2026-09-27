@@ -175,8 +175,12 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
           <>
             <div id="tickex-qr-reader" className="w-full h-full max-w-sm overflow-hidden" />
             {cameraError && (
-              <div className="absolute inset-0 bg-surface-1/95 p-6 flex flex-col items-center justify-center text-center space-y-3">
-                <AlertTriangle className="w-10 h-10 text-amber-400" />
+              <div 
+                role="alert" 
+                aria-live="assertive"
+                className="absolute inset-0 bg-surface-1/95 p-6 flex flex-col items-center justify-center text-center space-y-3"
+              >
+                <AlertTriangle className="w-10 h-10 text-amber-400" aria-hidden="true" />
                 <p className="text-sm font-semibold text-white">{cameraError}</p>
                 <button
                   onClick={() => { setCameraError(null); setCameraActive(true); setRetryNonce(n => n + 1); }}
