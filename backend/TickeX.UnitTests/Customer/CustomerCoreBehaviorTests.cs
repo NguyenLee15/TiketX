@@ -525,6 +525,75 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         (await _context.AuditLogs.AnyAsync(a => a.Action == "ORPHANED_PAYMENT_DETECTED")).Should().BeTrue();
     }
 
+    [Fact]
+    public async Task ProcessPayment_WhenPendingTicketExceedsHoldDuration_CancelsTicketReleasesSeatAndMarksOrphaned()
+    {
+        var user = new User("Customer", "expired_webhook@test.local", "hash");
+        var @event = CreateEvent("LateWebhookConcert", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        // Simulate ticket created 10 minutes ago (> 5 min hold duration), but still in Pending status (Hangfire lag)
+        _context.Entry(ticket).Property(nameof(BaseEntity.CreatedAt)).CurrentValue = DateTime.UtcNow.AddMinutes(-10);
+        await _context.SaveChangesAsync();
+
+        var lockService = new Mock<IDistributedLockService>();
+        lockService.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestDistributedLockLease());
+        var notifications = new Mock<ISeatNotificationService>();
+        var outbox = new Mock<INotificationOutboxPort>();
+        var ticketSecurity = new Mock<ITicketSecurityService>();
+
+        var handler = new ProcessPaymentCommandHandler(
+            _context, outbox.Object, notifications.Object, lockService.Object,
+            ticketSecurity.Object, NullLogger<ProcessPaymentCommandHandler>.Instance);
+
+        var webhookData = new PayOSWebhookData
+        {
+            OrderCode = ticket.OrderCode,
+            Amount = ticket.Price,
+            Success = true,
+            Reference = "payos-ref-late-123",
+            Code = "00"
+        };
+
+        var result = await handler.Handle(new ProcessPaymentCommand(webhookData), CancellationToken.None);
+
+        result.Should().BeTrue("expired hold webhook should be acknowledged to stop retries while preserving compensation state");
+
+        // Assert ticket was transitioned from Pending to Cancelled
+        var refreshedTicket = await _context.Tickets.AsNoTracking().SingleAsync(t => t.Id == ticket.Id);
+        refreshedTicket.Status.Should().Be(TicketStatus.Cancelled);
+
+        // Assert seat was released back to Available
+        var refreshedSeat = await _context.Seats.AsNoTracking().SingleAsync(s => s.Id == seat.Id);
+        refreshedSeat.Status.Should().Be(SeatStatus.Available);
+
+        // Assert refund request was created for customer compensation
+        (await _context.RefundRequests.CountAsync()).Should().Be(1);
+        var refundReq = await _context.RefundRequests.SingleAsync();
+        refundReq.TicketId.Should().Be(ticket.Id);
+        refundReq.Amount.Should().Be(ticket.Price);
+
+        // Assert PaymentTransaction was marked Orphaned with hold expired reason
+        var tx = await _context.PaymentTransactions.SingleAsync(p => p.OrderCode == ticket.OrderCode);
+        tx.Status.Should().Be("OrphanedPaid");
+        tx.RawWebhookPayload.Should().Contain("Reservation hold expired");
+
+        // Assert AuditLog was recorded
+        (await _context.AuditLogs.AnyAsync(a => a.Action == "ORPHANED_PAYMENT_DETECTED")).Should().BeTrue();
+
+        // Assert seat status notification was emitted
+        notifications.Verify(n => n.NotifySeatStatusChanged(@event.Id, seat.Id, SeatStatus.Available.ToString(), null, null), Times.Once);
+    }
+
     private static Event CreateEvent(string title, DateTime date) =>
         new(title, "Description", date, date.AddHours(2), "HCM", "Venue", 1);
 

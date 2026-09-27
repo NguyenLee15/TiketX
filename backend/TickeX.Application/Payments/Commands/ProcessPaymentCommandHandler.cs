@@ -1,8 +1,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TickeX.Application.Interfaces;
 using TickeX.Application.Payments;
+using TickeX.Application.Seats;
 using TickeX.Domain.Entities;
 using TickeX.Domain.Enums;
 
@@ -17,6 +19,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
     private readonly ITicketSecurityService _ticketSecurityService;
     private readonly ILogger<ProcessPaymentCommandHandler> _logger;
     private readonly ITimePolicy _time;
+    private readonly TimeSpan _holdDuration;
 
     public ProcessPaymentCommandHandler(
         IApplicationDbContext context, 
@@ -25,7 +28,8 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         IDistributedLockService lockService,
         ITicketSecurityService ticketSecurityService,
         ILogger<ProcessPaymentCommandHandler> logger,
-        ITimePolicy? time = null)
+        ITimePolicy? time = null,
+        IOptions<ReservationOptions>? reservationOptions = null)
     {
         _context = context;
         _notificationOutbox = notificationOutbox;
@@ -34,6 +38,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
         _ticketSecurityService = ticketSecurityService;
         _logger = logger;
         _time = time ?? new UtcTimePolicy();
+        _holdDuration = TimeSpan.FromMinutes(reservationOptions?.Value.HoldMinutes ?? new ReservationOptions().HoldMinutes);
     }
 
     public async Task<bool> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
@@ -103,13 +108,28 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                 : (!string.IsNullOrWhiteSpace(data.PaymentLinkId) ? data.PaymentLinkId : data.OrderCode.ToString());
             var auditSummary = PaymentAudit.CreateWebhookSummary(data.OrderCode, data.Amount, providerTxId, data.Code);
 
-            // Invariant 2: Ticket must be Pending to process payment
-            if (ticket.Status != TicketStatus.Pending)
+            // Invariant 2: Ticket must be Pending AND within the reservation hold window to process payment
+            var isHoldExpired = ticket.Status == TicketStatus.Pending && (_time.UtcNow - ticket.CreatedAt > _holdDuration);
+
+            if (ticket.Status != TicketStatus.Pending || isHoldExpired)
             {
                 if (data.Success)
                 {
-                    _logger.LogError("ORPHANED PAYMENT DETECTED: Order {OrderCode}, Ticket {TicketId}, Amount {Amount}. Ticket status is {Status}. Money captured but reservation hold expired or invalid. Recording OrphanedPaid transaction for compensation.",
-                        data.OrderCode, ticket.Id, data.Amount, ticket.Status);
+                    if (isHoldExpired)
+                    {
+                        ticket.Cancel();
+                        if (ticket.Seat != null)
+                        {
+                            ticket.Seat.Release();
+                        }
+                    }
+
+                    var reason = isHoldExpired
+                        ? $"Reservation hold expired ({_holdDuration.TotalMinutes:0}m limit exceeded)"
+                        : $"Hold expired or invalid status: {ticket.Status}";
+
+                    _logger.LogError("ORPHANED PAYMENT DETECTED: Order {OrderCode}, Ticket {TicketId}, Amount {Amount}. Ticket status is {Status}, HoldExpired: {IsHoldExpired}. Money captured but reservation hold expired or invalid. Recording OrphanedPaid transaction for compensation.",
+                        data.OrderCode, ticket.Id, data.Amount, ticket.Status, isHoldExpired);
 
                     if (existingTx == null)
                     {
@@ -119,12 +139,12 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                             data.Amount,
                             "VietQR_PayOS"
                         );
-                        transaction.MarkOrphaned($"Hold expired or invalid status: {ticket.Status}", providerTxId, auditSummary);
+                        transaction.MarkOrphaned(reason, providerTxId, auditSummary);
                         _context.PaymentTransactions.Add(transaction);
                     }
                     else
                     {
-                        existingTx.MarkOrphaned($"Hold expired or invalid status: {ticket.Status}", providerTxId, auditSummary);
+                        existingTx.MarkOrphaned(reason, providerTxId, auditSummary);
                     }
 
                     var audit = new AuditLog(
@@ -133,7 +153,7 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
                         "ORPHANED_PAYMENT_DETECTED",
                         "PaymentTransaction",
                         data.OrderCode.ToString(),
-                        $"TicketStatus: {ticket.Status}",
+                        $"TicketStatus: {ticket.Status}; HoldExpired: {isHoldExpired}",
                         $"ProviderTxId: {providerTxId}; ActionRequired: RefundCompensation"
                     );
                     _context.AuditLogs.Add(audit);
@@ -157,7 +177,30 @@ public class ProcessPaymentCommandHandler : IRequestHandler<ProcessPaymentComman
 
                     if (!lease.IsValid) return false;
                     await _context.SaveChangesAsync(cancellationToken);
+
+                    if (isHoldExpired && ticket.Seat != null)
+                    {
+                        await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString());
+                    }
+
                     return true; // Acknowledge webhook to avoid endless retries while preserving compensation state
+                }
+
+                if (isHoldExpired)
+                {
+                    ticket.Cancel();
+                    if (ticket.Seat != null)
+                    {
+                        ticket.Seat.Release();
+                    }
+                    if (lease.IsValid)
+                    {
+                        await _context.SaveChangesAsync(cancellationToken);
+                        if (ticket.Seat != null)
+                        {
+                            await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString());
+                        }
+                    }
                 }
 
                 _logger.LogWarning("Cannot process failed payment webhook for ticket {TicketId} with status {Status}.", ticket.Id, ticket.Status);
