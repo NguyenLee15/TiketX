@@ -25,6 +25,8 @@ export const TicketFilterTabs: React.FC<TicketFilterTabsProps> = React.memo(({
       {allowedTicketTabs.map(tab => (
         <button
           key={tab}
+          type="button"
+          aria-pressed={currentTab === tab}
           onClick={() => onTabChange(tab)}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
             currentTab === tab 

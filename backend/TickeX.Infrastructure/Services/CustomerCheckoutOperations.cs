@@ -63,7 +63,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         if (ticket.UserId != userId) return Fail("PAYMENT_FORBIDDEN", "Bạn không có quyền thanh toán vé này.");
         if (ticket.Status != TicketStatus.Pending)
             return Fail(ticket.Status == TicketStatus.Paid ? "PAYMENT_ALREADY_PAID" : "PAYMENT_NOT_PENDING", "Vé không còn chờ thanh toán.");
-        var holdMinutes = _configuration.GetValue<int>("Reservation:HoldMinutes", 10);
+        var holdMinutes = _configuration.GetValue<int>("Reservation:HoldMinutes", 5);
         var holdThreshold = _time.UtcNow.AddMinutes(-holdMinutes);
         if (ticket.CreatedAt <= holdThreshold)
             return Fail("RESERVATION_EXPIRED", "Thời gian giữ vé đã hết hạn. Vui lòng chọn lại ghế.");
