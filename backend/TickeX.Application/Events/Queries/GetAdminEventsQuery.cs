@@ -85,8 +85,6 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
                 e.OrganizerName,
                 e.TotalSeats,
                 e.BasePrice,
-                MinPrice = e.BasePrice * 0.75m,
-                MaxPrice = e.BasePrice * 1.75m,
                 e.Status,
                 e.RefundCutoffHours,
                 e.IsDeleted,
@@ -100,6 +98,11 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
             .GroupBy(s => s.EventId)
             .Select(g => new { EventId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.EventId, x => x.Count, cancellationToken);
+        var seatPrices = await _context.Seats
+            .Where(s => eventIds.Contains(s.EventId))
+            .GroupBy(s => s.EventId)
+            .Select(g => new { EventId = g.Key, MinPrice = g.Min(s => (double)s.Price), MaxPrice = g.Max(s => (double)s.Price) })
+            .ToDictionaryAsync(x => x.EventId, x => (MinPrice: (decimal)x.MinPrice, MaxPrice: (decimal)x.MaxPrice), cancellationToken);
         var ticketHistoryIds = await _context.Tickets
             .Where(t => eventIds.Contains(t.EventId))
             .Select(t => t.EventId)
@@ -122,8 +125,8 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
             e.TotalSeats,
             availableSeats.GetValueOrDefault(e.Id),
             e.BasePrice,
-            e.MinPrice,
-            e.MaxPrice,
+            seatPrices.TryGetValue(e.Id, out var prices) ? prices.MinPrice : e.BasePrice,
+            seatPrices.TryGetValue(e.Id, out prices) ? prices.MaxPrice : e.BasePrice,
             e.Status,
             e.RefundCutoffHours,
             e.IsDeleted,

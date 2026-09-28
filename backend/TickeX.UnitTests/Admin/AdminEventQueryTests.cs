@@ -55,6 +55,22 @@ public sealed class AdminEventQueryTests : IDisposable
         item.Version.Should().Be(Convert.ToBase64String(ev.Version));
     }
 
+    [Fact]
+    public async Task AdminEvents_ShouldProjectActualSeatPriceRange()
+    {
+        var ev = new Event("Tiered", "Description", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(3), "Location", "Venue", 2, basePrice: 100m);
+        ev.GenerateSeatsMatrix(rowCount: 1, seatsPerRow: 2);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var handler = new GetAdminEventsQueryHandler(_context);
+        var item = (await handler.Handle(new GetAdminEventsQuery(), CancellationToken.None))
+            .Items.Should().ContainSingle(x => x.Id == ev.Id).Subject;
+
+        item.MinPrice.Should().Be(175m);
+        item.MaxPrice.Should().Be(175m);
+    }
+
     public void Dispose()
     {
         _context.Dispose();
