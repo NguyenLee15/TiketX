@@ -6,6 +6,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Text;
+using System.Text.Json;
 using TickeX.Application.Events.Queries;
 using TickeX.Application.Interfaces;
 using TickeX.Application.Seats.Commands;
@@ -51,6 +53,30 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
             .Handle(new GetEventsQuery(), CancellationToken.None);
 
         result.Items.Select(x => x.Title).Should().Equal("Future");
+    }
+
+    [Fact]
+    public async Task PublicCatalogCursorResponseDoesNotPretendToHaveOffsetTotals()
+    {
+        var first = CreateEvent("First", DateTime.UtcNow.AddDays(2));
+        var second = CreateEvent("Second", DateTime.UtcNow.AddDays(3));
+        _context.Events.AddRange(first, second);
+        await _context.SaveChangesAsync();
+
+        var catalog = new CustomerEventCatalogAdapter(_context, new UtcTimePolicy());
+        var cursor = Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+        {
+            SortBy = "date_asc",
+            Date = first.Date,
+            Price = first.BasePrice,
+            Id = first.Id
+        }))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var cursorResult = await catalog.SearchAsync(new GetEventsQuery(PageSize: 1, Cursor: cursor), CancellationToken.None);
+
+        cursorResult.PaginationMode.Should().Be("cursor");
+        cursorResult.TotalCount.Should().BeNull();
+        cursorResult.TotalPages.Should().BeNull();
+        cursorResult.HasMore.Should().BeFalse();
     }
 
     [Fact]

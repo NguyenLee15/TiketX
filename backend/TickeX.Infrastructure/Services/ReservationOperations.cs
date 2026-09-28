@@ -17,6 +17,7 @@ public sealed class ReservationOperations : IReservationOperations
     private readonly ReservationOptions _options;
     private readonly ILogger<ReservationOperations> _logger;
     private readonly ITimePolicy _time;
+    private readonly ICustomerEventCatalogCache? _catalogCache;
 
     public ReservationOperations(
         IApplicationDbContext context,
@@ -25,7 +26,8 @@ public sealed class ReservationOperations : IReservationOperations
         IReservationExpiryScheduler scheduler,
         IOptions<ReservationOptions> options,
         ILogger<ReservationOperations> logger,
-        ITimePolicy? time = null)
+        ITimePolicy? time = null,
+        ICustomerEventCatalogCache? catalogCache = null)
     {
         _context = context;
         _locks = locks;
@@ -34,6 +36,7 @@ public sealed class ReservationOperations : IReservationOperations
         _options = options.Value;
         _logger = logger;
         _time = time ?? new UtcTimePolicy();
+        _catalogCache = catalogCache;
     }
 
     public async Task<ReservationResult> ReserveAsync(Guid eventId, Guid seatId, Guid userId, byte[] version, CancellationToken cancellationToken)
@@ -96,6 +99,7 @@ public sealed class ReservationOperations : IReservationOperations
                     try
                     {
                         await _context.SaveChangesAsync(cancellationToken);
+                        if (_catalogCache is not null) await _catalogCache.InvalidateAsync(cancellationToken);
                         break;
                     }
                     catch (DbUpdateException ex) when (attempt < 2 && IsOrderCodeConflict(ex))
@@ -174,6 +178,7 @@ public sealed class ReservationOperations : IReservationOperations
             current.Cancel();
             if (!lease.IsValid) return Fail("RESERVATION_LOCK_LOST", "Khóa hủy giữ ghế đã hết hạn. Vui lòng thử lại.");
             await _context.SaveChangesAsync(cancellationToken);
+            if (_catalogCache is not null) await _catalogCache.InvalidateAsync(cancellationToken);
             if (current.Seat != null)
                 try
                 {

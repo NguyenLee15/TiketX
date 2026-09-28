@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Text.Json;
 using TickeX.Application.Interfaces;
+using TickeX.Application.Tickets;
 using TickeX.Application.Tickets.Queries;
 using TickeX.Domain.Entities;
 using TickeX.Domain.Enums;
@@ -87,9 +88,9 @@ public sealed class CustomerTicketReadModelAdapter : ICustomerTicketReadModel
     private static TicketDto? ToDto(Ticket ticket, DateTime now)
     {
         if (ticket.Event == null || ticket.Seat == null) return null;
-        var cutoffHours = ticket.Event.RefundCutoffHours > 0 ? ticket.Event.RefundCutoffHours : 24;
-        var allowedUntil = ticket.Event.Date.AddHours(-cutoffHours);
-        var canRefund = ticket.Status == TicketStatus.Paid && now <= allowedUntil;
+        var cutoffHours = CustomerRefundPolicy.NormalizeCutoffHours(ticket.Event.RefundCutoffHours);
+        var canRefund = ticket.Status == TicketStatus.Paid
+            && CustomerRefundPolicy.CanRefund(now, ticket.Event.Date, cutoffHours);
         return new TicketDto(ticket.Id, ticket.EventId, ticket.SeatId, ticket.Event.Title, ticket.Event.Description,
             ticket.Event.Date, ticket.Event.EndDate, ticket.Event.Location, ticket.Event.VenueName, ticket.Event.Category,
             ticket.Event.ImageUrl, ticket.Seat.Row, ticket.Seat.Number, ticket.Seat.Tier, ticket.Price, ticket.Status.ToString(),

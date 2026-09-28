@@ -106,9 +106,9 @@ public class RefundTicketCommandHandler : IRequestHandler<RefundTicketCommand, R
                 return new RefundResult(false, "Hãy thiết lập tài khoản ngân hàng nhận tiền trong hồ sơ trước khi yêu cầu hoàn tiền.", Code: "REFUND_DESTINATION_REQUIRED");
 
             // Validate cutoff time (Event.RefundCutoffHours)
-            var cutoffHours = ticket.Event.RefundCutoffHours > 0 ? ticket.Event.RefundCutoffHours : 24;
+            var cutoffHours = CustomerRefundPolicy.NormalizeCutoffHours(ticket.Event.RefundCutoffHours);
             var eventStartTime = ticket.Event.Date;
-            var allowedUntil = eventStartTime.AddHours(-cutoffHours);
+            var allowedUntil = CustomerRefundPolicy.GetAllowedUntil(eventStartTime, cutoffHours);
 
             if (_time.UtcNow > allowedUntil)
             {

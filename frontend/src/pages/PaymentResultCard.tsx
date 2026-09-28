@@ -9,6 +9,8 @@ interface PaymentResultCardProps {
   isPending: boolean;
   isSuccess: boolean;
   isUnknown: boolean;
+  pollAttempt: number;
+  pollLimit: number;
   onRetry: () => void;
 }
 
@@ -19,6 +21,8 @@ export default function PaymentResultCard({
   isPending,
   isSuccess,
   isUnknown,
+  pollAttempt,
+  pollLimit,
   onRetry
 }: PaymentResultCardProps) {
   const title = isSuccess
@@ -86,6 +90,11 @@ export default function PaymentResultCard({
           </p>
         )}
         {notice && <p role="alert" className="mt-4 text-xs text-warning">{notice}</p>}
+        {isPending && (
+          <p className="mt-2 text-xs text-text-tertiary" aria-live="polite">
+            Tự động kiểm tra: {Math.min(pollAttempt, pollLimit)}/{pollLimit}
+          </p>
+        )}
 
         <div className="mt-7 space-y-3">
           {'refundStatus' in phase && phase.refundStatus === 'AwaitingDestination' && (

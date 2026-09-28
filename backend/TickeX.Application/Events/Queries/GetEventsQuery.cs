@@ -27,9 +27,11 @@ public record EventDto(
     string? Version = null
 );
 
-public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize, string? NextCursor = null, bool HasMore = false)
+public record PagedResult<T>(List<T> Items, int? TotalCount, int? Page, int? PageSize, string? NextCursor = null, bool HasMore = false, string PaginationMode = "offset")
 {
-    public int TotalPages => (int)Math.Ceiling((double)TotalCount / (PageSize > 0 ? PageSize : 10));
+    public int? TotalPages => TotalCount.HasValue && PageSize is > 0
+        ? (int)Math.Ceiling((double)TotalCount.Value / PageSize.Value)
+        : null;
 }
 
 public record GetEventsQuery(

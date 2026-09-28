@@ -96,10 +96,10 @@ export const useSeatSignalR = (
       void (async () => {
         try {
           if (connection?.state === signalR.HubConnectionState.Connected) {
-            await connection.invoke('LeaveEventGroup', eventId);
+            await connection.invoke('LeaveEventGroup', eventId).catch(() => undefined);
           }
         } finally {
-          await connection?.stop();
+          await connection?.stop().catch(() => undefined);
           connection = null;
         }
       })();

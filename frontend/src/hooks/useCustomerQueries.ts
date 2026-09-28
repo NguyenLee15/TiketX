@@ -30,12 +30,13 @@ export const eventItemSchema = z.object({
 
 export const catalogResponseSchema = z.object({
   items: z.array(eventItemSchema),
-  totalPages: z.number().int(),
-  totalCount: z.number().int().nonnegative(),
-  page: z.number().int().positive().optional().default(1),
+  totalPages: z.number().int().nonnegative().nullable().optional().default(null),
+  totalCount: z.number().int().nonnegative().nullable().optional().default(null),
+  page: z.number().int().positive().nullable().optional().default(null),
   pageSize: z.number().int().positive().optional().default(10),
   nextCursor: z.string().nullable().optional().default(null),
   hasMore: z.boolean().optional().default(false),
+  paginationMode: z.enum(['offset', 'cursor']).optional().default('offset'),
 }).passthrough();
 
 export const seatSchema = z.object({
@@ -163,8 +164,9 @@ export interface CatalogQueryOptions {
 
 export interface CatalogQueryResult {
   items: Event[];
-  totalPages: number;
-  totalCount: number;
+  totalPages: number | null;
+  totalCount: number | null;
+  paginationMode: 'offset' | 'cursor';
   nextCursor: string | null;
   hasMore: boolean;
 }
@@ -201,6 +203,7 @@ export function useEventsCatalogQuery(options: CatalogQueryOptions) {
         items: parsed.data.items as Event[],
         totalPages: parsed.data.totalPages,
         totalCount: parsed.data.totalCount,
+        paginationMode: parsed.data.paginationMode,
         nextCursor: parsed.data.nextCursor,
         hasMore: parsed.data.hasMore,
       };
@@ -232,13 +235,13 @@ export function useEventDetailQuery(eventId: string | undefined) {
   });
 }
 
-export function useMyTicketsQuery(page?: number, pageSize?: number, status?: string, options?: { enabled?: boolean }) {
+export function useMyTicketsQuery(page?: number, pageSize?: number, status?: string) {
   const user = useAuthStore(state => state.user);
   const userId = user?.id ?? '';
 
   return useQuery<TicketItemData[]>({
     queryKey: ['tickets', 'my-tickets', userId, { page, pageSize, status }],
-    enabled: Boolean(userId) && (options?.enabled ?? true),
+    enabled: Boolean(userId),
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams();
       if (page) params.append('page', page.toString());
@@ -278,26 +281,26 @@ export function useMyTicketsQuery(page?: number, pageSize?: number, status?: str
   });
 }
 
-export function useMyTicketsCursorQuery(cursor?: string, limit = 10, status?: string, options?: { enabled?: boolean }) {
+export function useMyTicketsCursorQuery(cursor?: string, limit = 10, status?: string) {
   const user = useAuthStore(state => state.user);
   const userId = user?.id ?? '';
 
   return useQuery<TicketCursorPage>({
     queryKey: ['tickets', 'my-tickets-cursor', userId, { cursor, limit, status }],
-    enabled: Boolean(userId) && (options?.enabled ?? true),
+    enabled: Boolean(userId),
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams({ limit: String(limit) });
       if (cursor) params.set('cursor', cursor);
       if (status && status !== 'All') params.set('status', status);
       const response = await api.get(`/api/tickets/my-tickets/cursor?${params.toString()}`, { signal });
       if (!response.data.success) {
-        throw new Error(response.data.message || 'Không thể tải danh sách vé');
+        throw new Error(response.data.message || 'KhÃ´ng thá»ƒ táº£i danh sÃ¡ch vÃ©');
       }
 
       const parsed = ticketCursorResponseSchema.safeParse(response.data?.data);
       if (!parsed.success) {
         const issues = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
-        throw new Error(`Dữ liệu cursor vé không hợp lệ từ máy chủ: ${issues}`);
+        throw new Error(`Dá»¯ liá»‡u cursor vÃ© khÃ´ng há»£p lá»‡ tá»« mÃ¡y chá»§: ${issues}`);
       }
 
       return {

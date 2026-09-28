@@ -21,6 +21,7 @@ export default function PaymentResultPage() {
   const orderCode = searchParams.get('orderCode') ?? '';
 
   const [phase, setPhase] = useState<PaymentPhase>({ state: 'checking', status: 'Pending' });
+  const [pollAttempt, setPollAttempt] = useState(0);
   const attemptRef = useRef(0);
   const mountedRef = useRef(true);
   const timerRef = useRef<number | null>(null);
@@ -139,6 +140,7 @@ export default function PaymentResultPage() {
     }
 
     if (attempt >= BACKOFF_MS.length) {
+      setPollAttempt(BACKOFF_MS.length);
       if (mountedRef.current) {
         setPhase(prev => ({
           ...prev,
@@ -150,6 +152,7 @@ export default function PaymentResultPage() {
 
     timerRef.current = window.setTimeout(async () => {
       if (!mountedRef.current) return;
+      setPollAttempt(attempt + 1);
       inFlightControllerRef.current = new AbortController();
       const done = await checkStatus(inFlightControllerRef.current.signal);
       if (!done && mountedRef.current) {
@@ -168,6 +171,7 @@ export default function PaymentResultPage() {
     inFlightControllerRef.current?.abort();
     inFlightControllerRef.current = new AbortController();
     attemptRef.current = 0;
+    setPollAttempt(0);
     const done = await checkStatus(inFlightControllerRef.current.signal);
     if (!done && mountedRef.current) {
       schedulePoll(0);
@@ -177,6 +181,7 @@ export default function PaymentResultPage() {
   useEffect(() => {
     inFlightControllerRef.current = new AbortController();
     attemptRef.current = 0;
+    setPollAttempt(0);
 
     const startInitialCheck = async () => {
       const done = await checkStatus(inFlightControllerRef.current?.signal);
@@ -209,6 +214,8 @@ export default function PaymentResultPage() {
       isPending={isPending}
       isSuccess={isSuccess}
       isUnknown={isUnknown}
+      pollAttempt={pollAttempt}
+      pollLimit={BACKOFF_MS.length}
       onRetry={() => void handleManualRetry()}
     />
   );

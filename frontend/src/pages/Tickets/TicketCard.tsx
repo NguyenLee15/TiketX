@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Loader2, Download, RotateCcw, Crown, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
+import { toast } from 'react-hot-toast';
 
 export interface TicketItemData {
   id: string;
@@ -55,6 +56,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
       await generateTicketPdf(ticket as unknown as Parameters<typeof generateTicketPdf>[0]);
     } catch (err) {
       if (import.meta.env.DEV) console.error('Failed to generate ticket PDF', err);
+      toast.error('Không thể tạo file PDF vé. Vui lòng thử lại.');
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -65,14 +67,14 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
     if (s === 'paid') {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold bg-success/15 text-success border border-success/30 uppercase tracking-wider whitespace-nowrap shrink-0">
-          <CheckCircle2 className="w-3.5 h-3.5" /> Hợp Lệ
+          <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" /> Hợp Lệ
         </span>
       );
     }
     if (s === 'used') {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface-3 text-text-tertiary border border-border-subtle uppercase tracking-wider whitespace-nowrap shrink-0">
-          <CheckCircle2 className="w-3.5 h-3.5" /> Đã Qua Cửa
+          <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" /> Đã Qua Cửa
         </span>
       );
     }
@@ -80,7 +82,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
       return (
         <>
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-warning/15 text-warning border border-warning/30 uppercase tracking-wider whitespace-nowrap shrink-0">
-          <Clock className="w-3.5 h-3.5" /> Đang Hoàn Tiền
+          <Clock className="w-3.5 h-3.5" aria-hidden="true" /> Đang Hoàn Tiền
         </span>
         <Link to="/profile?refundBankAccount=1" className="ml-2 text-xs font-semibold text-brand-primary underline underline-offset-4">Kiểm tra tài khoản nhận tiền</Link>
         </>
@@ -89,13 +91,13 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
     if (s === 'cancelled') {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-danger/15 text-danger border border-danger/30 uppercase tracking-wider whitespace-nowrap shrink-0">
-          <XCircle className="w-3.5 h-3.5" /> Đã Hủy
+          <XCircle className="w-3.5 h-3.5" aria-hidden="true" /> Đã Hủy
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-warning/15 text-warning border border-warning/30 uppercase tracking-wider whitespace-nowrap shrink-0">
-        <Clock className="w-3.5 h-3.5" /> Chờ Thanh Toán
+        <Clock className="w-3.5 h-3.5" aria-hidden="true" /> Chờ Thanh Toán
       </span>
     );
   };
@@ -113,7 +115,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
 
             {isVip && (
               <span className="inline-flex items-center gap-1 text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 whitespace-nowrap shrink-0">
-                <Crown className="w-3 h-3" /> HẠNG VIP
+                <Crown className="w-3 h-3" aria-hidden="true" /> HẠNG VIP
               </span>
             )}
           </div>
@@ -124,13 +126,13 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
           
           <div className="flex flex-wrap items-center gap-2 text-text-secondary text-xs">
             <div className="flex items-center bg-surface-2/60 px-2.5 py-1 rounded-lg border border-border-subtle whitespace-nowrap">
-              <Calendar className="w-3.5 h-3.5 mr-1.5 text-brand-secondary shrink-0" />
+              <Calendar className="w-3.5 h-3.5 mr-1.5 text-brand-secondary shrink-0" aria-hidden="true" />
               <span className="font-semibold text-white">
                 {formatDate(ticket.eventDate, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
             <div className="flex items-center bg-surface-2/60 px-2.5 py-1 rounded-lg border border-border-subtle whitespace-nowrap max-w-full">
-              <MapPin className="w-3.5 h-3.5 mr-1.5 text-brand-primary shrink-0" />
+              <MapPin className="w-3.5 h-3.5 mr-1.5 text-brand-primary shrink-0" aria-hidden="true" />
               <span className="font-semibold text-white truncate">{ticket.venueName || ticket.location}</span>
             </div>
           </div>
@@ -164,7 +166,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
         {ticket.status.toLowerCase() === 'paid' && (
           <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 border-t border-border-subtle/60 text-xs">
             <div className="text-text-tertiary flex items-center gap-1.5 text-[11px] whitespace-nowrap">
-              <Clock className="w-3.5 h-3.5 text-warning shrink-0" />
+              <Clock className="w-3.5 h-3.5 text-warning shrink-0" aria-hidden="true" />
               <span>Hạn hoàn vé: Trước giờ diễn {ticket.refundCutoffHours}h</span>
             </div>
 
@@ -175,9 +177,9 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-danger/10 hover:bg-danger/20 text-danger border border-danger/30 font-bold transition-colors text-xs whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed"
               >
                 {refundingId === ticket.id ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
                 ) : (
-                  <RotateCcw className="w-3 h-3" />
+                  <RotateCcw className="w-3 h-3" aria-hidden="true" />
                 )}
                 <span>Yêu Cầu Hoàn Vé</span>
               </button>
@@ -219,9 +221,9 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
           className="flex items-center justify-center w-full py-2.5 bg-surface-3 hover:bg-surface-2 border border-border-subtle hover:border-brand-primary text-white text-xs font-bold rounded-xl transition-[background-color,border-color,opacity,transform] shadow-md group/btn active:scale-95 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-subtle cursor-pointer"
         >
           {isDownloadingPdf ? (
-            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin text-brand-primary shrink-0" />
+            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin text-brand-primary shrink-0" aria-hidden="true" />
           ) : (
-            <Download className="w-3.5 h-3.5 mr-1.5 group-hover/btn:-translate-y-0.5 transition-transform text-brand-primary shrink-0" />
+            <Download className="w-3.5 h-3.5 mr-1.5 group-hover/btn:-translate-y-0.5 transition-transform text-brand-primary shrink-0" aria-hidden="true" />
           )}
           <span>{isDownloadingPdf ? 'Đang tạo file PDF...' : 'Tải File Vé PDF Chuẩn'}</span>
         </button>

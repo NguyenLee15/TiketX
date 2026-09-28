@@ -148,6 +148,7 @@ public partial class ProcessPaymentCommandHandler
 
                     if (!lease.IsValid) return false;
                     await _context.SaveChangesAsync(cancellationToken);
+                    if (_catalogCache is not null) await _catalogCache.InvalidateAsync(cancellationToken);
 
                     if (isHoldExpired && ticket.Seat != null)
                     {
@@ -175,7 +176,10 @@ public partial class ProcessPaymentCommandHandler
                 }
 
                 _logger.LogWarning("Cannot process failed payment webhook for ticket {TicketId} with status {Status}.", ticket.Id, ticket.Status);
-                return false;
+                // Terminal failed callbacks are safely idempotent: there is no
+                // pending reservation left to mutate, so acknowledge them and
+                // prevent the provider from retrying forever.
+                return true;
             }
 
             if (data.Success)
@@ -230,6 +234,7 @@ public partial class ProcessPaymentCommandHandler
                 // Explicitly commit financial, seat state, and outbox atomically into database
                 if (!lease.IsValid) return false;
                 await _context.SaveChangesAsync(cancellationToken);
+                if (_catalogCache is not null) await _catalogCache.InvalidateAsync(cancellationToken);
 
                 if (ticket.Seat != null)
                 {
@@ -266,6 +271,7 @@ public partial class ProcessPaymentCommandHandler
 
                 if (!lease.IsValid) return false;
                 await _context.SaveChangesAsync(cancellationToken);
+                if (_catalogCache is not null) await _catalogCache.InvalidateAsync(cancellationToken);
 
                 if (ticket.Seat != null)
                 {

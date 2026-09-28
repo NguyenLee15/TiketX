@@ -11,10 +11,12 @@ public class SeatHub : Hub
 {
     private readonly IApplicationDbContext _context;
     private readonly ITimePolicy _time;
+    private readonly ISeatHubAdmissionPolicy _admission;
 
-    public SeatHub(IApplicationDbContext context, ITimePolicy? time = null)
+    public SeatHub(IApplicationDbContext context, ISeatHubAdmissionPolicy admission, ITimePolicy? time = null)
     {
         _context = context;
+        _admission = admission;
         _time = time ?? new UtcTimePolicy();
     }
 
@@ -29,6 +31,9 @@ public class SeatHub : Hub
             && e.Date > _time.UtcNow);
         if (!exists) return;
 
+        var clientIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
+        if (!await _admission.TryJoinAsync(Context.ConnectionId, clientIp, eventId)) return;
+
         await Groups.AddToGroupAsync(Context.ConnectionId, eventId.ToString());
     }
 
@@ -36,5 +41,11 @@ public class SeatHub : Hub
     {
         if (eventId == Guid.Empty) return;
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, eventId.ToString());
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        await _admission.ReleaseAsync(Context.ConnectionId);
+        await base.OnDisconnectedAsync(exception);
     }
 }

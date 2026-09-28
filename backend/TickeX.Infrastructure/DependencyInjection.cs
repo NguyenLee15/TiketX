@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddSingleton<ITimePolicy, VietnamTimePolicy>();
         services.AddScoped<IDashboardReadModel, DashboardReadModelAdapter>();
         services.AddScoped<ICustomerEventCatalog, CustomerEventCatalogAdapter>();
+        services.AddSingleton<ICustomerEventCatalogCache, RedisCustomerEventCatalogCache>();
         services.AddScoped<ICustomerTicketReadModel, CustomerTicketReadModelAdapter>();
         services.AddScoped<IRefundRequestPort, RefundRequestPort>();
         services.AddScoped<INotificationOutboxPort, NotificationOutboxPort>();
@@ -83,6 +84,7 @@ public static class DependencyInjection
             
         services.AddScoped<TickeX.Application.Interfaces.IDistributedLockService, TickeX.Infrastructure.Services.RedisDistributedLockService>();
         services.AddSingleton<IIdempotencyStore, RedisIdempotencyStore>();
+        services.AddSingleton<ISeatHubAdmissionPolicy, RedisSeatHubAdmissionPolicy>();
 
         // RabbitMQ
         services.AddSingleton<IMessagePublisher, TickeX.Infrastructure.Messaging.RabbitMQPublisher>();

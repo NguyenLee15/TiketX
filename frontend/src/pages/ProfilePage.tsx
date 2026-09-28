@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Shield, Loader2 } from 'lucide-react';
@@ -23,6 +23,7 @@ export default function ProfilePage() {
   const [loadError, setLoadError] = useState(false);
   const [refundBank, setRefundBank] = useState<{ bankBin: string | null; accountName: string | null; masked: string | null }>({ bankBin: null, accountName: null, masked: null });
   const [savingRefundBank, setSavingRefundBank] = useState(false);
+  const profileControllerRef = useRef<AbortController | null>(null);
 
   const user = useAuthStore(state => state.user);
   const setAuth = useAuthStore(state => state.setAuth);
@@ -90,11 +91,22 @@ export default function ProfilePage() {
     }
   }, [resetProfile]);
 
-  useEffect(() => {
+  const refreshProfile = useCallback(() => {
+    profileControllerRef.current?.abort();
     const controller = new AbortController();
-    void fetchProfile(controller.signal);
-    return () => controller.abort();
+    profileControllerRef.current = controller;
+    return fetchProfile(controller.signal).finally(() => {
+      if (profileControllerRef.current === controller) profileControllerRef.current = null;
+    });
   }, [fetchProfile]);
+
+  useEffect(() => {
+    void refreshProfile();
+    return () => {
+      profileControllerRef.current?.abort();
+      profileControllerRef.current = null;
+    };
+  }, [refreshProfile]);
 
   const onUpdateProfile = async (values: ProfileFormValues) => {
     try {
@@ -140,7 +152,7 @@ export default function ProfilePage() {
     try {
       await api.put('/api/users/me/refund-bank-account', values);
       toast.success('Đã lưu tài khoản nhận hoàn tiền.');
-      await fetchProfile();
+      await refreshProfile();
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { message?: string } } };
       toast.error(apiErr.response?.data?.message || 'Không thể lưu tài khoản nhận tiền.');
@@ -152,7 +164,7 @@ export default function ProfilePage() {
     try {
       await api.delete('/api/users/me/refund-bank-account');
       toast.success('Đã xóa tài khoản nhận hoàn tiền.');
-      await fetchProfile();
+      await refreshProfile();
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { message?: string } } };
       toast.error(apiErr.response?.data?.message || 'Không thể xóa tài khoản nhận tiền.');
@@ -161,8 +173,9 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-brand-primary" />
+      <div className="flex h-[50vh] items-center justify-center" role="status" aria-live="polite" aria-busy="true">
+        <Loader2 className="w-10 h-10 animate-spin text-brand-primary" aria-hidden="true" />
+        <span className="sr-only">Đang tải hồ sơ</span>
       </div>
     );
   }
@@ -172,7 +185,7 @@ export default function ProfilePage() {
       <div className="surface-panel mx-auto flex min-h-[40vh] max-w-lg flex-col items-center justify-center gap-4 p-6 text-center">
         <h1 className="text-xl font-display font-bold text-text-primary">Không thể tải hồ sơ</h1>
         <p className="text-base text-text-secondary">Kiểm tra kết nối rồi thử lại.</p>
-        <button type="button" onClick={() => void fetchProfile()} className="min-h-11 rounded-lg bg-brand-primary px-5 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">Thử lại</button>
+        <button type="button" onClick={() => void refreshProfile()} className="min-h-11 rounded-lg bg-brand-primary px-5 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">Thử lại</button>
       </div>
     );
   }

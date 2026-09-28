@@ -20,6 +20,7 @@ public partial class ProcessPaymentCommandHandler : IRequestHandler<ProcessPayme
     private readonly ILogger<ProcessPaymentCommandHandler> _logger;
     private readonly ITimePolicy _time;
     private readonly TimeSpan _holdDuration;
+    private readonly ICustomerEventCatalogCache? _catalogCache;
 
     public ProcessPaymentCommandHandler(
         IApplicationDbContext context, 
@@ -29,7 +30,8 @@ public partial class ProcessPaymentCommandHandler : IRequestHandler<ProcessPayme
         ITicketSecurityService ticketSecurityService,
         ILogger<ProcessPaymentCommandHandler> logger,
         ITimePolicy? time = null,
-        IOptions<ReservationOptions>? reservationOptions = null)
+        IOptions<ReservationOptions>? reservationOptions = null,
+        ICustomerEventCatalogCache? catalogCache = null)
     {
         _context = context;
         _notificationOutbox = notificationOutbox;
@@ -39,6 +41,7 @@ public partial class ProcessPaymentCommandHandler : IRequestHandler<ProcessPayme
         _logger = logger;
         _time = time ?? new UtcTimePolicy();
         _holdDuration = TimeSpan.FromMinutes(reservationOptions?.Value.HoldMinutes ?? new ReservationOptions().HoldMinutes);
+        _catalogCache = catalogCache;
     }
 
 }

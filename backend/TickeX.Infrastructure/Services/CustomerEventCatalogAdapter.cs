@@ -11,15 +11,20 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
 {
     private readonly IApplicationDbContext _context;
     private readonly ITimePolicy _time;
+    private readonly ICustomerEventCatalogCache? _cache;
 
-    public CustomerEventCatalogAdapter(IApplicationDbContext context, ITimePolicy time)
+    public CustomerEventCatalogAdapter(IApplicationDbContext context, ITimePolicy time, ICustomerEventCatalogCache? cache = null)
     {
         _context = context;
         _time = time;
+        _cache = cache;
     }
 
     public async Task<PagedResult<EventDto>> SearchAsync(GetEventsQuery request, CancellationToken cancellationToken)
     {
+        var cached = _cache is null ? null : await _cache.GetAsync(request, cancellationToken);
+        if (cached is not null) return cached;
+
         var now = _time.UtcNow;
         var query = _context.Events.AsNoTracking()
             .Where(e => e.Status == EventStatus.Published && !e.IsDeleted && e.Date > now);
@@ -51,7 +56,7 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
 
         var page = Math.Clamp(request.Page > 0 ? request.Page : 1, 1, 10000);
         var pageSize = Math.Clamp(request.Limit ?? request.PageSize, 1, 50);
-        var totalCount = 0;
+        int? totalCount = null;
         List<TickeX.Domain.Entities.Event> rows;
         if (string.IsNullOrWhiteSpace(request.Cursor))
         {
@@ -85,7 +90,11 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
 
         var last = rows.LastOrDefault();
         var nextCursor = hasMore && last is not null ? EncodeCursor(sortBy, last) : null;
-        return new PagedResult<EventDto>(items, totalCount, page, pageSize, nextCursor, hasMore);
+        var result = string.IsNullOrWhiteSpace(request.Cursor)
+            ? new PagedResult<EventDto>(items, totalCount, page, pageSize, nextCursor, hasMore, "offset")
+            : new PagedResult<EventDto>(items, null, null, pageSize, nextCursor, hasMore, "cursor");
+        if (_cache is not null) await _cache.SetAsync(request, result, cancellationToken);
+        return result;
     }
 
     private static string EncodeCursor(string sortBy, TickeX.Domain.Entities.Event eventItem)

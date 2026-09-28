@@ -191,7 +191,7 @@ export default function EventDetailPage() {
     return (
       <div className="text-center p-16 surface-panel mt-8">
         <div className="w-20 h-20 bg-danger/10 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Info className="w-10 h-10 text-danger" />
+          <Info className="w-10 h-10 text-danger" aria-hidden="true" />
         </div>
         <h3 className="text-2xl font-display font-bold text-white mb-2">{loadError ? 'Không thể tải sự kiện' : 'Không tìm thấy sự kiện'}</h3>
         <p className="text-text-secondary">Kiểm tra kết nối rồi thử lại.</p>
@@ -210,7 +210,7 @@ export default function EventDetailPage() {
           to="/" 
           className="inline-flex min-h-11 items-center px-3.5 rounded-xl bg-surface-2 border border-border-subtle text-text-secondary hover:text-white hover:bg-surface-3 transition-colors text-xs sm:text-sm font-medium focus-visible:ring-2 focus-visible:ring-brand-primary"
         >
-          <ArrowLeft className="w-4 h-4 mr-1.5" />
+          <ArrowLeft className="w-4 h-4 mr-1.5" aria-hidden="true" />
           <span>Quay lại danh sách</span>
         </Link>
 
