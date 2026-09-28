@@ -4,6 +4,7 @@ import {
   eventDetailSchema,
   ticketsResponseSchema,
   ticketItemSchema,
+  ticketCursorResponseSchema,
   seatSchema,
 } from './useCustomerQueries';
 
@@ -132,6 +133,19 @@ describe('Zod Schema Contract Synchronization Tests', () => {
 
     const arrayParsed = ticketsResponseSchema.safeParse([backendTicketPayload]);
     expect(arrayParsed.success).toBe(true);
+
+    const cursorPayload = {
+      items: [backendTicketPayload],
+      nextCursor: 'eyJjcmVhdGVkQXQiOiIyMDI2LTA5LTI4VDA4OjAwOjAwWiIsImlkIjoiMTIzIn0',
+      hasMore: true,
+    };
+    const cursorParsed = ticketCursorResponseSchema.safeParse(cursorPayload);
+    expect(cursorParsed.success).toBe(true);
+    if (cursorParsed.success) {
+      expect(cursorParsed.data.items).toHaveLength(1);
+      expect(cursorParsed.data.nextCursor).toBe('eyJjcmVhdGVkQXQiOiIyMDI2LTA5LTI4VDA4OjAwOjAwWiIsImlkIjoiMTIzIn0');
+      expect(cursorParsed.data.hasMore).toBe(true);
+    }
   });
 
   it('should reject malformed data in Fail-Closed mode', () => {

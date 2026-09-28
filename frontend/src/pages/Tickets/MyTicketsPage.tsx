@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Ticket, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -8,7 +8,7 @@ import { TicketCard, TicketItemData } from './TicketCard';
 import { TicketFilterTabs, allowedTicketTabs, TicketTabType } from './TicketFilterTabs';
 import { TicketRefundModal } from './TicketRefundModal';
 import { TicketPagination } from './TicketPagination';
-import { useMyTicketsCursorQuery } from '../../hooks/useCustomerQueries';
+import { useMyTicketsQuery, useMyTicketsCursorQuery } from '../../hooks/useCustomerQueries';
 
 const PAGE_SIZE = 10;
 
@@ -25,17 +25,43 @@ export default function MyTicketsPage() {
     ? (requestedTab as TicketTabType) 
     : 'All';
 
-  const currentCursor = cursorHistory[cursorHistory.length - 1];
-  const currentPage = cursorHistory.length + 1;
+  const cursorParam = searchParams.get('cursor') || undefined;
+  const rawPage = parseInt(searchParams.get('page') || '1', 10);
+  const urlPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
 
-  const {
-    data: ticketPage,
-    isLoading,
-    isError: loadError,
-    refetch: refetchTickets,
-  } = useMyTicketsCursorQuery(currentCursor, PAGE_SIZE, filterTab === 'All' ? undefined : filterTab);
+  // Backwards compatibility: If URL has ?page=X without cursor, run in legacy offset mode
+  const isLegacyOffset = !cursorParam && urlPage > 1;
+  const currentPage = urlPage;
+  const currentCursor = cursorParam;
 
-  const tickets = ticketPage?.items ?? [];
+  useEffect(() => {
+    if (!cursorParam) {
+      setCursorHistory([]);
+    } else {
+      setCursorHistory(prev => (prev.includes(cursorParam) ? prev : [...prev, cursorParam]));
+    }
+  }, [cursorParam]);
+
+  const statusFilter = filterTab === 'All' ? undefined : filterTab;
+
+  const cursorQuery = useMyTicketsCursorQuery(currentCursor, PAGE_SIZE, statusFilter, {
+    enabled: !isLegacyOffset,
+  });
+
+  const offsetQuery = useMyTicketsQuery(urlPage, PAGE_SIZE, statusFilter, {
+    enabled: isLegacyOffset,
+  });
+
+  const tickets = isLegacyOffset ? (offsetQuery.data ?? []) : (cursorQuery.data?.items ?? []);
+  const isLoading = isLegacyOffset ? offsetQuery.isLoading : cursorQuery.isLoading;
+  const loadError = isLegacyOffset ? offsetQuery.isError : cursorQuery.isError;
+  const refetchTickets = isLegacyOffset ? offsetQuery.refetch : cursorQuery.refetch;
+  const hasNextPage = isLegacyOffset
+    ? (offsetQuery.data?.length ?? 0) >= PAGE_SIZE
+    : (cursorQuery.data?.hasMore ?? false);
+  const hasPrevPage = isLegacyOffset
+    ? urlPage > 1
+    : (urlPage > 1 || Boolean(cursorParam) || cursorHistory.length > 0);
 
   const handleTabChange = useCallback((tab: TicketTabType) => {
     const next = new URLSearchParams(searchParams);
@@ -44,17 +70,72 @@ export default function MyTicketsPage() {
     } else {
       next.set('status', tab);
     }
+    next.delete('page');
+    next.delete('cursor');
     setCursorHistory([]);
     setSearchParams(next);
   }, [searchParams, setSearchParams]);
 
+  const handleResetToFirstPage = useCallback(() => {
+    setCursorHistory([]);
+    const next = new URLSearchParams(searchParams);
+    next.delete('page');
+    next.delete('cursor');
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
+
   const handleNextPage = useCallback(() => {
-    if (ticketPage?.nextCursor) setCursorHistory(history => [...history, ticketPage.nextCursor as string]);
-  }, [ticketPage?.nextCursor]);
+    if (isLegacyOffset) {
+      const next = new URLSearchParams(searchParams);
+      next.set('page', String(urlPage + 1));
+      setSearchParams(next);
+      return;
+    }
+
+    if (cursorQuery.data?.nextCursor) {
+      const nextCursor = cursorQuery.data.nextCursor;
+      setCursorHistory(prev => (prev.includes(nextCursor) ? prev : [...prev, nextCursor]));
+      const next = new URLSearchParams(searchParams);
+      next.set('cursor', nextCursor);
+      next.set('page', String(currentPage + 1));
+      setSearchParams(next);
+    }
+  }, [isLegacyOffset, urlPage, cursorQuery.data?.nextCursor, currentPage, searchParams, setSearchParams]);
 
   const handlePreviousPage = useCallback(() => {
-    setCursorHistory(history => history.slice(0, -1));
-  }, []);
+    if (isLegacyOffset) {
+      const prevPage = Math.max(1, urlPage - 1);
+      const next = new URLSearchParams(searchParams);
+      if (prevPage <= 1) {
+        next.delete('page');
+      } else {
+        next.set('page', String(prevPage));
+      }
+      setSearchParams(next);
+      return;
+    }
+
+    if (cursorHistory.length > 1) {
+      const newHistory = cursorHistory.slice(0, -1);
+      const prevCursor = newHistory[newHistory.length - 1];
+      setCursorHistory(newHistory);
+      const next = new URLSearchParams(searchParams);
+      next.set('cursor', prevCursor);
+      const prevPage = Math.max(1, currentPage - 1);
+      if (prevPage <= 1) {
+        next.delete('page');
+      } else {
+        next.set('page', String(prevPage));
+      }
+      setSearchParams(next);
+    } else {
+      setCursorHistory([]);
+      const next = new URLSearchParams(searchParams);
+      next.delete('cursor');
+      next.delete('page');
+      setSearchParams(next);
+    }
+  }, [isLegacyOffset, urlPage, cursorHistory, currentPage, searchParams, setSearchParams]);
 
   const handleRefund = useCallback(async (ticket: TicketItemData) => {
     setRefundingId(ticket.id);
@@ -135,7 +216,7 @@ export default function MyTicketsPage() {
           {currentPage > 1 && (
             <button
               type="button"
-              onClick={() => setCursorHistory([])}
+              onClick={handleResetToFirstPage}
               className="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-brand-primary text-xs font-bold text-white hover:bg-brand-primary/90 transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer"
             >
               Quay lại trang 1
@@ -158,8 +239,8 @@ export default function MyTicketsPage() {
       {/* Pagination Controls */}
       <TicketPagination
         currentPage={currentPage}
-        hasPrevPage={cursorHistory.length > 0}
-        hasNextPage={ticketPage?.hasMore ?? false}
+        hasPrevPage={hasPrevPage}
+        hasNextPage={hasNextPage}
         onPrevious={handlePreviousPage}
         onNext={handleNextPage}
         isLoading={isLoading}
