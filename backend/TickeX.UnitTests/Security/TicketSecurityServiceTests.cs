@@ -1,5 +1,6 @@
 using System;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using TickeX.Infrastructure.Services;
 using Xunit;
 using FluentAssertions;
@@ -21,7 +22,18 @@ public class TicketSecurityServiceTests
             .AddInMemoryCollection(inMemorySettings)
             .Build();
 
-        _service = new TicketSecurityService(configuration);
+        _service = new TicketSecurityService(configuration, NullLogger<TicketSecurityService>.Instance);
+    }
+
+    [Fact]
+    public void ValidateQrToken_WhenPayloadIsMalformed_DoesNotExposeParserDetails()
+    {
+        var result = _service.ValidateQrToken("eyJ0aWQiOiJub3QtYS1ndWlkIn0.signature");
+
+        result.IsValid.Should().BeFalse();
+        result.Message.Should().Contain("QR");
+        result.Message.Should().NotContain("Guid");
+        result.Message.Should().NotContain("Format");
     }
 
     [Fact]

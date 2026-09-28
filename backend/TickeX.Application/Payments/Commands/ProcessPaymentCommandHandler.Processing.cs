@@ -24,6 +24,24 @@ public partial class ProcessPaymentCommandHandler
             return false;
         }
 
+        IDistributedLockLease? eventLease;
+        try
+        {
+            eventLease = await _lockService.AcquireLockAsync(
+                $"event:cancel:{initialTicket.EventId:N}", TimeSpan.FromSeconds(30), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Required event lock is unavailable for payment order {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
+            return false;
+        }
+
+        if (eventLease is null || !eventLease.IsValid)
+        {
+            _logger.LogWarning("Could not acquire event lock for payment order {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
+            return false;
+        }
+
         string lockKey = $"payment:lock:{initialTicket.OrderCode}";
         IDistributedLockLease? lease;
         try
@@ -42,6 +60,7 @@ public partial class ProcessPaymentCommandHandler
             return false;
         }
 
+        await using (eventLease)
         await using (lease)
         {
             // Re-fetch the ticket inside the lock with Event and Seat included

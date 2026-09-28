@@ -70,7 +70,7 @@ public sealed class RefundQuerySanitizationTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithOutOfRangePageAndPageSize_ClampsSafelyWithoutException()
+    public async Task Handle_WithOutOfRangePageAndPageSize_ClampsToDefensiveMaximumWithoutException()
     {
         // Arrange
         var refund = new RefundRequest(Guid.NewGuid(), Guid.NewGuid(), 100_000m, "idemp-key-1");
@@ -80,12 +80,12 @@ public sealed class RefundQuerySanitizationTests : IDisposable
 
         var handler = new GetRefundRequestsQueryHandler(_context);
 
-        // Act: Page = -5 (should clamp to 1), PageSize = 500 (should clamp to 100)
+        // Act: Page = -5 (should clamp to 1), PageSize = 500 (should clamp to 50)
         var result = await handler.Handle(new GetRefundRequestsQuery(-5, 500), CancellationToken.None);
 
         // Assert
         result.Page.Should().Be(1);
-        result.PageSize.Should().Be(100);
+        result.PageSize.Should().Be(50);
         result.Items.Should().HaveCount(1);
         result.Items[0].LastError.Should().Be("Network timeout error");
     }

@@ -8,6 +8,16 @@ import { DashboardKpiGrid } from './Dashboard/DashboardKpiGrid';
 import { DashboardRevenueChart } from './Dashboard/DashboardRevenueChart';
 import { DashboardTopEvents } from './Dashboard/DashboardTopEvents';
 import { DashboardRecentTransactions } from './Dashboard/DashboardRecentTransactions';
+import { AdminDashboardEmptyState } from './Dashboard/AdminDashboardEmptyState';
+
+function isDashboardEmpty(stats: Stats): boolean {
+  return stats.dailyStats.length === 0
+    && stats.topEvents.length === 0
+    && stats.recentTransactions.length === 0
+    && stats.totalRevenue === 0
+    && stats.totalTicketsSold === 0
+    && stats.totalRefunded === 0;
+}
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -84,6 +94,10 @@ export default function AdminDashboardPage() {
         <button type="button" onClick={fetchStats} className="px-4 py-2 rounded-xl bg-brand-primary text-white font-bold focus-visible:ring-2 focus-visible:ring-white">Thử lại</button>
       </div>
     );
+  }
+
+  if (isDashboardEmpty(stats)) {
+    return <AdminDashboardEmptyState onRefresh={fetchStats} isRefreshing={isRefreshing} />;
   }
 
   return (

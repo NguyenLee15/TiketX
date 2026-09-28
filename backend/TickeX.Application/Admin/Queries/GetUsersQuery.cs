@@ -35,17 +35,13 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PagedResult<U
     public async Task<PagedResult<UserDto>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
         var page = Math.Clamp(request.Page > 0 ? request.Page : 1, 1, 10000);
-        var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 10, 1, 100);
+        var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 10, 1, 50);
 
         var query = _context.Users.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim();
-            if (search.Length > 100)
-            {
-                search = search.Substring(0, 100);
-            }
             var pattern = $"%{search}%";
             query = query.Where(u => EF.Functions.Like(u.Name, pattern) || EF.Functions.Like(u.Email, pattern));
         }

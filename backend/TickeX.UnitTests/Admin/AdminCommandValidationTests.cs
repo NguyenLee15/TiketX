@@ -123,7 +123,8 @@ public class AdminCommandValidationTests
     {
         var command = new CancelEventCommand(
             Id: Guid.NewGuid(),
-            Reason: "Điều kiện thời tiết bất khả kháng do bão"
+            Reason: "Điều kiện thời tiết bất khả kháng do bão",
+            ExpectedVersion: Convert.ToBase64String(Guid.NewGuid().ToByteArray())
         );
 
         var result = _cancelEventValidator.Validate(command);

@@ -185,7 +185,7 @@ public class EventLifecycleAndDeletionTests : IDisposable
         await _context.SaveChangesAsync();
 
         var handler = new CancelEventCommandHandler(_context, new RefundRequestPort(_context));
-        var command = new CancelEventCommand(ev.Id, "Typhoon Weather Warning", AdminEmail: "superadmin@tickex.com");
+        var command = new CancelEventCommand(ev.Id, "Typhoon Weather Warning", Convert.ToBase64String(ev.Version), AdminEmail: "superadmin@tickex.com");
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);

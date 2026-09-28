@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TickeX.Application.Admin;
 using TickeX.Application.Common.Models;
 using TickeX.Application.Interfaces;
 using TickeX.Domain.Entities;
@@ -10,6 +11,7 @@ namespace TickeX.Application.Events.Commands;
 public record CancelEventCommand(
     Guid Id, 
     string Reason, 
+    string? ExpectedVersion = null,
     Guid? AdminUserId = null, 
     string AdminEmail = "admin@tickex.com", 
     string? IpAddress = null
@@ -19,21 +21,56 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
 {
     private readonly IApplicationDbContext _context;
     private readonly IRefundRequestPort _refundRequestPort;
+    private readonly IDistributedLockService? _lockService;
 
-    public CancelEventCommandHandler(IApplicationDbContext context, IRefundRequestPort refundRequestPort)
+    public CancelEventCommandHandler(IApplicationDbContext context, IRefundRequestPort refundRequestPort, IDistributedLockService? lockService = null)
     {
         _context = context;
         _refundRequestPort = refundRequestPort;
+        _lockService = lockService;
     }
 
     public async Task<AdminOperationResult> Handle(CancelEventCommand request, CancellationToken cancellationToken)
     {
+        IDistributedLockLease? eventLease = null;
+        if (_lockService is not null)
+        {
+            try
+            {
+                eventLease = await _lockService.AcquireLockAsync(
+                    $"event:cancel:{request.Id:N}", TimeSpan.FromSeconds(30), cancellationToken);
+            }
+            catch
+            {
+                return AdminOperationResult.Conflict("Không thể khóa thao tác hủy sự kiện lúc này. Vui lòng thử lại.", "EVENT_LOCK_UNAVAILABLE");
+            }
+
+            if (eventLease is null || !eventLease.IsValid)
+            {
+                if (eventLease is not null) await eventLease.DisposeAsync();
+                return AdminOperationResult.Conflict("Thao tác hủy sự kiện đang được xử lý. Vui lòng thử lại.", "EVENT_LOCK_UNAVAILABLE");
+            }
+        }
+
+        await using (eventLease)
+        {
         var ev = await _context.Events
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.Id == request.Id, cancellationToken);
 
         if (ev == null)
             return AdminOperationResult.NotFound("Không tìm thấy sự kiện.");
+
+        if (string.IsNullOrWhiteSpace(request.ExpectedVersion))
+            return AdminOperationResult.BadRequest("Phiên bản dữ liệu sự kiện (ExpectedVersion) là bắt buộc.", "VERSION_REQUIRED");
+
+        if (!AdminMutationVersionPolicy.TryDecodeRequiredVersion(request.ExpectedVersion, out var expectedBytes))
+            return AdminOperationResult.BadRequest("ExpectedVersion không hợp lệ.", "INVALID_VERSION");
+
+        if (!ev.Version.SequenceEqual(expectedBytes))
+            return AdminOperationResult.Conflict(
+                "Sự kiện vừa được cập nhật bởi quản trị viên khác. Vui lòng tải lại dữ liệu mới nhất.",
+                "EVENT_CONCURRENCY_CONFLICT");
 
         if (ev.Status == EventStatus.Cancelled)
             return AdminOperationResult.BadRequest("Sự kiện này đã ở trạng thái Đã Hủy trước đó.", "EVENT_ALREADY_CANCELLED");
@@ -150,6 +187,7 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
 
             return AdminOperationResult.Ok($"Hủy sự kiện thành công. Đã tạo yêu cầu hoàn tiền cho {refundedCount} vé và giải phóng {releasedSeatCount} ghế chưa bán.");
         });
+        }
     }
 
     private void DetachProcessedEntities()

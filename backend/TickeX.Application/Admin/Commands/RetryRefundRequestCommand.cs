@@ -14,15 +14,11 @@ public sealed class RetryRefundRequestCommandHandler(
 {
     public async Task<string> Handle(RetryRefundRequestCommand request, CancellationToken cancellationToken)
     {
-        var refund = await context.RefundRequests.SingleOrDefaultAsync(x => x.Id == request.RefundRequestId, cancellationToken);
-        if (refund is null) return "REFUND_NOT_FOUND";
-        if (refund.Status != "NeedsReview") return "REFUND_NOT_RETRYABLE";
-
         IDistributedLockLease? lease;
         try
         {
             lease = await locks.AcquireLockAsync(
-                $"refund:reconcile:{refund.Id:N}", TimeSpan.FromSeconds(30), cancellationToken);
+                $"refund:reconcile:{request.RefundRequestId:N}", TimeSpan.FromSeconds(30), cancellationToken);
         }
         catch (Exception)
         {
@@ -35,6 +31,12 @@ public sealed class RetryRefundRequestCommandHandler(
         await using (lease)
         {
             if (!lease.IsValid) return "REFUND_RECONCILIATION_LOCK_LOST";
+
+            var refund = await context.RefundRequests.SingleOrDefaultAsync(
+                x => x.Id == request.RefundRequestId,
+                cancellationToken);
+            if (refund is null) return "REFUND_NOT_FOUND";
+            if (refund.Status != "NeedsReview") return "REFUND_NOT_RETRYABLE";
 
             var stableReference = $"refund-{refund.Id:N}-{refund.ProviderRetryGeneration}";
             var remote = (refund.ProviderStatus is "PROCESSING" or "PENDING") && refund.ProviderReference is not null

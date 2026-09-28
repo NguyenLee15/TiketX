@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using TickeX.Application.Interfaces;
 
 namespace TickeX.Infrastructure.Services;
@@ -10,9 +11,11 @@ public class TicketSecurityService : ITicketSecurityService
 {
     private readonly Dictionary<string, string> _keyRotationMap = new();
     private readonly string _activeKeyId;
+    private readonly ILogger<TicketSecurityService> _logger;
 
-    public TicketSecurityService(IConfiguration configuration)
+    public TicketSecurityService(IConfiguration configuration, ILogger<TicketSecurityService> logger)
     {
+        _logger = logger;
         // Load active key id and key store
         _activeKeyId = configuration["TicketSecurity:ActiveKeyId"] ?? "k1";
         
@@ -116,7 +119,8 @@ public class TicketSecurityService : ITicketSecurityService
         }
         catch (Exception ex)
         {
-            return new QrValidationResult(false, $"Lỗi phân tích mã QR: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to parse ticket QR payload");
+            return new QrValidationResult(false, "Mã QR không hợp lệ hoặc bị hỏng.");
         }
     }
 

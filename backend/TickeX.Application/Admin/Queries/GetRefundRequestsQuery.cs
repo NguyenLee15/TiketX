@@ -13,7 +13,7 @@ public sealed class GetRefundRequestsQueryHandler(IApplicationDbContext context)
     public async Task<RefundRequestPage> Handle(GetRefundRequestsQuery request, CancellationToken cancellationToken)
     {
         var page = Math.Clamp(request.Page > 0 ? request.Page : 1, 1, 10000);
-        var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 25, 1, 100);
+        var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 25, 1, 50);
 
         var query = context.RefundRequests.AsNoTracking().OrderByDescending(x => x.CreatedAt);
         var count = await query.CountAsync(cancellationToken);

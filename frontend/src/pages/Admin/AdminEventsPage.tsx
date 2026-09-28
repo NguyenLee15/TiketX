@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Event } from '../../types';
 import api from '../../services/api';
 import { EventFormValues } from '../../components/Admin/EventModal';
+import { getDefaultEventEndDate } from '../../components/Admin/EventModal/eventModalSchemas';
 import { formValueToEventStatus } from '../../utils/adminEventState';
 import { AdminEventsFilterBar } from './Events/AdminEventsFilterBar';
 import { AdminEventsTable } from './Events/AdminEventsTable';
@@ -119,7 +120,7 @@ export default function AdminEventsPage() {
           title: data.title,
           description: data.description,
           date: data.date,
-          endDate: data.endDate || new Date(new Date(data.date).getTime() + 3 * 3600 * 1000).toISOString(),
+          endDate: data.endDate || getDefaultEventEndDate(data.date).toISOString(),
           location: data.location,
           venueName: data.venueName || data.location,
           totalSeats: modalState.form.event.totalSeats,
@@ -146,7 +147,7 @@ export default function AdminEventsPage() {
           title: data.title,
           description: data.description,
           date: data.date,
-          endDate: data.endDate || new Date(new Date(data.date).getTime() + 3 * 3600 * 1000).toISOString(),
+          endDate: data.endDate || getDefaultEventEndDate(data.date).toISOString(),
           location: data.location,
           venueName: data.venueName || data.location,
           totalSeats: data.rowCount * data.seatsPerRow,
@@ -207,7 +208,10 @@ export default function AdminEventsPage() {
     if (!modalState.cancelTarget) return;
     setIsSubmitting(true);
     try {
-      const res = await api.post(`/api/events/${modalState.cancelTarget.id}/cancel`, { reason });
+      const res = await api.post(`/api/events/${modalState.cancelTarget.id}/cancel`, {
+        reason,
+        expectedVersion: modalState.cancelTarget.version,
+      });
       if (res.data.success) {
         toast.success(`Đã hủy sự kiện "${modalState.cancelTarget.title}". Các vé đã bán đang chờ xử lý hoàn tiền.`);
         setModalState(current => ({ ...current, cancelTarget: null }));
@@ -216,8 +220,13 @@ export default function AdminEventsPage() {
         toast.error(res.data.message || 'Không thể hủy sự kiện.');
       }
     } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { message?: string } } };
-      toast.error(apiErr.response?.data?.message || 'Không thể hủy sự kiện.');
+      const apiErr = err as { response?: { status?: number; data?: { code?: string; message?: string } } };
+      if (apiErr.response?.status === 409 || apiErr.response?.data?.code === 'EVENT_CONCURRENCY_CONFLICT') {
+        toast.error('Sự kiện vừa được chỉnh sửa bởi quản trị viên khác. Vui lòng tải lại dữ liệu.');
+        await fetchEvents();
+      } else {
+        toast.error(apiErr.response?.data?.message || 'Không thể hủy sự kiện.');
+      }
     } finally {
       setIsSubmitting(false);
     }

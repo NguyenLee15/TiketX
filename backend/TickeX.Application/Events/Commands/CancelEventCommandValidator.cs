@@ -13,5 +13,8 @@ public class CancelEventCommandValidator : AbstractValidator<CancelEventCommand>
             .NotEmpty().WithMessage("Lý do hủy sự kiện không được để trống.")
             .MinimumLength(5).WithMessage("Lý do hủy sự kiện phải có ít nhất 5 ký tự.")
             .MaximumLength(500).WithMessage("Lý do hủy không được vượt quá 500 ký tự.");
+
+        RuleFor(x => x.ExpectedVersion)
+            .NotEmpty().WithErrorCode("VERSION_REQUIRED");
     }
 }

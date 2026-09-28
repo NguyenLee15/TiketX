@@ -22,5 +22,6 @@ public class RefundRequestConfiguration : IEntityTypeConfiguration<RefundRequest
         builder.HasIndex(x => new { x.Status, x.NextAttemptAt });
         builder.HasIndex(x => x.TicketId);
         builder.HasIndex(x => x.EventId);
+        builder.HasIndex(x => new { x.CreatedAt, x.Id });
     }
 }

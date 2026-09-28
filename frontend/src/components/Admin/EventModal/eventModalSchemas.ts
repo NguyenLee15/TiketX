@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+export const DEFAULT_EVENT_DURATION_HOURS = 3;
+
+export function getDefaultEventEndDate(start: Date | string): Date {
+  const date = start instanceof Date ? new Date(start.getTime()) : new Date(start);
+  if (Number.isNaN(date.getTime())) return new Date(Number.NaN);
+  date.setHours(date.getHours() + DEFAULT_EVENT_DURATION_HOURS);
+  return date;
+}
+
 export function toLocalDatetimeInput(isoOrDateString?: string | null): string {
   if (!isoOrDateString) return '';
   const d = new Date(isoOrDateString);

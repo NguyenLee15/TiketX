@@ -217,7 +217,7 @@ public class EventConcurrencyAndAdminAuditTests : IDisposable
         await _context.SaveChangesAsync();
 
         var handler = new CancelEventCommandHandler(_context, new RefundRequestPort(_context));
-        var command = new CancelEventCommand(ev.Id, "Cancel reason test");
+        var command = new CancelEventCommand(ev.Id, "Cancel reason test", ExpectedVersion: Convert.ToBase64String(ev.Version));
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -226,5 +226,39 @@ public class EventConcurrencyAndAdminAuditTests : IDisposable
         result.Success.Should().BeFalse();
         result.StatusCode.Should().Be(400);
         result.ErrorCode.Should().Be("EVENT_ALREADY_COMPLETED");
+    }
+
+    [Fact]
+    public async Task CancelEvent_WithoutExpectedVersion_ReturnsVersionRequired()
+    {
+        var ev = new Event("Versioned Event", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(3), "HCMC", "Venue", 10);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var result = await new CancelEventCommandHandler(_context, new RefundRequestPort(_context))
+            .Handle(new CancelEventCommand(ev.Id, "Admin cancellation"), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.ErrorCode.Should().Be("VERSION_REQUIRED");
+        (await _context.Events.FindAsync(ev.Id))!.Status.Should().NotBe(EventStatus.Cancelled);
+    }
+
+    [Fact]
+    public async Task CancelEvent_WithStaleExpectedVersion_ReturnsConflictWithoutMutation()
+    {
+        var ev = new Event("Versioned Event", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(3), "HCMC", "Venue", 10);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var staleVersion = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        var result = await new CancelEventCommandHandler(_context, new RefundRequestPort(_context))
+            .Handle(new CancelEventCommand(ev.Id, "Admin cancellation", staleVersion), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(409);
+        result.ErrorCode.Should().Be("EVENT_CONCURRENCY_CONFLICT");
+        (await _context.Events.FindAsync(ev.Id))!.Status.Should().NotBe(EventStatus.Cancelled);
+        (await _context.RefundRequests.CountAsync()).Should().Be(0);
     }
 }

@@ -10,12 +10,13 @@ import {
   EventFormValues, 
   CATEGORIES, 
   toLocalDatetimeInput, 
-  toUtcIsoString 
+  toUtcIsoString,
+  getDefaultEventEndDate
 } from './EventModal/eventModalSchemas';
 import { EventSeatMatrixSection } from './EventModal/EventSeatMatrixSection';
 import { EventImagePreviewSection } from './EventModal/EventImagePreviewSection';
 
-export { toLocalDatetimeInput, toUtcIsoString, eventSchema, CATEGORIES };
+export { toLocalDatetimeInput, toUtcIsoString, eventSchema, CATEGORIES, getDefaultEventEndDate };
 export type { EventFormValues };
 
 interface EventModalProps {
@@ -59,7 +60,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
     if (event) {
       const statusStr = eventStatusToFormValue(event.status);
       const defaultEndDate = event.date 
-        ? new Date(new Date(event.date).getTime() + 3 * 3600 * 1000).toISOString() 
+        ? getDefaultEventEndDate(event.date).toISOString()
         : '';
 
       reset({
@@ -100,7 +101,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
     const transformed: EventFormValues = {
       ...data,
       date: toUtcIsoString(data.date),
-      endDate: data.endDate ? toUtcIsoString(data.endDate) : toUtcIsoString(new Date(new Date(data.date).getTime() + 3 * 3600 * 1000).toISOString()),
+      endDate: data.endDate ? toUtcIsoString(data.endDate) : getDefaultEventEndDate(data.date).toISOString(),
     };
     await onSubmit(transformed);
   };

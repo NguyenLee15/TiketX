@@ -32,6 +32,7 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.HasIndex(e => e.Status);
         builder.HasIndex(e => e.IsDeleted);
         builder.HasIndex(e => new { e.Status, e.Date });
+        builder.HasIndex(e => new { e.Date, e.Id });
 
         builder.HasQueryFilter(e => !e.IsDeleted);
     }

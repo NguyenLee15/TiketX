@@ -27,12 +27,7 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
     public async Task<PagedResult<EventDto>> Handle(GetAdminEventsQuery request, CancellationToken cancellationToken)
     {
         var page = Math.Clamp(request.Page > 0 ? request.Page : 1, 1, 10000);
-        var pageSize = request.PageSize switch
-        {
-            < 1 => 10,
-            > 100 => 100,
-            _ => request.PageSize
-        };
+        var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 10, 1, 50);
 
         var query = _context.Events
             .IgnoreQueryFilters()
@@ -46,10 +41,6 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim();
-            if (search.Length > 100)
-            {
-                search = search.Substring(0, 100);
-            }
             var pattern = $"%{search}%";
             query = query.Where(e => EF.Functions.Like(e.Title, pattern) || EF.Functions.Like(e.Location, pattern));
         }

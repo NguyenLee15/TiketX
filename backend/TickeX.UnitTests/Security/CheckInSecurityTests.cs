@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using TickeX.Application.Interfaces;
 using TickeX.Application.Tickets.Commands;
 using TickeX.Domain.Entities;
@@ -39,7 +40,7 @@ public class CheckInSecurityTests : IDisposable
             .AddInMemoryCollection(settings)
             .Build();
 
-        _ticketSecurityService = new TicketSecurityService(config);
+        _ticketSecurityService = new TicketSecurityService(config, NullLogger<TicketSecurityService>.Instance);
     }
 
     public void Dispose()

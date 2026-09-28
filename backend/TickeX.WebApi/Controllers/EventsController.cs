@@ -186,7 +186,7 @@ public class EventsController : ControllerBase
         return Ok(new { success = true, code = "OK", message = result.Message, data = (object?)null });
     }
 
-    public record CancelEventRequest(string Reason);
+    public record CancelEventRequest(string Reason, string? ExpectedVersion = null);
 
     [HttpPost("{id}/cancel")]
     [Idempotent]
@@ -201,7 +201,8 @@ public class EventsController : ControllerBase
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
-        var result = await _adminEventOperations.CancelAsync(new CancelEventCommand(id, request.Reason, adminUserId, adminEmail, ipAddress), cancellationToken);
+        var result = await _adminEventOperations.CancelAsync(new CancelEventCommand(
+            id, request.Reason, request.ExpectedVersion, adminUserId, adminEmail, ipAddress), cancellationToken);
         if (!result.Success)
             return StatusCode(result.StatusCode, new { success = false, code = result.ErrorCode, message = result.Message, error = new { code = result.ErrorCode, message = result.Message } });
 
