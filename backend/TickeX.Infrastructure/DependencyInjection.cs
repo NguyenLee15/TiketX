@@ -27,7 +27,11 @@ public static class DependencyInjection
                 ?? configuration.GetConnectionString("DefaultConnection");
             if (connStr != null && connStr.Contains("Server=", StringComparison.OrdinalIgnoreCase))
             {
-                options.UseSqlServer(connStr, b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName));
+                options.UseSqlServer(connStr, b =>
+                {
+                    b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
+                    b.EnableRetryOnFailure();
+                });
             }
             else if (connStr != null && (connStr.Contains(".db", StringComparison.OrdinalIgnoreCase) || connStr.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase)))
             {
@@ -57,6 +61,7 @@ public static class DependencyInjection
         services.AddSingleton<IClientIdentityResolver, ClientIdentityResolver>();
         
         services.AddScoped<IJwtService, JwtService>();
+        services.AddSingleton<IUserSecurityStateCache, RedisUserSecurityStateCache>();
         services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<ITicketSecurityService, TicketSecurityService>();

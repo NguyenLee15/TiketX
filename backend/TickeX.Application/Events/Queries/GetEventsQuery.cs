@@ -27,7 +27,7 @@ public record EventDto(
     string? Version = null
 );
 
-public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize)
+public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize, string? NextCursor = null, bool HasMore = false)
 {
     public int TotalPages => (int)Math.Ceiling((double)TotalCount / (PageSize > 0 ? PageSize : 10));
 }
@@ -39,5 +39,7 @@ public record GetEventsQuery(
     DateTime? DateTo = null,
     string? SortBy = null, // "date_asc", "date_desc", "price_asc", "price_desc"
     int Page = 1,
-    int PageSize = 12
+    int PageSize = 12,
+    string? Cursor = null,
+    int? Limit = null
 ) : IRequest<PagedResult<EventDto>>;

@@ -78,6 +78,8 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
             return Fail("RESERVATION_EXPIRED", "Thời gian giữ vé đã hết hạn. Vui lòng chọn lại ghế.");
         if (ticket.Event is null || ticket.Event.IsDeleted || ticket.Event.Status != EventStatus.Published || ticket.Event.Date <= _time.UtcNow)
             return Fail("EVENT_NOT_ON_SALE", "Sự kiện không còn mở bán.");
+        if (ticket.Price <= 0 || ticket.Price != decimal.Truncate(ticket.Price) || ticket.Price > int.MaxValue)
+            return Fail("INVALID_PAYMENT_AMOUNT", "Số tiền thanh toán không hợp lệ.");
 
         IDistributedLockLease? paymentLinkLease = null;
         if (_locks is not null)
@@ -173,7 +175,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         {
             try
             {
-                var result = await _payOS.CreatePaymentLink(ticket.OrderCode, decimal.ToInt32(ticket.Price),
+                var result = await _payOS.CreatePaymentLink(ticket.OrderCode, checked((int)ticket.Price),
                     $"TickeX {ticket.OrderCode}", ReturnUrl(ticket.OrderCode), CancelUrl(ticket.OrderCode), cancellationToken);
                 if (result is null || string.IsNullOrWhiteSpace(result.CheckoutUrl))
                 {

@@ -34,6 +34,8 @@ export const catalogResponseSchema = z.object({
   totalCount: z.number().int().nonnegative(),
   page: z.number().int().positive().optional().default(1),
   pageSize: z.number().int().positive().optional().default(10),
+  nextCursor: z.string().nullable().optional().default(null),
+  hasMore: z.boolean().optional().default(false),
 }).passthrough();
 
 export const seatSchema = z.object({
@@ -137,6 +139,17 @@ export const ticketItemSchema = z.object({
 }).passthrough();
 
 export const ticketsResponseSchema = z.array(ticketItemSchema);
+export const ticketCursorResponseSchema = z.object({
+  items: z.array(ticketItemSchema),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
+}).passthrough();
+
+export interface TicketCursorPage {
+  items: TicketItemData[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
 
 export interface CatalogQueryOptions {
   page: number;
@@ -144,25 +157,32 @@ export interface CatalogQueryOptions {
   search?: string;
   category?: string;
   sort?: string;
+  cursor?: string;
+  limit?: number;
 }
 
 export interface CatalogQueryResult {
   items: Event[];
   totalPages: number;
   totalCount: number;
+  nextCursor: string | null;
+  hasMore: boolean;
 }
 
 export function useEventsCatalogQuery(options: CatalogQueryOptions) {
-  const { page, pageSize = 6, search = '', category = 'All', sort = 'date_asc' } = options;
+  const { page, pageSize = 6, search = '', category = 'All', sort = 'date_asc', cursor, limit } = options;
 
   return useQuery<CatalogQueryResult>({
-    queryKey: ['events', 'catalog', { page, pageSize, search: search.trim(), category, sort }],
+    queryKey: ['events', 'catalog', { page, pageSize, search: search.trim(), category, sort, cursor, limit }],
     queryFn: async ({ signal }) => {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        pageSize: pageSize.toString(),
-        sortBy: sort,
-      });
+      const params = new URLSearchParams({ sortBy: sort });
+      if (cursor) {
+        params.set('cursor', cursor);
+        params.set('limit', String(Math.min(Math.max(limit ?? pageSize, 1), 50)));
+      } else {
+        params.set('page', page.toString());
+        params.set('pageSize', pageSize.toString());
+      }
       if (search.trim()) params.append('search', search.trim());
       if (category && category !== 'All') params.append('category', category);
 
@@ -181,6 +201,8 @@ export function useEventsCatalogQuery(options: CatalogQueryOptions) {
         items: parsed.data.items as Event[],
         totalPages: parsed.data.totalPages,
         totalCount: parsed.data.totalCount,
+        nextCursor: parsed.data.nextCursor,
+        hasMore: parsed.data.hasMore,
       };
     },
     staleTime: 3 * 60 * 1000,
@@ -251,6 +273,38 @@ export function useMyTicketsQuery(page?: number, pageSize?: number, status?: str
       }
 
       return parsed.data as unknown as TicketItemData[];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useMyTicketsCursorQuery(cursor?: string, limit = 10, status?: string) {
+  const user = useAuthStore(state => state.user);
+  const userId = user?.id ?? '';
+
+  return useQuery<TicketCursorPage>({
+    queryKey: ['tickets', 'my-tickets-cursor', userId, { cursor, limit, status }],
+    enabled: Boolean(userId),
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams({ limit: String(limit) });
+      if (cursor) params.set('cursor', cursor);
+      if (status && status !== 'All') params.set('status', status);
+      const response = await api.get(`/api/tickets/my-tickets/cursor?${params.toString()}`, { signal });
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'KhÃ´ng thá»ƒ táº£i danh sÃ¡ch vÃ©');
+      }
+
+      const parsed = ticketCursorResponseSchema.safeParse(response.data?.data);
+      if (!parsed.success) {
+        const issues = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+        throw new Error(`Dá»¯ liá»‡u cursor vÃ© khÃ´ng há»£p lá»‡ tá»« mÃ¡y chá»§: ${issues}`);
+      }
+
+      return {
+        items: parsed.data.items as unknown as TicketItemData[],
+        nextCursor: parsed.data.nextCursor,
+        hasMore: parsed.data.hasMore,
+      };
     },
     staleTime: 2 * 60 * 1000,
   });

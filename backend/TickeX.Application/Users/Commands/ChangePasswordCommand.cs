@@ -11,12 +11,14 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
     private readonly IApplicationDbContext _context;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IRefreshTokenStore? _refreshTokens;
+    private readonly IUserSecurityStateCache? _securityStateCache;
 
-    public ChangePasswordCommandHandler(IApplicationDbContext context, IPasswordHasher passwordHasher, IRefreshTokenStore? refreshTokens = null)
+    public ChangePasswordCommandHandler(IApplicationDbContext context, IPasswordHasher passwordHasher, IRefreshTokenStore? refreshTokens = null, IUserSecurityStateCache? securityStateCache = null)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _refreshTokens = refreshTokens;
+        _securityStateCache = securityStateCache;
     }
 
     public async Task<bool> Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
@@ -33,12 +35,18 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
             return false;
         }
 
-        await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
-        user.ChangePassword(_passwordHasher.Hash(request.NewPassword));
-        await _context.SaveChangesAsync(cancellationToken);
-        if (_refreshTokens is not null)
-            await _refreshTokens.RevokeAllForUserAsync(user.Id, cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        var strategy = _context.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
+            user.ChangePassword(_passwordHasher.Hash(request.NewPassword));
+            await _context.SaveChangesAsync(cancellationToken);
+            if (_refreshTokens is not null)
+                await _refreshTokens.RevokeAllForUserAsync(user.Id, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        });
+        if (_securityStateCache is not null)
+            await _securityStateCache.SetAsync(user.Id, new UserSecurityState(user.SecurityStamp, user.IsBlocked), CancellationToken.None);
 
         return true;
     }

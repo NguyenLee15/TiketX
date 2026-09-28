@@ -265,6 +265,28 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
         payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task CreatePaymentLink_WhenTicketPriceHasFractionalVnd_ReturnsInvalidAmountWithoutCallingPayOS()
+    {
+        var user = new User("Customer", "fractional-price@test.local", "hash");
+        var @event = new Event("Future", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(2), "HCM", "Venue", 1);
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, 150_000.99m);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        var payos = new Mock<IPayOSService>();
+        var result = await CreateOperations(payos.Object).CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.Code.Should().Be("INVALID_PAYMENT_AMOUNT");
+        payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private CustomerCheckoutOperations CreateOperations(IPayOSService payos, IDistributedLockService? locks = null)
     {
         var settings = new Dictionary<string, string?>

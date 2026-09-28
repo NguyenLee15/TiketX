@@ -20,12 +20,14 @@ public class BlockUserCommandHandler : IRequestHandler<BlockUserCommand, AdminOp
     private readonly IApplicationDbContext _context;
     private readonly IDistributedLockService _lockService;
     private readonly IRefreshTokenStore? _refreshTokens;
+    private readonly IUserSecurityStateCache? _securityStateCache;
 
-    public BlockUserCommandHandler(IApplicationDbContext context, IDistributedLockService lockService, IRefreshTokenStore? refreshTokens = null)
+    public BlockUserCommandHandler(IApplicationDbContext context, IDistributedLockService lockService, IRefreshTokenStore? refreshTokens = null, IUserSecurityStateCache? securityStateCache = null)
     {
         _context = context;
         _lockService = lockService;
         _refreshTokens = refreshTokens;
+        _securityStateCache = securityStateCache;
     }
 
     public async Task<AdminOperationResult> Handle(BlockUserCommand request, CancellationToken cancellationToken)
@@ -104,11 +106,15 @@ public class BlockUserCommandHandler : IRequestHandler<BlockUserCommand, AdminOp
             try
             {
                 if (!lease.IsValid) return AdminOperationResult.Conflict("Khóa thao tác đã hết hạn. Vui lòng thử lại.", "ADMIN_LOCK_LOST");
-                await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
-                await _context.SaveChangesAsync(cancellationToken);
-                if (request.IsBlocked && _refreshTokens is not null)
-                    await _refreshTokens.RevokeAllForUserAsync(user.Id, cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
+                var strategy = _context.CreateExecutionStrategy();
+                await strategy.ExecuteAsync(async () =>
+                {
+                    await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
+                    await _context.SaveChangesAsync(cancellationToken);
+                    if (request.IsBlocked && _refreshTokens is not null)
+                        await _refreshTokens.RevokeAllForUserAsync(user.Id, cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                });
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -116,6 +122,8 @@ public class BlockUserCommandHandler : IRequestHandler<BlockUserCommand, AdminOp
                     "Người dùng vừa được quản trị viên khác cập nhật. Vui lòng tải lại và thử lại.",
                     "CONCURRENCY_CONFLICT");
             }
+            if (_securityStateCache is not null)
+                await _securityStateCache.SetAsync(user.Id, new UserSecurityState(user.SecurityStamp, user.IsBlocked), CancellationToken.None);
 
             var actionName = request.IsBlocked ? "Khóa" : "Mở khóa";
             return AdminOperationResult.Ok($"{actionName} tài khoản người dùng thành công.");

@@ -21,48 +21,52 @@ public sealed class SaveRefundBankAccountCommandHandler(
         if (!await context.Users.AnyAsync(x => x.Id == request.UserId, cancellationToken)) return false;
         var details = new RefundBankAccountDetails(request.BankBin.Trim(), request.AccountName.Trim(), request.AccountNumber.Trim());
         var encrypted = protector.Protect(details);
-        await using var transaction = await context.BeginTransactionAsync(cancellationToken);
-        try
+        var strategy = context.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            var account = await context.RefundBankAccounts.SingleOrDefaultAsync(x => x.UserId == request.UserId, cancellationToken);
-            if (account is null) context.RefundBankAccounts.Add(new RefundBankAccount(request.UserId, encrypted, details.AccountNumber[^4..]));
-            else account.Replace(encrypted, details.AccountNumber[^4..]);
-
-            const int batchSize = 500;
-            while (true)
+            await using var transaction = await context.BeginTransactionAsync(cancellationToken);
+            try
             {
-                var refundIds = await context.RefundRequests
-                    .Where(x => x.TicketId != Guid.Empty && x.EncryptedDestinationSnapshot == null && x.Status == "AwaitingDestination")
-                    .Where(r => context.Tickets.Any(t => t.Id == r.TicketId && t.UserId == request.UserId))
-                    .OrderBy(x => x.Id)
-                    .Select(x => x.Id)
-                    .Take(batchSize)
-                    .ToListAsync(cancellationToken);
-                if (refundIds.Count == 0) break;
+                var account = await context.RefundBankAccounts.SingleOrDefaultAsync(x => x.UserId == request.UserId, cancellationToken);
+                if (account is null) context.RefundBankAccounts.Add(new RefundBankAccount(request.UserId, encrypted, details.AccountNumber[^4..]));
+                else account.Replace(encrypted, details.AccountNumber[^4..]);
 
-                var waitingRefunds = await context.RefundRequests
-                    .Where(x => refundIds.Contains(x.Id))
-                    .ToListAsync(cancellationToken);
-                foreach (var refund in waitingRefunds) refund.SetDestinationSnapshot(encrypted);
-                await context.SaveChangesAsync(cancellationToken);
-
-                if (context is DbContext dbContext)
+                const int batchSize = 500;
+                while (true)
                 {
-                    foreach (var entry in dbContext.ChangeTracker.Entries<RefundRequest>().ToList())
-                        entry.State = EntityState.Detached;
-                }
-            }
+                    var refundIds = await context.RefundRequests
+                        .Where(x => x.TicketId != Guid.Empty && x.EncryptedDestinationSnapshot == null && x.Status == "AwaitingDestination")
+                        .Where(r => context.Tickets.Any(t => t.Id == r.TicketId && t.UserId == request.UserId))
+                        .OrderBy(x => x.Id)
+                        .Select(x => x.Id)
+                        .Take(batchSize)
+                        .ToListAsync(cancellationToken);
+                    if (refundIds.Count == 0) break;
 
-            context.AuditLogs.Add(new AuditLog(request.UserId, string.Empty, "REFUND_BANK_ACCOUNT_UPDATED", nameof(RefundBankAccount), request.UserId.ToString(), "Configured", "Updated"));
-            await context.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            return true;
-        }
-        catch
-        {
-            await transaction.RollbackAsync(CancellationToken.None);
-            throw;
-        }
+                    var waitingRefunds = await context.RefundRequests
+                        .Where(x => refundIds.Contains(x.Id))
+                        .ToListAsync(cancellationToken);
+                    foreach (var refund in waitingRefunds) refund.SetDestinationSnapshot(encrypted);
+                    await context.SaveChangesAsync(cancellationToken);
+
+                    if (context is DbContext dbContext)
+                    {
+                        foreach (var entry in dbContext.ChangeTracker.Entries<RefundRequest>().ToList())
+                            entry.State = EntityState.Detached;
+                    }
+                }
+
+                context.AuditLogs.Add(new AuditLog(request.UserId, string.Empty, "REFUND_BANK_ACCOUNT_UPDATED", nameof(RefundBankAccount), request.UserId.ToString(), "Configured", "Updated"));
+                await context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                throw;
+            }
+        });
     }
 }
 

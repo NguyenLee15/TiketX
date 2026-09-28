@@ -3,19 +3,21 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface TicketPaginationProps {
   currentPage: number;
+  hasPrevPage: boolean;
   hasNextPage: boolean;
-  onPageChange: (page: number) => void;
+  onPrevious: () => void;
+  onNext: () => void;
   isLoading?: boolean;
 }
 
 export const TicketPagination: React.FC<TicketPaginationProps> = React.memo(({
   currentPage,
+  hasPrevPage,
   hasNextPage,
-  onPageChange,
+  onPrevious,
+  onNext,
   isLoading = false,
 }) => {
-  const hasPrevPage = currentPage > 1;
-
   if (!hasPrevPage && !hasNextPage) {
     return null;
   }
@@ -27,7 +29,7 @@ export const TicketPagination: React.FC<TicketPaginationProps> = React.memo(({
     >
       <button
         type="button"
-        onClick={() => onPageChange(currentPage - 1)}
+        onClick={onPrevious}
         disabled={!hasPrevPage || isLoading}
         aria-label="Trang trước"
         className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
@@ -49,7 +51,7 @@ export const TicketPagination: React.FC<TicketPaginationProps> = React.memo(({
 
       <button
         type="button"
-        onClick={() => onPageChange(currentPage + 1)}
+        onClick={onNext}
         disabled={!hasNextPage || isLoading}
         aria-label="Trang sau"
         className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${

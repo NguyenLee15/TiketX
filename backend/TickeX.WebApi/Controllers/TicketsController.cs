@@ -17,11 +17,13 @@ public class TicketsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ICheckInOperations _checkInOperations;
+    private readonly ICustomerTicketReadModel _customerTicketReadModel;
 
-    public TicketsController(IMediator mediator, ICheckInOperations checkInOperations)
+    public TicketsController(IMediator mediator, ICheckInOperations checkInOperations, ICustomerTicketReadModel customerTicketReadModel)
     {
         _mediator = mediator;
         _checkInOperations = checkInOperations;
+        _customerTicketReadModel = customerTicketReadModel;
     }
 
     [HttpGet("my-tickets")]
@@ -39,6 +41,27 @@ public class TicketsController : ControllerBase
 
         var result = await _mediator.Send(new GetMyTicketsQuery(userId, page, pageSize, status), cancellationToken);
         return Ok(new { success = true, data = result });
+    }
+
+    [HttpGet("my-tickets/cursor")]
+    public async Task<IActionResult> GetMyTicketsCursor([FromQuery] string? cursor = null, [FromQuery] int limit = 10, [FromQuery] string? status = null, CancellationToken cancellationToken = default)
+    {
+        if (limit is < 1 or > 50)
+            return BadRequest(new { success = false, code = "PAGINATION_OUT_OF_RANGE", message = "limit phải nằm trong khoảng 1–50." });
+
+        var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+            return Unauthorized(new { success = false, code = "UNAUTHORIZED", message = "User is not authenticated" });
+
+        try
+        {
+            var result = await _customerTicketReadModel.GetForUserCursorAsync(userId, cursor, limit, status, cancellationToken);
+            return Ok(new { success = true, data = result });
+        }
+        catch (ArgumentException ex) when (cursor is not null)
+        {
+            return BadRequest(new { success = false, code = "INVALID_CURSOR", message = ex.Message });
+        }
     }
 
     public record RefundRequest(string? Reason);

@@ -87,7 +87,7 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
               </div>
               
               <div className="flex gap-1.5 sm:gap-2 md:gap-2.5">
-                {rows[rowName].sort((a, b) => a.number - b.number).map((seat, index) => {
+                {[...rows[rowName]].sort((a, b) => a.number - b.number).map((seat, index) => {
                   const isSelected = selectedSeat?.id === seat.id;
                   const tierInfo = getSeatTierInfo(seat);
                   return (

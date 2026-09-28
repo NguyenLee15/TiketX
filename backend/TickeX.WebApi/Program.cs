@@ -231,6 +231,7 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer
             OnTokenValidated = async context =>
             {
                 var dbContext = context.HttpContext.RequestServices.GetRequiredService<TickeX.Application.Interfaces.IApplicationDbContext>();
+                var securityStateCache = context.HttpContext.RequestServices.GetRequiredService<TickeX.Application.Interfaces.IUserSecurityStateCache>();
                 var userIdClaim = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 var stampClaim = context.Principal?.FindFirst("SecurityStamp")?.Value;
 
@@ -240,17 +241,31 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer
                     return;
                 }
 
-                var user = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
-                    .AsNoTracking(dbContext.Users)
-                    .FirstOrDefaultAsync(u => u.Id == userId);
+                var cachedState = await securityStateCache.GetAsync(userId, context.HttpContext.RequestAborted);
+                var securityState = cachedState;
+                if (securityState is null)
+                {
+                    var user = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
+                        .AsNoTracking(dbContext.Users)
+                        .Where(u => u.Id == userId)
+                        .Select(u => new { u.SecurityStamp, u.IsBlocked })
+                        .FirstOrDefaultAsync(context.HttpContext.RequestAborted);
+                    if (user is null)
+                    {
+                        context.Fail("User not found or blocked.");
+                        return;
+                    }
+                    securityState = new TickeX.Application.Interfaces.UserSecurityState(user.SecurityStamp, user.IsBlocked);
+                    await securityStateCache.SetAsync(userId, securityState, context.HttpContext.RequestAborted);
+                }
 
-                if (user == null || user.IsBlocked)
+                if (securityState.IsBlocked)
                 {
                     context.Fail("User not found or blocked.");
                     return;
                 }
 
-                if (!string.IsNullOrEmpty(user.SecurityStamp) && user.SecurityStamp != stampClaim)
+                if (!string.IsNullOrEmpty(securityState.SecurityStamp) && securityState.SecurityStamp != stampClaim)
                 {
                     context.Fail("Token revoked due to security state change.");
                     return;

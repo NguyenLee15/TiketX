@@ -30,4 +30,6 @@ public record TicketDto(
     bool CanRefund
 );
 
+public record TicketCursorPage(List<TicketDto> Items, string? NextCursor, bool HasMore);
+
 public record GetMyTicketsQuery(Guid UserId, int? Page = null, int? PageSize = null, string? Status = null) : IRequest<List<TicketDto>>;

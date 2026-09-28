@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Ticket, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -8,7 +8,7 @@ import { TicketCard, TicketItemData } from './TicketCard';
 import { TicketFilterTabs, allowedTicketTabs, TicketTabType } from './TicketFilterTabs';
 import { TicketRefundModal } from './TicketRefundModal';
 import { TicketPagination } from './TicketPagination';
-import { useMyTicketsQuery } from '../../hooks/useCustomerQueries';
+import { useMyTicketsCursorQuery } from '../../hooks/useCustomerQueries';
 
 const PAGE_SIZE = 10;
 
@@ -17,6 +17,7 @@ export default function MyTicketsPage() {
   const queryClient = useQueryClient();
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [refundCandidate, setRefundCandidate] = useState<TicketItemData | null>(null);
+  const [cursorHistory, setCursorHistory] = useState<string[]>([]);
 
   // Single Source of Truth from URL params (Zero derived effect ping-pong loops)
   const requestedTab = searchParams.get('status');
@@ -24,17 +25,17 @@ export default function MyTicketsPage() {
     ? (requestedTab as TicketTabType) 
     : 'All';
 
-  const rawPage = parseInt(searchParams.get('page') || '1', 10);
-  const currentPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+  const currentCursor = cursorHistory[cursorHistory.length - 1];
+  const currentPage = cursorHistory.length + 1;
 
   const {
-    data: fetchedTickets,
+    data: ticketPage,
     isLoading,
     isError: loadError,
     refetch: refetchTickets,
-  } = useMyTicketsQuery(currentPage, PAGE_SIZE, filterTab === 'All' ? undefined : filterTab);
+  } = useMyTicketsCursorQuery(currentCursor, PAGE_SIZE, filterTab === 'All' ? undefined : filterTab);
 
-  const tickets = useMemo(() => fetchedTickets ?? [], [fetchedTickets]);
+  const tickets = ticketPage?.items ?? [];
 
   const handleTabChange = useCallback((tab: TicketTabType) => {
     const next = new URLSearchParams(searchParams);
@@ -43,19 +44,17 @@ export default function MyTicketsPage() {
     } else {
       next.set('status', tab);
     }
-    next.delete('page');
+    setCursorHistory([]);
     setSearchParams(next);
   }, [searchParams, setSearchParams]);
 
-  const handlePageChange = useCallback((page: number) => {
-    const next = new URLSearchParams(searchParams);
-    if (page <= 1) {
-      next.delete('page');
-    } else {
-      next.set('page', String(page));
-    }
-    setSearchParams(next);
-  }, [searchParams, setSearchParams]);
+  const handleNextPage = useCallback(() => {
+    if (ticketPage?.nextCursor) setCursorHistory(history => [...history, ticketPage.nextCursor as string]);
+  }, [ticketPage?.nextCursor]);
+
+  const handlePreviousPage = useCallback(() => {
+    setCursorHistory(history => history.slice(0, -1));
+  }, []);
 
   const handleRefund = useCallback(async (ticket: TicketItemData) => {
     setRefundingId(ticket.id);
@@ -77,13 +76,6 @@ export default function MyTicketsPage() {
       setRefundingId(null);
     }
   }, [queryClient]);
-
-  const filteredTickets = useMemo(() => {
-    return tickets.filter(t => {
-      if (filterTab === 'All') return true;
-      return t.status.toLowerCase() === filterTab.toLowerCase();
-    });
-  }, [tickets, filterTab]);
 
   if (isLoading) {
     return (
@@ -129,7 +121,7 @@ export default function MyTicketsPage() {
         <TicketFilterTabs currentTab={filterTab} onTabChange={handleTabChange} />
       </div>
         
-      {filteredTickets.length === 0 ? (
+      {tickets.length === 0 ? (
         <div className="text-center py-16 bg-surface-2 rounded-2xl border border-dashed border-border-subtle" aria-live="polite">
           <div className="w-12 h-12 bg-surface-3 rounded-xl flex items-center justify-center mx-auto mb-3 text-text-tertiary">
             <Ticket className="w-6 h-6" />
@@ -143,7 +135,7 @@ export default function MyTicketsPage() {
           {currentPage > 1 && (
             <button
               type="button"
-              onClick={() => handlePageChange(1)}
+              onClick={() => setCursorHistory([])}
               className="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-brand-primary text-xs font-bold text-white hover:bg-brand-primary/90 transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer"
             >
               Quay lại trang 1
@@ -152,7 +144,7 @@ export default function MyTicketsPage() {
         </div>
       ) : (
         <div className="space-y-5">
-          {filteredTickets.map(ticket => (
+          {tickets.map(ticket => (
             <TicketCard
               key={ticket.id}
               ticket={ticket}
@@ -166,8 +158,10 @@ export default function MyTicketsPage() {
       {/* Pagination Controls */}
       <TicketPagination
         currentPage={currentPage}
-        hasNextPage={tickets.length >= PAGE_SIZE}
-        onPageChange={handlePageChange}
+        hasPrevPage={cursorHistory.length > 0}
+        hasNextPage={ticketPage?.hasMore ?? false}
+        onPrevious={handlePreviousPage}
+        onNext={handleNextPage}
         isLoading={isLoading}
       />
 

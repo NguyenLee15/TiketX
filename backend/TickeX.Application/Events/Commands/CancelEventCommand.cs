@@ -41,13 +41,16 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
         if (ev.Status == EventStatus.Completed)
             return AdminOperationResult.BadRequest("Không thể hủy sự kiện đã kết thúc.", "EVENT_ALREADY_COMPLETED");
 
-        await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
-        var beforeStatus = ev.Status.ToString();
-        ev.Cancel();
-        const int batchSize = 500;
-        var refundedCount = 0;
-        decimal refundPendingAmount = 0m;
-        var releasedSeatCount = 0;
+        var strategy = _context.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
+            var beforeStatus = ev.Status.ToString();
+            ev.Cancel();
+            const int batchSize = 500;
+            var refundedCount = 0;
+            decimal refundPendingAmount = 0m;
+            var releasedSeatCount = 0;
 
         while (true)
         {
@@ -145,7 +148,8 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
                 "EVENT_CONCURRENCY_CONFLICT");
         }
 
-        return AdminOperationResult.Ok($"Hủy sự kiện thành công. Đã tạo yêu cầu hoàn tiền cho {refundedCount} vé và giải phóng {releasedSeatCount} ghế chưa bán.");
+            return AdminOperationResult.Ok($"Hủy sự kiện thành công. Đã tạo yêu cầu hoàn tiền cho {refundedCount} vé và giải phóng {releasedSeatCount} ghế chưa bán.");
+        });
     }
 
     private void DetachProcessedEntities()

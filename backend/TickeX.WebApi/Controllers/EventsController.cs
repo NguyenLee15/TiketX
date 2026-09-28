@@ -27,8 +27,15 @@ public class EventsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetEvents([FromQuery] GetEventsQuery query, CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(query, cancellationToken);
-        return Ok(new { success = true, data = result });
+        try
+        {
+            var result = await _mediator.Send(query, cancellationToken);
+            return Ok(new { success = true, data = result });
+        }
+        catch (ArgumentException ex) when (query.Cursor is not null)
+        {
+            return BadRequest(new { success = false, code = "INVALID_CURSOR", message = ex.Message });
+        }
     }
 
     [HttpGet("admin-all")]

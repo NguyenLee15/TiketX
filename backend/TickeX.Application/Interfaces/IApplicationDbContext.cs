@@ -20,4 +20,5 @@ public interface IApplicationDbContext
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
     Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
+    IExecutionStrategy CreateExecutionStrategy();
 }

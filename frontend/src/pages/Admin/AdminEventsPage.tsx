@@ -10,7 +10,7 @@ import { AdminEventsTable } from './Events/AdminEventsTable';
 import { AdminEventsSkeleton } from './Events/AdminEventsSkeleton';
 import { adminEventsPagedResponseSchema } from '../../schemas/adminSchemas';
 import { AdminEventsHeader } from './Events/AdminEventsHeader';
-import { AdminEventsModals } from './Events/AdminEventsModals';
+import { AdminEventModalState, AdminEventsModals } from './Events/AdminEventsModals';
 
 export default function AdminEventsPage() {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
@@ -38,10 +38,11 @@ export default function AdminEventsPage() {
   }, [searchQuery]);
 
   // Modals state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [deleteEventTarget, setDeleteEventTarget] = useState<Event | null>(null);
-  const [cancelEventTarget, setCancelEventTarget] = useState<Event | null>(null);
+  const [modalState, setModalState] = useState<AdminEventModalState>({
+    form: { open: false, event: null },
+    deleteTarget: null,
+    cancelTarget: null
+  });
   const requestRef = useRef<AbortController | null>(null);
 
   const fetchEvents = useCallback(async () => {
@@ -102,43 +103,41 @@ export default function AdminEventsPage() {
   }, [debouncedSearch, statusFilter, categoryFilter, page, setUrlSearchParams]);
 
   const handleOpenCreateModal = () => {
-    setSelectedEvent(null);
-    setIsModalOpen(true);
+    setModalState(current => ({ ...current, form: { open: true, event: null } }));
   };
 
   const handleOpenEditModal = (event: Event) => {
-    setSelectedEvent(event);
-    setIsModalOpen(true);
+    setModalState(current => ({ ...current, form: { open: true, event } }));
   };
 
   const handleModalSubmit = async (data: EventFormValues) => {
     setIsSubmitting(true);
     try {
-      if (selectedEvent) {
+      if (modalState.form.event) {
         const payload = {
-          id: selectedEvent.id,
+          id: modalState.form.event.id,
           title: data.title,
           description: data.description,
           date: data.date,
           endDate: data.endDate || new Date(new Date(data.date).getTime() + 3 * 3600 * 1000).toISOString(),
           location: data.location,
           venueName: data.venueName || data.location,
-          totalSeats: selectedEvent.totalSeats,
+          totalSeats: modalState.form.event.totalSeats,
           category: data.category,
           imageUrl: data.imageUrl,
           bannerUrl: data.imageUrl,
-          organizerName: selectedEvent.organizerName || 'TickeX Live',
-          basePrice: data.basePrice || selectedEvent.basePrice || 200000,
+          organizerName: modalState.form.event.organizerName || 'TickeX Live',
+          basePrice: data.basePrice || modalState.form.event.basePrice || 200000,
           status: formValueToEventStatus(data.status),
-          refundCutoffHours: selectedEvent.refundCutoffHours || 24,
-          expectedVersion: selectedEvent.version
+          refundCutoffHours: modalState.form.event.refundCutoffHours || 24,
+          expectedVersion: modalState.form.event.version
         };
 
-        const response = await api.put(`/api/events/${selectedEvent.id}`, payload);
+        const response = await api.put(`/api/events/${modalState.form.event.id}`, payload);
         if (response.data.success) {
           toast.success('Cập nhật sự kiện thành công');
           await fetchEvents();
-          setIsModalOpen(false);
+          setModalState(current => ({ ...current, form: { ...current.form, open: false } }));
         } else {
           toast.error(response.data.message || 'Không thể cập nhật sự kiện.');
         }
@@ -166,7 +165,7 @@ export default function AdminEventsPage() {
         if (response.data.success) {
           toast.success('Tạo sự kiện và khởi tạo ma trận ghế thành công!');
           await fetchEvents();
-          setIsModalOpen(false);
+          setModalState(current => ({ ...current, form: { ...current.form, open: false } }));
         } else {
           toast.error(response.data.message || 'Không thể tạo sự kiện.');
         }
@@ -185,13 +184,13 @@ export default function AdminEventsPage() {
   };
 
   const handleConfirmDeleteEvent = async () => {
-    if (!deleteEventTarget) return;
+    if (!modalState.deleteTarget) return;
     setIsSubmitting(true);
     try {
-      const res = await api.delete(`/api/events/${deleteEventTarget.id}`);
+      const res = await api.delete(`/api/events/${modalState.deleteTarget.id}`);
       if (res.data.success) {
-        toast.success(`Đã xóa sự kiện "${deleteEventTarget.title}"`);
-        setDeleteEventTarget(null);
+        toast.success(`Đã xóa sự kiện "${modalState.deleteTarget.title}"`);
+        setModalState(current => ({ ...current, deleteTarget: null }));
         await fetchEvents();
       } else {
         toast.error(res.data.message || 'Không thể xóa sự kiện.');
@@ -205,13 +204,13 @@ export default function AdminEventsPage() {
   };
 
   const handleConfirmCancelEvent = async (reason: string) => {
-    if (!cancelEventTarget) return;
+    if (!modalState.cancelTarget) return;
     setIsSubmitting(true);
     try {
-      const res = await api.post(`/api/events/${cancelEventTarget.id}/cancel`, { reason });
+      const res = await api.post(`/api/events/${modalState.cancelTarget.id}/cancel`, { reason });
       if (res.data.success) {
-        toast.success(`Đã hủy sự kiện "${cancelEventTarget.title}". Các vé đã bán đang chờ xử lý hoàn tiền.`);
-        setCancelEventTarget(null);
+        toast.success(`Đã hủy sự kiện "${modalState.cancelTarget.title}". Các vé đã bán đang chờ xử lý hoàn tiền.`);
+        setModalState(current => ({ ...current, cancelTarget: null }));
         await fetchEvents();
       } else {
         toast.error(res.data.message || 'Không thể hủy sự kiện.');
@@ -256,23 +255,22 @@ export default function AdminEventsPage() {
           totalPages={totalPages}
           onPageChange={setPage}
           onEdit={handleOpenEditModal}
-          onCancel={setCancelEventTarget}
-          onDelete={setDeleteEventTarget}
+          onCancel={event => setModalState(current => ({ ...current, cancelTarget: event }))}
+          onDelete={event => setModalState(current => ({ ...current, deleteTarget: event }))}
         />
       )}
 
       <AdminEventsModals
-        isModalOpen={isModalOpen}
-        selectedEvent={selectedEvent}
-        deleteEventTarget={deleteEventTarget}
-        cancelEventTarget={cancelEventTarget}
+        state={modalState}
         isSubmitting={isSubmitting}
-        onCloseForm={() => setIsModalOpen(false)}
-        onSubmitForm={handleModalSubmit}
-        onCloseDelete={() => setDeleteEventTarget(null)}
-        onConfirmDelete={handleConfirmDeleteEvent}
-        onCloseCancel={() => setCancelEventTarget(null)}
-        onConfirmCancel={handleConfirmCancelEvent}
+        actions={{
+          closeForm: () => setModalState(current => ({ ...current, form: { ...current.form, open: false } })),
+          submitForm: handleModalSubmit,
+          closeDelete: () => setModalState(current => ({ ...current, deleteTarget: null })),
+          confirmDelete: handleConfirmDeleteEvent,
+          closeCancel: () => setModalState(current => ({ ...current, cancelTarget: null })),
+          confirmCancel: handleConfirmCancelEvent
+        }}
       />
     </div>
   );

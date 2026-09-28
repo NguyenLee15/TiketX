@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text;
+using System.Text.Json;
 using TickeX.Application.Events.Queries;
 using TickeX.Application.Interfaces;
 using TickeX.Domain.Enums;
@@ -38,8 +40,8 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
         if (request.DateFrom.HasValue) query = query.Where(e => e.Date >= request.DateFrom.Value);
         if (request.DateTo.HasValue) query = query.Where(e => e.Date <= request.DateTo.Value);
 
-        var totalCount = await query.CountAsync(cancellationToken);
-        query = request.SortBy switch
+        var sortBy = request.SortBy is "date_desc" or "price_asc" or "price_desc" ? request.SortBy : "date_asc";
+        query = sortBy switch
         {
             "date_desc" => query.OrderByDescending(e => e.Date).ThenBy(e => e.Id),
             "price_asc" => query.OrderBy(e => e.BasePrice).ThenBy(e => e.Id),
@@ -48,8 +50,30 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
         };
 
         var page = Math.Clamp(request.Page > 0 ? request.Page : 1, 1, 10000);
-        var pageSize = Math.Clamp(request.PageSize > 0 ? request.PageSize : 12, 1, 50);
-        var items = await query.Skip((page - 1) * pageSize).Take(pageSize)
+        var pageSize = Math.Clamp(request.Limit ?? request.PageSize, 1, 50);
+        var totalCount = 0;
+        List<TickeX.Domain.Entities.Event> rows;
+        if (string.IsNullOrWhiteSpace(request.Cursor))
+        {
+            totalCount = await query.CountAsync(cancellationToken);
+            rows = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        }
+        else
+        {
+            var cursor = DecodeCursor(request.Cursor, sortBy);
+            query = sortBy switch
+            {
+                "date_desc" => query.Where(e => e.Date < cursor.Date || (e.Date == cursor.Date && e.Id.CompareTo(cursor.Id) > 0)),
+                "price_asc" => query.Where(e => e.BasePrice > cursor.Price || (e.BasePrice == cursor.Price && e.Id.CompareTo(cursor.Id) > 0)),
+                "price_desc" => query.Where(e => e.BasePrice < cursor.Price || (e.BasePrice == cursor.Price && e.Id.CompareTo(cursor.Id) > 0)),
+                _ => query.Where(e => e.Date > cursor.Date || (e.Date == cursor.Date && e.Id.CompareTo(cursor.Id) > 0))
+            };
+            rows = await query.Take(pageSize + 1).ToListAsync(cancellationToken);
+        }
+
+        var hasMore = rows.Count > pageSize;
+        if (hasMore) rows.RemoveAt(pageSize);
+        var items = rows
             .Select(e => new EventDto(
                 e.Id, e.Title, e.Description, e.Date, e.EndDate, e.Location, e.VenueName,
                 e.Category, e.ImageUrl, e.BannerUrl, e.OrganizerName, e.TotalSeats,
@@ -57,8 +81,40 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
                 e.Seats.Any() ? (decimal)e.Seats.Min(s => (double)s.Price) : e.BasePrice,
                 e.Seats.Any() ? (decimal)e.Seats.Max(s => (double)s.Price) : e.BasePrice,
                 e.Status, e.RefundCutoffHours, false, false, null))
-            .ToListAsync(cancellationToken);
+            .ToList();
 
-        return new PagedResult<EventDto>(items, totalCount, page, pageSize);
+        var last = rows.LastOrDefault();
+        var nextCursor = hasMore && last is not null ? EncodeCursor(sortBy, last) : null;
+        return new PagedResult<EventDto>(items, totalCount, page, pageSize, nextCursor, hasMore);
     }
+
+    private static string EncodeCursor(string sortBy, TickeX.Domain.Entities.Event eventItem)
+    {
+        var value = new EventCursor(sortBy, eventItem.Date, eventItem.BasePrice, eventItem.Id);
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(value)))
+            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    }
+
+    private static EventCursor DecodeCursor(string encoded, string sortBy)
+    {
+        try
+        {
+            var padded = encoded.Replace('-', '+').Replace('_', '/');
+            padded += new string('=', (4 - padded.Length % 4) % 4);
+            var cursor = JsonSerializer.Deserialize<EventCursor>(Convert.FromBase64String(padded));
+            if (cursor is null || cursor.SortBy != sortBy || cursor.Id == Guid.Empty)
+                throw new ArgumentException("Cursor không hợp lệ.", nameof(encoded));
+            return cursor;
+        }
+        catch (JsonException ex)
+        {
+            throw new ArgumentException("Cursor không hợp lệ.", nameof(encoded), ex);
+        }
+        catch (FormatException ex)
+        {
+            throw new ArgumentException("Cursor không hợp lệ.", nameof(encoded), ex);
+        }
+    }
+
+    private sealed record EventCursor(string SortBy, DateTime Date, decimal Price, Guid Id);
 }
