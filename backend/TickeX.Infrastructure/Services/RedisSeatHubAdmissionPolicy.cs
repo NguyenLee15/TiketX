@@ -71,5 +71,16 @@ public sealed class RedisSeatHubAdmissionPolicy(IConnectionMultiplexer redis) : 
         await redis.GetDatabase().KeyDeleteAsync(GroupKey(connectionId)).WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<bool> LeaveGroupAsync(string connectionId, Guid eventId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(connectionId) || eventId == Guid.Empty || !redis.IsConnected)
+            return false;
+
+        return await redis.GetDatabase()
+            .SetRemoveAsync(GroupKey(connectionId), eventId.ToString("N"))
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     private static RedisKey GroupKey(string connectionId) => $"tickex:seat-hub:groups:{connectionId}";
 }

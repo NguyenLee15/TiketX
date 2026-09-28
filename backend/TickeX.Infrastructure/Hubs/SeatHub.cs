@@ -41,6 +41,7 @@ public class SeatHub : Hub
     {
         if (eventId == Guid.Empty) return;
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, eventId.ToString());
+        await _admission.LeaveGroupAsync(Context.ConnectionId, eventId);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

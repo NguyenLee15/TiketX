@@ -40,7 +40,8 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
                 || EF.Functions.Like(e.OrganizerName, $"%{search}%"));
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Category) && request.Category != "All")
+        if (!string.IsNullOrWhiteSpace(request.Category)
+            && !string.Equals(request.Category.Trim(), "All", StringComparison.OrdinalIgnoreCase))
             query = query.Where(e => e.Category == request.Category);
         if (request.DateFrom.HasValue) query = query.Where(e => e.Date >= request.DateFrom.Value);
         if (request.DateTo.HasValue) query = query.Where(e => e.Date <= request.DateTo.Value);

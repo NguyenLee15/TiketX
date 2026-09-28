@@ -235,13 +235,13 @@ export function useEventDetailQuery(eventId: string | undefined) {
   });
 }
 
-export function useMyTicketsQuery(page?: number, pageSize?: number, status?: string) {
+export function useMyTicketsQuery(page?: number, pageSize?: number, status?: string, options?: { enabled?: boolean }) {
   const user = useAuthStore(state => state.user);
   const userId = user?.id ?? '';
 
   return useQuery<TicketItemData[]>({
     queryKey: ['tickets', 'my-tickets', userId, { page, pageSize, status }],
-    enabled: Boolean(userId),
+    enabled: Boolean(userId) && (options?.enabled ?? true),
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams();
       if (page) params.append('page', page.toString());
@@ -281,13 +281,13 @@ export function useMyTicketsQuery(page?: number, pageSize?: number, status?: str
   });
 }
 
-export function useMyTicketsCursorQuery(cursor?: string, limit = 10, status?: string) {
+export function useMyTicketsCursorQuery(cursor?: string, limit = 10, status?: string, options?: { enabled?: boolean }) {
   const user = useAuthStore(state => state.user);
   const userId = user?.id ?? '';
 
   return useQuery<TicketCursorPage>({
     queryKey: ['tickets', 'my-tickets-cursor', userId, { cursor, limit, status }],
-    enabled: Boolean(userId),
+    enabled: Boolean(userId) && (options?.enabled ?? true),
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams({ limit: String(limit) });
       if (cursor) params.set('cursor', cursor);

@@ -56,6 +56,18 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
     }
 
     [Fact]
+    public async Task PublicCatalogTreatsAllCategoryCaseInsensitively()
+    {
+        _context.Events.Add(CreateEvent("Future", DateTime.UtcNow.AddDays(2)));
+        await _context.SaveChangesAsync();
+
+        var catalog = new CustomerEventCatalogAdapter(_context, new UtcTimePolicy());
+        var result = await catalog.SearchAsync(new GetEventsQuery(Category: "all"), CancellationToken.None);
+
+        result.Items.Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task PublicCatalogCursorResponseDoesNotPretendToHaveOffsetTotals()
     {
         var first = CreateEvent("First", DateTime.UtcNow.AddDays(2));
