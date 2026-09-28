@@ -1,7 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Cryptography;
 using System.Text;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using TickeX.Application.Auth.Commands;
 using TickeX.Application.Auth.Validators;
 using TickeX.Domain.Entities;
@@ -143,6 +145,29 @@ public class AuthSecurityTests
         var stampClaim = jwt.Claims.FirstOrDefault(c => c.Type == "SecurityStamp");
         stampClaim.Should().NotBeNull();
         stampClaim!.Value.Should().Be(user.SecurityStamp);
+    }
+
+    [Fact]
+    public void JwtService_GenerateToken_ShouldUseConfiguredRsaKeyAndKeyId()
+    {
+        using var rsa = RSA.Create(2048);
+        var keyId = "jwt-test-v1";
+        var settings = new Dictionary<string, string?>
+        {
+            [$"Jwt:ActiveKeyId"] = keyId,
+            [$"Jwt:SigningKeys:{keyId}"] = Convert.ToBase64String(rsa.ExportPkcs8PrivateKey()),
+            [$"Jwt:ValidationKeys:{keyId}"] = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo()),
+            ["Jwt:Issuer"] = "TickeX",
+            ["Jwt:Audience"] = "TickeXClient"
+        };
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var service = new JwtService(configuration);
+        var user = new User("RSA User", "rsa@tickex.com", _hasher.Hash("Password@123"));
+
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(service.GenerateToken(user));
+
+        jwt.Header.Alg.Should().Be(SecurityAlgorithms.RsaSha256);
+        jwt.Header.Kid.Should().Be(keyId);
     }
 
     [Fact]

@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using TickeX.Application.Interfaces;
@@ -29,12 +28,26 @@ public class JwtService : IJwtService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        var jwtKey = _configuration["Jwt:Key"];
-        if (string.IsNullOrWhiteSpace(jwtKey))
-            throw new InvalidOperationException("Jwt:Key must be configured before issuing tokens.");
+        var activeKeyId = _configuration["Jwt:ActiveKeyId"];
+        var signingKey = !string.IsNullOrWhiteSpace(activeKeyId)
+            ? _configuration[$"Jwt:SigningKeys:{activeKeyId}"]
+            : null;
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        SigningCredentials creds;
+        if (!string.IsNullOrWhiteSpace(activeKeyId) && !string.IsNullOrWhiteSpace(signingKey))
+        {
+            var key = JwtKeyMaterial.LoadPrivateKey(signingKey, activeKeyId);
+            creds = new SigningCredentials(key, SecurityAlgorithms.RsaSha256);
+        }
+        else
+        {
+            var jwtKey = _configuration["Jwt:Key"];
+            if (string.IsNullOrWhiteSpace(jwtKey))
+                throw new InvalidOperationException("Jwt RSA signing key must be configured before issuing tokens.");
+
+            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtKey));
+            creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        }
 
         var accessTokenMinutes = _configuration.GetValue("Jwt:AccessTokenMinutes", 15);
         var token = new JwtSecurityToken(
@@ -44,6 +57,9 @@ public class JwtService : IJwtService
             expires: DateTime.UtcNow.AddMinutes(accessTokenMinutes),
             signingCredentials: creds
         );
+
+        if (!string.IsNullOrWhiteSpace(activeKeyId) && !string.IsNullOrWhiteSpace(signingKey))
+            token.Header[JwtHeaderParameterNames.Kid] = activeKeyId;
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }

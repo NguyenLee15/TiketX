@@ -43,8 +43,6 @@ builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.Configure<CookieAuthenticationSettings>(builder.Configuration.GetSection(CookieAuthenticationSettings.SectionName));
@@ -122,11 +120,21 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+var jwtActiveKeyId = builder.Configuration["Jwt:ActiveKeyId"];
+var jwtSigningKeyValue = !string.IsNullOrWhiteSpace(jwtActiveKeyId)
+    ? builder.Configuration[$"Jwt:SigningKeys:{jwtActiveKeyId}"]
+    : null;
+var jwtValidationKeys = builder.Configuration.GetSection("Jwt:ValidationKeys")
+    .GetChildren()
+    .Where(x => !string.IsNullOrWhiteSpace(x.Value))
+    .ToDictionary(x => x.Key, x => JwtKeyMaterial.LoadPublicKey(x.Value!, x.Key), StringComparer.OrdinalIgnoreCase);
+var useRsaJwt = !string.IsNullOrWhiteSpace(jwtActiveKeyId) && !string.IsNullOrWhiteSpace(jwtSigningKeyValue);
+if (useRsaJwt && !jwtValidationKeys.ContainsKey(jwtActiveKeyId!))
+    throw new InvalidOperationException("Jwt validation keys must include the active signing key id.");
+
 var jwtKey = builder.Configuration["Jwt:Key"];
-if (string.IsNullOrWhiteSpace(jwtKey))
-    throw new InvalidOperationException("Jwt:Key is missing. Configure a development or production secret explicitly.");
-if (jwtKey.Length < 32)
-    throw new InvalidOperationException("Jwt:Key must contain at least 32 characters.");
+if (!useRsaJwt && (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32))
+    throw new InvalidOperationException("Configure Jwt:ActiveKeyId with RSA keys, or a development Jwt:Key of at least 32 characters.");
 
 if (!builder.Environment.IsDevelopment())
 {
@@ -145,6 +153,8 @@ if (!builder.Environment.IsDevelopment())
         (Name: "PayOS:ReturnUrl", Value: builder.Configuration["PayOS:ReturnUrl"]),
         (Name: "PayOS:CancelUrl", Value: builder.Configuration["PayOS:CancelUrl"])
     };
+    if (!useRsaJwt)
+        throw new InvalidOperationException("RSA JWT signing and validation keys are required outside Development.");
     var missingInfrastructure = requiredInfrastructure.FirstOrDefault(setting => !IsConfigured(setting.Value));
     if (missingInfrastructure != default)
         throw new InvalidOperationException($"{missingInfrastructure.Name} is required outside Development.");
@@ -190,7 +200,17 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer
             ClockSkew = TimeSpan.Zero,
             ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "TickeX",
             ValidAudience = builder.Configuration["Jwt:Audience"] ?? "TickeXClient",
-            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtKey))
+            ValidAlgorithms = useRsaJwt
+                ? [Microsoft.IdentityModel.Tokens.SecurityAlgorithms.RsaSha256]
+                : [Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256],
+            IssuerSigningKeyResolver = useRsaJwt
+                ? (_, _, kid, _) => kid is not null && jwtValidationKeys.TryGetValue(kid, out var key)
+                    ? [key]
+                    : jwtValidationKeys.Values.Cast<Microsoft.IdentityModel.Tokens.SecurityKey>()
+                : null,
+            IssuerSigningKey = !useRsaJwt
+                ? new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtKey!))
+                : null
         };
 
         options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents

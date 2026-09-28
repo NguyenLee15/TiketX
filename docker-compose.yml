@@ -48,7 +48,9 @@ services:
       ConnectionStrings__HangfireConnection: Server=sqlserver,1433;Database=TickeXHangfire;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=True;
       ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD},abortConnect=false
       DataProtection__KeyRingPath: /var/tickex-dpkeys
-      Jwt__Key: ${JWT_KEY:?Set JWT_KEY in .env}
+      Jwt__ActiveKeyId: ${JWT_ACTIVE_KEY_ID:?Set JWT_ACTIVE_KEY_ID in .env}
+      Jwt__SigningKeys__${JWT_ACTIVE_KEY_ID}: ${JWT_SIGNING_KEY_BASE64:?Set JWT_SIGNING_KEY_BASE64 in .env}
+      Jwt__ValidationKeys__${JWT_ACTIVE_KEY_ID}: ${JWT_VALIDATION_KEY_BASE64:?Set JWT_VALIDATION_KEY_BASE64 in .env}
       TicketSecurity__ActiveKeyId: key-2026-v1
       TicketSecurity__SecretKeys__key-2026-v1: ${TICKET_SIGNING_KEY:?Set TICKET_SIGNING_KEY in .env}
       RabbitMQ__HostName: rabbitmq
@@ -116,7 +118,9 @@ services:
       RabbitMQ__HostName: rabbitmq
       RabbitMQ__UserName: ${RABBITMQ_DEFAULT_USER}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
-      Jwt__Key: ${JWT_KEY:?Set JWT_KEY in .env}
+      Jwt__ActiveKeyId: ${JWT_ACTIVE_KEY_ID:?Set JWT_ACTIVE_KEY_ID in .env}
+      Jwt__SigningKeys__${JWT_ACTIVE_KEY_ID}: ${JWT_SIGNING_KEY_BASE64:?Set JWT_SIGNING_KEY_BASE64 in .env}
+      Jwt__ValidationKeys__${JWT_ACTIVE_KEY_ID}: ${JWT_VALIDATION_KEY_BASE64:?Set JWT_VALIDATION_KEY_BASE64 in .env}
       TicketSecurity__ActiveKeyId: key-2026-v1
       TicketSecurity__SecretKeys__key-2026-v1: ${TICKET_SIGNING_KEY:?Set TICKET_SIGNING_KEY in .env}
       PayOS__ClientId: ${PAYOS_CLIENT_ID:?Set PAYOS_CLIENT_ID in .env}

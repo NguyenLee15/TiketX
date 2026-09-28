@@ -32,7 +32,9 @@ docker compose --env-file .env up -d --build
 - **Frontend Web UI:** [http://localhost:3000](http://localhost:3000)
 - **Health Check Readiness:** [http://localhost:3000/health/ready](http://localhost:3000/health/ready) (Proxy qua Nginx)
 - **Backend API (Nội bộ):** `http://backend:8080`
-- **RabbitMQ Management:** [http://localhost:15672](http://localhost:15672) (Tài khoản từ file `.env`)
+- RabbitMQ, Redis và SQL Server chỉ nằm trong network nội bộ của Compose; không expose port quản trị ra host.
+
+JWT production dùng RSA key pair dạng base64 trong `.env`: `JWT_ACTIVE_KEY_ID`, `JWT_SIGNING_KEY_BASE64` (PKCS#8 private key) và `JWT_VALIDATION_KEY_BASE64` (public key). Có thể giữ public key cũ trong `Jwt:ValidationKeys` trong thời gian rotation.
 
 ---
 
