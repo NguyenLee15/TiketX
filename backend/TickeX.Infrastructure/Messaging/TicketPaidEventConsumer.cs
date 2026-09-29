@@ -20,6 +20,8 @@ public class TicketPaidEventConsumer : BackgroundService
     private readonly string _password;
     private readonly int _port;
     private readonly bool _useTls;
+    private readonly string? _virtualHost;
+    private readonly string? _uri;
     private IConnection? _connection;
     private IChannel? _channel;
 
@@ -27,12 +29,14 @@ public class TicketPaidEventConsumer : BackgroundService
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _uri = configuration["RabbitMQ:Uri"] ?? configuration["RABBITMQ_URI"];
         _hostname = configuration["RabbitMQ:HostName"] ?? "localhost";
         _queueName = configuration["RabbitMQ:QueueName"] ?? "ticket_events";
         _username = configuration["RabbitMQ:UserName"] ?? string.Empty;
         _password = configuration["RabbitMQ:Password"] ?? string.Empty;
         _port = configuration.GetValue("RabbitMQ:Port", 5672);
         _useTls = configuration.GetValue("RabbitMQ:UseTls", false);
+        _virtualHost = configuration["RabbitMQ:VirtualHost"];
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
@@ -252,9 +256,21 @@ public class TicketPaidEventConsumer : BackgroundService
         await base.StopAsync(cancellationToken);
     }
 
-    private ConnectionFactory CreateFactory() => new()
+    private ConnectionFactory CreateFactory()
     {
-        HostName = _hostname, UserName = _username, Password = _password, Port = _port,
-        Ssl = new SslOption { Enabled = _useTls }
-    };
+        if (!string.IsNullOrWhiteSpace(_uri))
+        {
+            return new ConnectionFactory { Uri = new Uri(_uri) };
+        }
+
+        return new ConnectionFactory
+        {
+            HostName = _hostname,
+            UserName = _username,
+            Password = _password,
+            Port = _port,
+            VirtualHost = !string.IsNullOrWhiteSpace(_virtualHost) ? _virtualHost : "/",
+            Ssl = new SslOption { Enabled = _useTls }
+        };
+    }
 }

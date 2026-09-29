@@ -167,7 +167,7 @@ public partial class ProcessPaymentCommandHandler
 
                     if (!lease.IsValid) return false;
                     await _context.SaveChangesAsync(cancellationToken);
-                    if (_catalogCache is not null) await _catalogCache.InvalidateAsync(cancellationToken);
+                    if (_catalogCache is not null) await _catalogCache.InvalidateAsync(CancellationToken.None);
 
                     if (isHoldExpired && ticket.Seat != null)
                     {
@@ -253,7 +253,7 @@ public partial class ProcessPaymentCommandHandler
                 // Explicitly commit financial, seat state, and outbox atomically into database
                 if (!lease.IsValid) return false;
                 await _context.SaveChangesAsync(cancellationToken);
-                if (_catalogCache is not null) await _catalogCache.InvalidateAsync(cancellationToken);
+                if (_catalogCache is not null) await _catalogCache.InvalidateAsync(CancellationToken.None);
 
                 if (ticket.Seat != null)
                 {
@@ -290,7 +290,7 @@ public partial class ProcessPaymentCommandHandler
 
                 if (!lease.IsValid) return false;
                 await _context.SaveChangesAsync(cancellationToken);
-                if (_catalogCache is not null) await _catalogCache.InvalidateAsync(cancellationToken);
+                if (_catalogCache is not null) await _catalogCache.InvalidateAsync(CancellationToken.None);
 
                 if (ticket.Seat != null)
                 {

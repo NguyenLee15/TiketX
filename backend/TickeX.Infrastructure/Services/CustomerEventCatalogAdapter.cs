@@ -27,6 +27,7 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
 
         var now = _time.UtcNow;
         var query = _context.Events.AsNoTracking()
+            .Include(e => e.Seats)
             .Where(e => e.Status == EventStatus.Published && !e.IsDeleted && e.Date > now);
 
         if (!string.IsNullOrWhiteSpace(request.Search))

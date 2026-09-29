@@ -99,7 +99,7 @@ public sealed class ReservationOperations : IReservationOperations
                     try
                     {
                         await _context.SaveChangesAsync(cancellationToken);
-                        if (_catalogCache is not null) await _catalogCache.InvalidateAsync(cancellationToken);
+                        if (_catalogCache is not null) await _catalogCache.InvalidateAsync(CancellationToken.None);
                         break;
                     }
                     catch (DbUpdateException ex) when (attempt < 2 && IsOrderCodeConflict(ex))
@@ -178,7 +178,7 @@ public sealed class ReservationOperations : IReservationOperations
             current.Cancel();
             if (!lease.IsValid) return Fail("RESERVATION_LOCK_LOST", "Khóa hủy giữ ghế đã hết hạn. Vui lòng thử lại.");
             await _context.SaveChangesAsync(cancellationToken);
-            if (_catalogCache is not null) await _catalogCache.InvalidateAsync(cancellationToken);
+            if (_catalogCache is not null) await _catalogCache.InvalidateAsync(CancellationToken.None);
             if (current.Seat != null)
                 try
                 {

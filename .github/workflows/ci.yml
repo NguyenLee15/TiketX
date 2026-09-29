@@ -60,10 +60,10 @@ jobs:
     needs: [backend-build-and-test, frontend-build-and-typecheck]
     env:
       MSSQL_SA_PASSWORD: CiOnly!2026Password
+      MSSQL_TRUST_SERVER_CERTIFICATE: "true"
       RABBITMQ_DEFAULT_USER: tickex-ci
       RABBITMQ_DEFAULT_PASS: CiOnly!2026Password
       REDIS_PASSWORD: CiOnly!2026Password
-      JWT_KEY: ci-only-jwt-key-that-is-at-least-32-characters
       TICKET_SIGNING_KEY: ci-only-ticket-signing-key-that-is-at-least-32-characters
       PAYOS_CLIENT_ID: ci-payos-client-id
       PAYOS_API_KEY: ci-payos-api-key
@@ -73,9 +73,21 @@ jobs:
       SMTP_PASSWORD: ci-smtp-password
       SMTP_FROM_EMAIL: ci@tickex.invalid
       PUBLIC_ORIGIN: https://tickex-ci.invalid
+      PUBLIC_HOST: tickex-ci.invalid
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Generate ephemeral CI JWT key pair
+      run: |
+        openssl genrsa 2048 > "$RUNNER_TEMP/tickex-jwt-private.pem"
+        private_key_base64="$(openssl pkcs8 -topk8 -nocrypt -in "$RUNNER_TEMP/tickex-jwt-private.pem" -outform DER | base64 -w0)"
+        public_key_base64="$(openssl rsa -in "$RUNNER_TEMP/tickex-jwt-private.pem" -pubout -outform DER 2>/dev/null | base64 -w0)"
+        {
+          echo "JWT_ACTIVE_KEY_ID=ci-jwt-v1"
+          echo "JWT_SIGNING_KEY_BASE64=$private_key_base64"
+          echo "JWT_VALIDATION_KEY_BASE64=$public_key_base64"
+        } >> "$GITHUB_ENV"
 
     - name: Validate production Compose contract
       run: docker compose --env-file .env.example config -q
@@ -104,7 +116,7 @@ jobs:
     - name: Scan production images (Backend)
       uses: aquasecurity/trivy-action@v0.33.1
       with:
-        image-ref: tickex-backend:latest
+        image-ref: tickex-api:latest
         format: table
         exit-code: '1'
         severity: CRITICAL,HIGH

@@ -14,18 +14,22 @@ public class RabbitMQPublisher : IMessagePublisher, IAsyncDisposable
     private readonly string _password;
     private readonly int _port;
     private readonly bool _useTls;
+    private readonly string? _virtualHost;
+    private readonly string? _uri;
 
     private IConnection? _connection;
     private readonly SemaphoreSlim _connectionLock = new(1, 1);
 
     public RabbitMQPublisher(IConfiguration configuration)
     {
+        _uri = configuration["RabbitMQ:Uri"] ?? configuration["RABBITMQ_URI"];
         _hostname = configuration["RabbitMQ:HostName"] ?? "localhost";
         _queueName = configuration["RabbitMQ:QueueName"] ?? "ticket_events";
         _username = configuration["RabbitMQ:UserName"] ?? string.Empty;
         _password = configuration["RabbitMQ:Password"] ?? string.Empty;
         _port = configuration.GetValue("RabbitMQ:Port", 5672);
         _useTls = configuration.GetValue("RabbitMQ:UseTls", false);
+        _virtualHost = configuration["RabbitMQ:VirtualHost"];
     }
 
     private async Task<IConnection> GetConnectionAsync(CancellationToken cancellationToken)
@@ -48,14 +52,23 @@ public class RabbitMQPublisher : IMessagePublisher, IAsyncDisposable
                 await _connection.DisposeAsync();
             }
 
-            var factory = new ConnectionFactory
+            ConnectionFactory factory;
+            if (!string.IsNullOrWhiteSpace(_uri))
             {
-                HostName = _hostname,
-                UserName = _username,
-                Password = _password,
-                Port = _port,
-                Ssl = new SslOption { Enabled = _useTls }
-            };
+                factory = new ConnectionFactory { Uri = new Uri(_uri) };
+            }
+            else
+            {
+                factory = new ConnectionFactory
+                {
+                    HostName = _hostname,
+                    UserName = _username,
+                    Password = _password,
+                    Port = _port,
+                    VirtualHost = !string.IsNullOrWhiteSpace(_virtualHost) ? _virtualHost : "/",
+                    Ssl = new SslOption { Enabled = _useTls }
+                };
+            }
 
             _connection = await factory.CreateConnectionAsync(cancellationToken);
             return _connection;

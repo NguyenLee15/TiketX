@@ -43,9 +43,9 @@ services:
     command: ["--migrate"]
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__MigrationConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=True;
-      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=True;
-      ConnectionStrings__HangfireConnection: Server=sqlserver,1433;Database=TickeXHangfire;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=True;
+      ConnectionStrings__MigrationConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=${MSSQL_TRUST_SERVER_CERTIFICATE:-false};
+      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=${MSSQL_TRUST_SERVER_CERTIFICATE:-false};
+      ConnectionStrings__HangfireConnection: Server=sqlserver,1433;Database=TickeXHangfire;User Id=${MSSQL_MIGRATOR_USER};Password=${MSSQL_MIGRATOR_PASSWORD};TrustServerCertificate=${MSSQL_TRUST_SERVER_CERTIFICATE:-false};
       ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD},abortConnect=false
       DataProtection__KeyRingPath: /var/tickex-dpkeys
       Jwt__ActiveKeyId: ${JWT_ACTIVE_KEY_ID:?Set JWT_ACTIVE_KEY_ID in .env}
@@ -111,8 +111,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=${MSSQL_APP_USER};Password=${MSSQL_APP_PASSWORD};TrustServerCertificate=True;
-      ConnectionStrings__HangfireConnection: Server=sqlserver,1433;Database=TickeXHangfire;User Id=${MSSQL_HANGFIRE_USER};Password=${MSSQL_HANGFIRE_PASSWORD};TrustServerCertificate=True;
+      AllowedHosts: ${PUBLIC_HOST:?Set PUBLIC_HOST in .env}
+      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=TickeXDb;User Id=${MSSQL_APP_USER};Password=${MSSQL_APP_PASSWORD};TrustServerCertificate=${MSSQL_TRUST_SERVER_CERTIFICATE:-false};
+      ConnectionStrings__HangfireConnection: Server=sqlserver,1433;Database=TickeXHangfire;User Id=${MSSQL_HANGFIRE_USER};Password=${MSSQL_HANGFIRE_PASSWORD};TrustServerCertificate=${MSSQL_TRUST_SERVER_CERTIFICATE:-false};
       ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD},abortConnect=false
       DataProtection__KeyRingPath: /var/tickex-dpkeys
       RabbitMQ__HostName: rabbitmq

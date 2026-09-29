@@ -198,6 +198,36 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
     }
 
     [Fact]
+    public async Task LockSeat_WhenPostCommitCacheCancellationOccurs_ReturnsCommittedSuccess()
+    {
+        var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
+        var @event = CreateEvent("Future", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+
+        using var requestCancellation = new CancellationTokenSource();
+        var cache = new Mock<ICustomerEventCatalogCache>();
+        cache.Setup(x => x.InvalidateAsync(It.IsAny<CancellationToken>()))
+            .Returns<CancellationToken>(token => token == requestCancellation.Token
+                ? Task.FromException(new OperationCanceledException(token))
+                : Task.CompletedTask);
+        var locks = new Mock<IDistributedLockService>();
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestDistributedLockLease());
+
+        var operations = new ReservationOperations(_context, locks.Object, Mock.Of<ISeatNotificationService>(),
+            Mock.Of<IReservationExpiryScheduler>(), Options.Create(new ReservationOptions()),
+            NullLogger<ReservationOperations>.Instance, catalogCache: cache.Object);
+
+        var result = await operations.ReserveAsync(@event.Id, seat.Id, user.Id, seat.Version, requestCancellation.Token);
+
+        result.Success.Should().BeTrue();
+        (await _context.Tickets.CountAsync()).Should().Be(1);
+    }
+
+    [Fact]
     public async Task CustomerRefund_QueuesOutboxAndLeavesSoldSeatUnavailable()
     {
         var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
