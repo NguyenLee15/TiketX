@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\TickeX.Application\TickeX.Application.csproj" />
+    <ProjectReference Include="..\Application\TickeX.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,17 +1,17 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.Domain", "TickeX.Domain\TickeX.Domain.csproj", "{B950B47E-63B6-4F8B-B286-639278B1CAD9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.Domain", "Domain\TickeX.Domain.csproj", "{B950B47E-63B6-4F8B-B286-639278B1CAD9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.Application", "TickeX.Application\TickeX.Application.csproj", "{BCC0C939-93C6-4846-A3E4-CB104FEBA498}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.Application", "Application\TickeX.Application.csproj", "{BCC0C939-93C6-4846-A3E4-CB104FEBA498}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.Infrastructure", "TickeX.Infrastructure\TickeX.Infrastructure.csproj", "{1B9FA14C-BD09-409F-AEB3-06F507A8CE9D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.Infrastructure", "Infrastructure\TickeX.Infrastructure.csproj", "{1B9FA14C-BD09-409F-AEB3-06F507A8CE9D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.WebApi", "TickeX.WebApi\TickeX.WebApi.csproj", "{EDD257E3-3C1F-42AA-A49C-39480A6349F2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.WebApi", "WebApi\TickeX.WebApi.csproj", "{EDD257E3-3C1F-42AA-A49C-39480A6349F2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.UnitTests", "TickeX.UnitTests\TickeX.UnitTests.csproj", "{89CBB83B-BE95-47CA-B0FC-8D3AEDD68357}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TickeX.UnitTests", "UnitTests\TickeX.UnitTests.csproj", "{89CBB83B-BE95-47CA-B0FC-8D3AEDD68357}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

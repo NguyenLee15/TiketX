@@ -19,9 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TickeX.Domain\TickeX.Domain.csproj" />
-    <ProjectReference Include="..\TickeX.Application\TickeX.Application.csproj" />
-    <ProjectReference Include="..\TickeX.Infrastructure\TickeX.Infrastructure.csproj" />
+    <ProjectReference Include="..\Domain\TickeX.Domain.csproj" />
+    <ProjectReference Include="..\Application\TickeX.Application.csproj" />
+    <ProjectReference Include="..\Infrastructure\TickeX.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

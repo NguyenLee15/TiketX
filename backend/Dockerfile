@@ -8,13 +8,13 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["TickeX.WebApi/TickeX.WebApi.csproj", "TickeX.WebApi/"]
-COPY ["TickeX.Application/TickeX.Application.csproj", "TickeX.Application/"]
-COPY ["TickeX.Domain/TickeX.Domain.csproj", "TickeX.Domain/"]
-COPY ["TickeX.Infrastructure/TickeX.Infrastructure.csproj", "TickeX.Infrastructure/"]
-RUN dotnet restore "./TickeX.WebApi/TickeX.WebApi.csproj"
+COPY ["WebApi/TickeX.WebApi.csproj", "WebApi/"]
+COPY ["Application/TickeX.Application.csproj", "Application/"]
+COPY ["Domain/TickeX.Domain.csproj", "Domain/"]
+COPY ["Infrastructure/TickeX.Infrastructure.csproj", "Infrastructure/"]
+RUN dotnet restore "./WebApi/TickeX.WebApi.csproj"
 COPY . .
-WORKDIR "/src/TickeX.WebApi"
+WORKDIR "/src/WebApi"
 RUN dotnet build "./TickeX.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
