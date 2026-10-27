@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { z } from 'zod';
@@ -16,7 +17,20 @@ const refundPageSchema = z.object({
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 
 export default function AdminRefundsPage() {
-  const [page, setPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Math.max(1, Number(searchParams.get('page')) || 1);
+  const setPage = (updater: number | ((prev: number) => number)) => {
+    const nextPage = typeof updater === 'function' ? updater(page) : updater;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (nextPage > 1) {
+        next.set('page', String(nextPage));
+      } else {
+        next.delete('page');
+      }
+      return next;
+    }, { replace: true });
+  };
   const [retrying, setRetrying] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const refundsQuery = useQuery({

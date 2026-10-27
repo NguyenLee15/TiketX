@@ -30,6 +30,7 @@ export default function AdminUsersPage() {
 
   // Search, Filter & Pagination
   const [searchTerm, setSearchTerm] = useState(() => urlSearchParams.get('search') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   const [roleFilter, setRoleFilter] = useState(() => urlSearchParams.get('role') || '');
   const [blockFilter, setBlockFilter] = useState<string>(() => urlSearchParams.get('status') || '');
   const [page, setPage] = useState(() => Math.max(1, Number(urlSearchParams.get('page')) || 1));
@@ -51,7 +52,7 @@ export default function AdminUsersPage() {
       setLoading(true);
       setLoadError(false);
       const params: Record<string, string | number> = { page, pageSize };
-      if (searchTerm.trim()) params.search = searchTerm.trim();
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
       if (roleFilter) params.role = roleFilter;
       if (blockFilter === 'blocked') params.isBlocked = 'true';
       if (blockFilter === 'active') params.isBlocked = 'false';
@@ -87,24 +88,29 @@ export default function AdminUsersPage() {
         setLoading(false);
       }
     }
-  }, [page, pageSize, searchTerm, roleFilter, blockFilter]);
+  }, [page, pageSize, debouncedSearch, roleFilter, blockFilter]);
 
-  // Debounced search
+  // Debounced search query
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchUsers();
+      setDebouncedSearch(searchTerm);
     }, 300);
-    return () => { clearTimeout(timer); requestRef.current?.abort(); };
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchUsers();
+    return () => requestRef.current?.abort();
   }, [fetchUsers]);
 
   useEffect(() => {
     const nextParams = new URLSearchParams();
-    if (searchTerm.trim()) nextParams.set('search', searchTerm.trim());
+    if (debouncedSearch.trim()) nextParams.set('search', debouncedSearch.trim());
     if (roleFilter) nextParams.set('role', roleFilter);
     if (blockFilter) nextParams.set('status', blockFilter);
     if (page > 1) nextParams.set('page', String(page));
     setUrlSearchParams(nextParams, { replace: true });
-  }, [blockFilter, page, roleFilter, searchTerm, setUrlSearchParams]);
+  }, [blockFilter, page, roleFilter, debouncedSearch, setUrlSearchParams]);
 
   const requestChangeRole = (u: AdminUserItem, newRole: string) => {
     if (currentUser?.id === u.id && newRole !== 'Admin') {
@@ -236,7 +242,7 @@ export default function AdminUsersPage() {
       {confirmModal && (
         <ConfirmModal
           isOpen={true}
-          onClose={() => setConfirmModal(null)}
+          onClose={() => { setConfirmModal(null); setMutationError(''); }}
           onConfirm={executeConfirmedAction}
           title={confirmModal.type === 'role' ? 'Thay đổi vai trò người dùng' : (confirmModal.targetBlocked ? 'Khóa tài khoản' : 'Mở khóa tài khoản')}
           message={
