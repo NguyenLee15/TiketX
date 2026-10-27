@@ -5,7 +5,10 @@ import {
   clearCheckoutState,
   shouldPreserveSeatSelection,
   writeCatalogState,
+  shouldShowFeaturedHero,
+  getEventDisplayPrice,
 } from './customerState';
+import { toPdfSafeText } from './ticketPdfGenerator';
 
 describe('normalizePaymentStatus', () => {
   it.each([
@@ -57,3 +60,27 @@ describe('catalog URL state', () => {
     expect(writeCatalogState({ search: '', category: 'All', sort: 'date_asc', page: 1 }).toString()).toBe('');
   });
 });
+
+describe('catalog featured and pricing helpers', () => {
+  it('only shows featured hero on page 1 with default catalog filters', () => {
+    expect(shouldShowFeaturedHero({ search: '', category: 'All', sort: 'date_asc', page: 1 }, 3)).toBe(true);
+    expect(shouldShowFeaturedHero({ search: 'rock', category: 'All', sort: 'date_asc', page: 1 }, 3)).toBe(false);
+    expect(shouldShowFeaturedHero({ search: '', category: 'Music', sort: 'date_asc', page: 1 }, 3)).toBe(false);
+    expect(shouldShowFeaturedHero({ search: '', category: 'All', sort: 'price_asc', page: 1 }, 3)).toBe(false);
+    expect(shouldShowFeaturedHero({ search: '', category: 'All', sort: 'date_asc', page: 2 }, 3)).toBe(false);
+    expect(shouldShowFeaturedHero({ search: '', category: 'All', sort: 'date_asc', page: 1 }, 0)).toBe(false);
+  });
+
+  it('prefers minPrice when positive, falling back to basePrice', () => {
+    expect(getEventDisplayPrice({ basePrice: 200000, minPrice: 150000 })).toBe(150000);
+    expect(getEventDisplayPrice({ basePrice: 200000, minPrice: 0 })).toBe(200000);
+    expect(getEventDisplayPrice({ basePrice: 200000 })).toBe(200000);
+  });
+
+  it('converts Vietnamese text to safe ASCII for PDF generation', () => {
+    expect(toPdfSafeText('Đêm Nhạc Sơn Tùng M-TP — Hà Nội')).toBe('Dem Nhac Son Tung M-TP - Ha Noi');
+    expect(toPdfSafeText('Trung Tâm Hội Nghị Quốc Gia')).toBe('Trung Tam Hoi Nghi Quoc Gia');
+    expect(toPdfSafeText(null)).toBe('');
+  });
+});
+

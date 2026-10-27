@@ -2,6 +2,7 @@ import { Calendar, MapPin, ArrowRight, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Event } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { getEventDisplayPrice } from '../../utils/customerState';
 import { ResilientImage } from '../ResilientImage';
 
 interface EventCardProps { event: Event; featured?: boolean }
@@ -42,8 +43,10 @@ export function EventCard({ event, featured = false }: EventCardProps) {
           <p className="line-clamp-2 text-sm leading-relaxed text-text-secondary">{event.description}</p>
         </div>
         <div className="mt-auto flex items-end justify-between gap-3 border-t border-border-subtle pt-4">
-          <div><span className="block text-xs text-text-tertiary">Từ</span><span className="text-lg font-bold text-text-primary">{formatCurrency(event.basePrice)}</span></div>
-          <span className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border-subtle px-3 text-sm font-bold text-text-primary group-hover:border-brand-primary group-hover:text-brand-primary">Chọn chỗ <ArrowRight className="h-4 w-4" aria-hidden="true" /></span>
+          <div><span className="block text-xs text-text-tertiary">Từ</span><span className="text-lg font-bold text-text-primary">{formatCurrency(getEventDisplayPrice(event))}</span></div>
+          <span className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border-subtle px-3 text-sm font-bold text-text-primary group-hover:border-brand-primary group-hover:text-brand-primary">
+            {event.availableSeatsCount === 0 ? 'Xem chi tiết' : 'Chọn chỗ'} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </span>
         </div>
       </div>
     </Link>
@@ -51,5 +54,23 @@ export function EventCard({ event, featured = false }: EventCardProps) {
 }
 
 function EventMeta({ event }: { event: Event }) {
-  return <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-text-secondary"><span className="inline-flex items-center gap-1.5"><Calendar className="h-4 w-4 text-brand-primary" aria-hidden="true" />{formatDate(event.date, { month: 'short', day: 'numeric', year: 'numeric' })}</span><span className="inline-flex min-w-0 items-center gap-1.5"><MapPin className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden="true" /><span className="truncate">{event.venueName || event.location}</span></span>{typeof event.availableSeatsCount === 'number' && <span className="inline-flex items-center gap-1.5 text-success"><Users className="h-4 w-4" aria-hidden="true" />Còn {event.availableSeatsCount} chỗ</span>}</div>;
+  const isSoldOut = event.availableSeatsCount === 0;
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-text-secondary">
+      <span className="inline-flex items-center gap-1.5">
+        <Calendar className="h-4 w-4 text-brand-primary" aria-hidden="true" />
+        {formatDate(event.date, { month: 'short', day: 'numeric', year: 'numeric' })}
+      </span>
+      <span className="inline-flex min-w-0 items-center gap-1.5">
+        <MapPin className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden="true" />
+        <span className="truncate">{event.venueName || event.location}</span>
+      </span>
+      {typeof event.availableSeatsCount === 'number' && (
+        <span className={`inline-flex items-center gap-1.5 ${isSoldOut ? 'text-danger font-semibold' : 'text-success'}`}>
+          <Users className="h-4 w-4" aria-hidden="true" />
+          {isSoldOut ? 'Hết chỗ' : `Còn ${event.availableSeatsCount} chỗ`}
+        </span>
+      )}
+    </div>
+  );
 }

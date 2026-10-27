@@ -48,3 +48,10 @@ export const writeCatalogState = (state: CatalogState) => {
   if (state.page > 1) params.set('page', String(state.page));
   return params;
 };
+
+export const shouldShowFeaturedHero = (state: CatalogState, itemCount: number): boolean =>
+  state.page === 1 && !state.search.trim() && state.category === 'All' && state.sort === 'date_asc' && itemCount > 0;
+
+export const getEventDisplayPrice = (event: { basePrice: number; minPrice?: number }): number =>
+  typeof event.minPrice === 'number' && event.minPrice > 0 ? event.minPrice : event.basePrice;
+

@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { SkeletonCard } from '../components/Skeletons/SkeletonCard';
 import { DiscoveryHero } from '../components/Discovery/DiscoveryHero';
 import { EventCard } from '../components/Discovery/EventCard';
-import { parseCatalogState, writeCatalogState } from '../utils/customerState';
+import { parseCatalogState, writeCatalogState, shouldShowFeaturedHero } from '../utils/customerState';
 import { useEventsCatalogQuery } from '../hooks/useCustomerQueries';
 
 export default function DashboardPage() {
@@ -57,7 +57,8 @@ export default function DashboardPage() {
     updateFilters({ search: searchInput, page: 1 });
   };
 
-  const featuredEvent = events[0];
+  const showFeatured = shouldShowFeaturedHero(catalogState, events.length);
+  const featuredEvent = showFeatured ? events[0] : null;
 
   return (
     <div className="space-y-10 pb-16 text-text-primary">
@@ -104,7 +105,7 @@ export default function DashboardPage() {
           />
         ) : (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {events.slice(1).map((event) => (
+            {events.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
