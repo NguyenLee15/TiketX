@@ -261,4 +261,20 @@ public class AdminUserManagementSecurityTests : IDisposable
         result.Items.Should().ContainSingle();
         result.Items[0].Version.Should().Be(Convert.ToBase64String(user.Version));
     }
+
+    [Fact]
+    public async Task GetUsers_ShouldProjectPhoneAndAvatarUrl()
+    {
+        var user = new User("Profile User", "profile@tickex.com", "hash");
+        user.UpdateProfile("Profile User", "0901234567", "https://example.com/avatar.png");
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var result = await new GetUsersQueryHandler(_context)
+            .Handle(new GetUsersQuery(Search: "profile@tickex.com"), CancellationToken.None);
+
+        result.Items.Should().ContainSingle();
+        result.Items[0].Phone.Should().Be("0901234567");
+        result.Items[0].AvatarUrl.Should().Be("https://example.com/avatar.png");
+    }
 }

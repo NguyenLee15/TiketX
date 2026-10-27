@@ -21,6 +21,7 @@ export default function MyTicketsPage() {
   const [resumingTicketId, setResumingTicketId] = useState<string | null>(null);
   const [releasingTicketId, setReleasingTicketId] = useState<string | null>(null);
   const [refundCandidate, setRefundCandidate] = useState<TicketItemData | null>(null);
+  const [refundError, setRefundError] = useState<{ code?: string; message?: string } | null>(null);
   const [cursorHistory, setCursorHistory] = useState<string[]>([]);
 
   // Single Source of Truth from URL params (Zero derived effect ping-pong loops)
@@ -129,6 +130,7 @@ export default function MyTicketsPage() {
 
   const handleRefund = useCallback(async (ticket: TicketItemData) => {
     setRefundingId(ticket.id);
+    setRefundError(null);
     try {
       const response = await api.post(`/api/tickets/${ticket.id}/refund`, {
         reason: 'Customer requested refund via web portal',
@@ -136,13 +138,17 @@ export default function MyTicketsPage() {
       if (response.data.success) {
         toast.success(response.data.message || 'Yêu cầu hoàn vé đã được gửi và đang chờ xử lý.');
         setRefundCandidate(null);
+        setRefundError(null);
         await queryClient.invalidateQueries({ queryKey: ['tickets'] });
       } else {
         toast.error(response.data.message || 'Không thể gửi yêu cầu hoàn vé.');
       }
     } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { message?: string } } };
-      toast.error(apiErr.response?.data?.message || 'Có lỗi xảy ra khi hoàn vé.');
+      const apiErr = err as { response?: { data?: { message?: string; code?: string } } };
+      const errCode = apiErr.response?.data?.code;
+      const errMsg = apiErr.response?.data?.message || 'Có lỗi xảy ra khi hoàn vé.';
+      setRefundError({ code: errCode, message: errMsg });
+      toast.error(errMsg);
     } finally {
       setRefundingId(null);
     }
@@ -295,7 +301,11 @@ export default function MyTicketsPage() {
       <TicketRefundModal
         candidate={refundCandidate}
         refundingId={refundingId}
-        onClose={() => setRefundCandidate(null)}
+        refundError={refundError}
+        onClose={() => {
+          setRefundCandidate(null);
+          setRefundError(null);
+        }}
         onConfirm={handleRefund}
       />
     </div>

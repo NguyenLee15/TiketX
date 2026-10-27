@@ -125,4 +125,33 @@ public class DashboardStatsTests : IDisposable
         result.DailyStats.Should().HaveCount(7);
         result.RecentTransactions.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task GetDashboardStats_ShouldExcludeUnpaidCancelledReservationsFromRecentTransactions()
+    {
+        var user = new User("Bob", "bob@example.com", "hash", "Customer");
+        _context.Users.Add(user);
+        var ev = new Event("Opera Night", "Desc", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(2), "Hanoi", "Opera House", 50, "Music", basePrice: 100000m);
+        ev.GenerateSeatsMatrix(1, 3);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var seats = ev.Seats.ToList();
+        var paidTicket = new Ticket(ev.Id, seats[0].Id, user.Id, 100000m);
+        paidTicket.MarkAsPaid();
+        paidTicket.Refund(100000m);
+        _context.Tickets.Add(paidTicket);
+
+        var unpaidCancelled = new Ticket(ev.Id, seats[1].Id, user.Id, 100000m);
+        unpaidCancelled.Cancel();
+        _context.Tickets.Add(unpaidCancelled);
+        await _context.SaveChangesAsync();
+
+        var readModel = new DashboardReadModelAdapter(_context, new VietnamTimePolicy());
+        var result = await readModel.GetAsync(CancellationToken.None);
+
+        result.RecentTransactions.Should().ContainSingle();
+        result.RecentTransactions[0].TicketId.Should().Be(paidTicket.Id);
+        result.RecentTransactions.Should().NotContain(t => t.TicketId == unpaidCancelled.Id);
+    }
 }

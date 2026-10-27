@@ -116,7 +116,7 @@ public sealed class DashboardReadModelAdapter : IDashboardReadModel
         }).ToList();
 
         var recentTransactions = await operationalTickets
-            .Where(t => paidStates.Contains(t.Status) || t.Status == TicketStatus.Cancelled || t.Status == TicketStatus.RefundPending)
+            .Where(t => paidStates.Contains(t.Status) || t.Status == TicketStatus.RefundPending || (t.Status == TicketStatus.Cancelled && (t.PaidAt.HasValue || t.RefundAmount.HasValue || t.RefundedAt.HasValue)))
             .OrderByDescending(t => t.CreatedAt)
             .ThenByDescending(t => t.Id)
             .Take(10)

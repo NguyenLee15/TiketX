@@ -122,6 +122,13 @@ public static class DatabaseSeeder
                 await context.SaveChangesAsync();
                 logger.LogInformation("4 realistic events and 240 tiered seats seeded successfully.");
             }
+
+            var oversized = await context.Tickets.Where(t => t.OrderCode > 9007199254740991L).ToListAsync();
+            if (oversized.Count > 0)
+            {
+                foreach (var ticket in oversized) ticket.RegenerateOrderCode();
+                await context.SaveChangesAsync();
+            }
         }
         catch (Exception ex)
         {

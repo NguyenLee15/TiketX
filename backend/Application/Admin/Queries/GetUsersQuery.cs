@@ -12,7 +12,9 @@ public record UserDto(
     string Role, 
     bool IsBlocked, 
     DateTime CreatedAt,
-    string Version
+    string Version,
+    string? Phone = null,
+    string? AvatarUrl = null
 );
 
 public record GetUsersQuery(
@@ -63,12 +65,12 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PagedResult<U
             .ThenBy(u => u.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(u => new { u.Id, u.Name, u.Email, u.Role, u.IsBlocked, u.CreatedAt, u.Version })
+            .Select(u => new { u.Id, u.Name, u.Email, u.Role, u.IsBlocked, u.CreatedAt, u.Version, u.Phone, u.AvatarUrl })
             .ToListAsync(cancellationToken);
 
         var items = users.Select(u => new UserDto(
             u.Id, u.Name, u.Email, u.Role, u.IsBlocked, u.CreatedAt,
-            Convert.ToBase64String(u.Version))).ToList();
+            Convert.ToBase64String(u.Version), u.Phone, u.AvatarUrl)).ToList();
 
         return new PagedResult<UserDto>(items, totalCount, page, pageSize);
     }

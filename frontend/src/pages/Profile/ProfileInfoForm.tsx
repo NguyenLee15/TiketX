@@ -60,6 +60,7 @@ export function ProfileInfoForm({
                 </div>
                 <input 
                   id="profile-avatar-url"
+                  autoComplete="url"
                   type="url" 
                   aria-invalid={errors.avatarUrl ? 'true' : 'false'}
                   aria-describedby={errors.avatarUrl ? 'profile-avatar-url-error' : undefined}
@@ -85,6 +86,7 @@ export function ProfileInfoForm({
                 </div>
                 <input 
                   id="profile-name"
+                  autoComplete="name"
                   type="text" 
                   aria-invalid={errors.name ? 'true' : 'false'}
                   aria-describedby={errors.name ? 'profile-name-error' : undefined}
@@ -111,6 +113,8 @@ export function ProfileInfoForm({
                 </div>
                 <input 
                   id="profile-email"
+                  name="email"
+                  autoComplete="email"
                   type="email" 
                   value={email}
                   disabled
@@ -127,6 +131,7 @@ export function ProfileInfoForm({
                 </div>
                 <input 
                   id="profile-phone"
+                  autoComplete="tel"
                   type="tel" 
                   aria-invalid={errors.phone ? 'true' : 'false'}
                   aria-describedby={errors.phone ? 'profile-phone-error' : undefined}

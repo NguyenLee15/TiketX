@@ -83,7 +83,7 @@ export default function EventDetailPage() {
         payload.isLockedByCurrentUser ||
         payload.isLockedByMe ||
         lockingSeatRef.current?.id === payload.seatId ||
-        (user?.id && (payload.reservationOwnerId === user.id || (payload as Record<string, unknown>).ReservationOwnerId === user.id))
+        (user?.id && (payload.reservationOwnerId === user.id || (payload as unknown as Record<string, unknown>).ReservationOwnerId === user.id))
       );
       const newSeats = seats.map(seat => 
         seat.id === payload.seatId ? { ...seat, status: payload.status, version: payload.version ?? seat.version, isLockedByMe } : seat

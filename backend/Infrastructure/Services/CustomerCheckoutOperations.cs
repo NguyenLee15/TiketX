@@ -203,8 +203,9 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
             }
         }
 
-        // Re-validate that the ticket hold has not expired during external PayOS I/O
-        if (ticket.CreatedAt <= _time.UtcNow.AddMinutes(-holdMinutes) || ticket.Status != TicketStatus.Pending)
+        // Re-validate that the ticket hold has not expired or been cancelled in DB during external PayOS I/O
+        var freshTicket = await _context.Tickets.AsNoTracking().Select(t => new { t.Id, t.Status, t.CreatedAt }).FirstOrDefaultAsync(t => t.Id == ticket.Id, cancellationToken);
+        if (freshTicket == null || freshTicket.CreatedAt <= _time.UtcNow.AddMinutes(-holdMinutes) || freshTicket.Status != TicketStatus.Pending)
         {
             if (isNew)
             {

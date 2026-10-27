@@ -38,6 +38,7 @@ export function ChangePasswordForm({
               </div>
               <input 
                 id="password-current"
+                autoComplete="current-password"
                 type="password" 
                 aria-invalid={errors.currentPassword ? 'true' : 'false'}
                 aria-describedby={errors.currentPassword ? 'password-current-error' : undefined}
@@ -61,6 +62,7 @@ export function ChangePasswordForm({
               </div>
               <input 
                 id="password-new"
+                autoComplete="new-password"
                 type="password" 
                 aria-invalid={errors.newPassword ? 'true' : 'false'}
                 aria-describedby={errors.newPassword ? 'password-new-error' : undefined}
@@ -84,6 +86,7 @@ export function ChangePasswordForm({
               </div>
               <input 
                 id="password-confirm"
+                autoComplete="new-password"
                 type="password" 
                 aria-invalid={errors.confirmPassword ? 'true' : 'false'}
                 aria-describedby={errors.confirmPassword ? 'password-confirm-error' : undefined}

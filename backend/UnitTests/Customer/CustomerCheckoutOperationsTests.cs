@@ -287,6 +287,39 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
         payos.Verify(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task CreatePaymentLink_WhenTicketCancelledInDatabaseDuringPayOSCall_ReturnsReservationExpired()
+    {
+        var user = new User("Customer", "fresh-check@test.local", "hash");
+        var @event = new Event("Future", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(2), "HCM", "Venue", 1);
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        var payos = new Mock<IPayOSService>();
+        payos.Setup(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(async () =>
+            {
+                // Simulate an external background worker or user cancellation in database while PayOS was in-flight
+                using var cmd = _connection.CreateCommand();
+                cmd.CommandText = "UPDATE Tickets SET Status = 2 WHERE OrderCode = " + ticket.OrderCode + ";";
+                var rows = await cmd.ExecuteNonQueryAsync();
+                if (rows != 1) throw new InvalidOperationException("Failed to update ticket status via raw sql, rows: " + rows);
+                return new CreatePaymentResult { CheckoutUrl = "https://pay.example/checkout" };
+            });
+
+        var operations = CreateOperations(payos.Object);
+        var result = await operations.CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.Code.Should().Be("RESERVATION_EXPIRED");
+    }
+
     private CustomerCheckoutOperations CreateOperations(IPayOSService payos, IDistributedLockService? locks = null)
     {
         var settings = new Dictionary<string, string?>

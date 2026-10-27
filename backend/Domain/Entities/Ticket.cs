@@ -130,7 +130,7 @@ public class Ticket : BaseEntity
 
     private static long GenerateOrderCode()
     {
-        var high = RandomNumberGenerator.GetInt32(100_000_000, 1_000_000_000);
+        var high = RandomNumberGenerator.GetInt32(100_000, 1_000_000);
         var low = RandomNumberGenerator.GetInt32(0, 1_000_000_000);
         return high * 1_000_000_000L + low;
     }
