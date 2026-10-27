@@ -663,6 +663,72 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessPayment_WhenHoldExpiredAndSeatReclaimedByAnotherUser_PreservesNewUsersSeatLock()
+    {
+        var userA = new User("CustomerA", $"{Guid.NewGuid():N}@test.local", "hash");
+        var userB = new User("CustomerB", $"{Guid.NewGuid():N}@test.local", "hash");
+        var @event = CreateEvent("ReclaimedConcert", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(userA, userB, @event);
+        await _context.SaveChangesAsync();
+
+        var seat = await _context.Seats.SingleAsync();
+        // User A originally booked
+        var ticket = new Ticket(@event.Id, seat.Id, userA.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        // Simulate ticket created 10 minutes ago (> 5 min hold duration)
+        _context.Entry(ticket).Property(nameof(BaseEntity.CreatedAt)).CurrentValue = DateTime.UtcNow.AddMinutes(-10);
+
+        // Seat has been subsequently locked by User B
+        seat.Lock(userB.Id);
+        await _context.SaveChangesAsync();
+
+        var lockService = new Mock<IDistributedLockService>();
+        lockService.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestDistributedLockLease());
+        var notifications = new Mock<ISeatNotificationService>();
+        var outbox = new Mock<INotificationOutboxPort>();
+        var ticketSecurity = new Mock<ITicketSecurityService>();
+
+        var handler = new ProcessPaymentCommandHandler(
+            _context, outbox.Object, notifications.Object, lockService.Object,
+            ticketSecurity.Object, NullLogger<ProcessPaymentCommandHandler>.Instance);
+
+        var webhookData = new PayOSWebhookData
+        {
+            OrderCode = ticket.OrderCode,
+            Amount = ticket.Price,
+            Success = true,
+            Reference = "payos-ref-late-userA",
+            Code = "00"
+        };
+
+        var result = await handler.Handle(new ProcessPaymentCommand(webhookData), CancellationToken.None);
+
+        result.Should().BeTrue();
+
+        // Ticket A was cancelled and orphaned refund request recorded
+        var refreshedTicket = await _context.Tickets.AsNoTracking().SingleAsync(t => t.Id == ticket.Id);
+        refreshedTicket.Status.Should().Be(TicketStatus.Cancelled);
+        (await _context.RefundRequests.AnyAsync(r => r.TicketId == ticket.Id)).Should().BeTrue();
+
+        // Crucial invariant: Seat must STILL be locked by User B, NOT released to Available!
+        var refreshedSeat = await _context.Seats.AsNoTracking().SingleAsync(s => s.Id == seat.Id);
+        refreshedSeat.Status.Should().Be(SeatStatus.Locked);
+        refreshedSeat.LockedByUserId.Should().Be(userB.Id);
+
+        // NotifySeatStatusChanged must NOT broadcast Available
+        notifications.Verify(n => n.NotifySeatStatusChanged(@event.Id, seat.Id, SeatStatus.Available.ToString(), null, null), Times.Never);
+
+        // Lock ordering must include seat lock: event:cancel -> seat:lock -> payment:lock
+        lockService.Verify(x => x.AcquireLockAsync($"event:cancel:{@event.Id:N}", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);
+        lockService.Verify(x => x.AcquireLockAsync($"seat:lock:{seat.Id:N}", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);
+        lockService.Verify(x => x.AcquireLockAsync($"payment:lock:{ticket.OrderCode}", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task PublicCatalog_CountsExpiredSeatLocksAsAvailable_MatchingDetailView()
     {
         var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");

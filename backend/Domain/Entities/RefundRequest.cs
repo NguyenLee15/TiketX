@@ -21,6 +21,7 @@ public class RefundRequest : BaseEntity
     public int ProviderRetryGeneration { get; private set; }
     public string? LeaseOwner { get; private set; }
     public DateTime? LeaseUntil { get; private set; }
+    public byte[] Version { get; private set; } = Guid.NewGuid().ToByteArray();
 
     private RefundRequest() { }
 
@@ -33,6 +34,7 @@ public class RefundRequest : BaseEntity
         Status = "Pending";
         AttemptCount = 0;
         NextAttemptAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public void MarkProcessing()
@@ -41,6 +43,7 @@ public class RefundRequest : BaseEntity
         AttemptCount++;
         NextAttemptAt = null;
         UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public void MarkCompleted()
@@ -50,6 +53,7 @@ public class RefundRequest : BaseEntity
         NextAttemptAt = null;
         LastError = null;
         UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public void MarkFailed(string error, TimeSpan retryAfter)
@@ -58,6 +62,7 @@ public class RefundRequest : BaseEntity
         LastError = error;
         NextAttemptAt = DateTime.UtcNow.Add(retryAfter);
         UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public void SetDestinationSnapshot(string encryptedSnapshot)
@@ -67,6 +72,7 @@ public class RefundRequest : BaseEntity
         if (Status == "AwaitingDestination") Status = "Pending";
         NextAttemptAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public void WaitForDestination()
@@ -75,6 +81,7 @@ public class RefundRequest : BaseEntity
         Status = "AwaitingDestination";
         NextAttemptAt = null;
         UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public bool TryClaim(string owner, DateTime leaseUntil, DateTime now)
@@ -86,6 +93,7 @@ public class RefundRequest : BaseEntity
         AttemptCount++;
         NextAttemptAt = null;
         UpdatedAt = now;
+        Version = Guid.NewGuid().ToByteArray();
         return true;
     }
 
@@ -94,6 +102,7 @@ public class RefundRequest : BaseEntity
         ProviderReference = reference;
         ProviderStatus = status;
         UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public void MarkCompleted(string reference)
@@ -107,6 +116,7 @@ public class RefundRequest : BaseEntity
         LeaseOwner = null;
         LeaseUntil = null;
         UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public void ScheduleRetry(string error, DateTime nextAttemptAt, string? providerStatus)
@@ -118,6 +128,7 @@ public class RefundRequest : BaseEntity
         LeaseOwner = null;
         LeaseUntil = null;
         UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public void MarkNeedsReview(string error, string? providerStatus)
@@ -129,6 +140,7 @@ public class RefundRequest : BaseEntity
         LeaseOwner = null;
         LeaseUntil = null;
         UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public void RetryAfterReconciliation(DateTime now, string reconciledProviderStatus)
@@ -142,5 +154,6 @@ public class RefundRequest : BaseEntity
         LastError = null;
         NextAttemptAt = EncryptedDestinationSnapshot is null ? null : now;
         UpdatedAt = now;
+        Version = Guid.NewGuid().ToByteArray();
     }
 }

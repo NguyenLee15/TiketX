@@ -104,6 +104,20 @@ public sealed class RefundPayoutWorker(
                 refund.MarkCompleted(result.PayoutId ?? refund.ProviderReference ?? stableReference);
                 ticket.CompleteRefund(refund.Amount);
                 payment?.MarkRefunded(result.PayoutId ?? stableReference, "PayOS payout confirmed SUCCEEDED");
+
+                var seat = await db.Seats.FirstOrDefaultAsync(s => s.Id == ticket.SeatId, cancellationToken);
+                if (seat != null && seat.Status == SeatStatus.Sold)
+                {
+                    var hasOtherActiveTicket = await db.Tickets.AnyAsync(
+                        t => t.SeatId == ticket.SeatId && t.Id != ticket.Id &&
+                             (t.Status == TicketStatus.Pending || t.Status == TicketStatus.Paid || t.Status == TicketStatus.Used || t.Status == TicketStatus.RefundPending),
+                        cancellationToken);
+
+                    if (!hasOtherActiveTicket)
+                    {
+                        seat.Release();
+                    }
+                }
             }
             else if (result.State is "PROCESSING" or "PENDING" or "NOT_FOUND")
             {
@@ -123,6 +137,40 @@ public sealed class RefundPayoutWorker(
             }
             if (!await ExtendLeaseIfOwnedAsync(db, refund.Id, cancellationToken)) return true;
             await db.SaveChangesAsync(cancellationToken);
+
+            if (result.State == "SUCCEEDED")
+            {
+                var seatNotifications = scope.ServiceProvider.GetService<ISeatNotificationService>();
+                var catalogCache = scope.ServiceProvider.GetService<ICustomerEventCatalogCache>();
+
+                if (catalogCache != null)
+                {
+                    try { await catalogCache.InvalidateAsync(CancellationToken.None); } catch { }
+                }
+
+                if (seatNotifications != null)
+                {
+                    var seat = await db.Seats.AsNoTracking().FirstOrDefaultAsync(s => s.Id == ticket.SeatId, cancellationToken);
+                    if (seat != null && seat.Status == SeatStatus.Available)
+                    {
+                        try
+                        {
+                            await seatNotifications.NotifySeatStatusChanged(
+                                ticket.EventId,
+                                seat.Id,
+                                seat.Status.ToString(),
+                                Convert.ToBase64String(seat.Version),
+                                null);
+                        }
+                        catch { }
+                    }
+                }
+            }
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            logger.LogWarning(ex, "Refund payout concurrency conflict for refund {RefundId}. Another worker or admin operation modified the refund state.", refund.Id);
+            return true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)

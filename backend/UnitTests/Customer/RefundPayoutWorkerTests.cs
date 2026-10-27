@@ -133,7 +133,99 @@ public sealed class RefundPayoutWorkerTests
         payout.IdempotencyKeys.Should().ContainSingle();
     }
 
-    private static ServiceCollection CreateWorkerServices(DbContextOptions<ApplicationDbContext> options, FakePayoutService payout)
+    [Fact]
+    public async Task SucceededPayout_ReleasesSoldSeatAndNotifiesSubscribers()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        Guid refundId;
+        Guid ticketId;
+        Guid seatId;
+        Guid eventId;
+        await using (var seed = new ApplicationDbContext(options))
+        {
+            await seed.Database.EnsureCreatedAsync();
+            (refundId, ticketId) = await SeedRefundAsync(seed);
+            var ticket = await seed.Tickets.AsNoTracking().SingleAsync(x => x.Id == ticketId);
+            seatId = ticket.SeatId;
+            eventId = ticket.EventId;
+        }
+
+        var payout = new FakePayoutService();
+        var seatNotifications = new Mock<ISeatNotificationService>();
+        var catalogCache = new Mock<ICustomerEventCatalogCache>();
+        var services = CreateWorkerServices(options, payout, seatNotifications.Object, catalogCache.Object);
+        await using var provider = services.BuildServiceProvider();
+        using var stop = new CancellationTokenSource();
+        var worker = new RefundPayoutWorker(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<RefundPayoutWorker>.Instance);
+        await worker.StartAsync(stop.Token);
+
+        await WaitUntilAsync(async () =>
+        {
+            await using var check = new ApplicationDbContext(options);
+            return await check.RefundRequests.AnyAsync(x => x.Id == refundId && x.Status == "Completed");
+        }, TimeSpan.FromSeconds(5));
+        await worker.StopAsync(CancellationToken.None);
+
+        await using var final = new ApplicationDbContext(options);
+        var updatedSeat = await final.Seats.AsNoTracking().SingleAsync(x => x.Id == seatId);
+        updatedSeat.Status.Should().Be(SeatStatus.Available);
+        updatedSeat.LockedByUserId.Should().BeNull();
+        seatNotifications.Verify(x => x.NotifySeatStatusChanged(eventId, seatId, SeatStatus.Available.ToString(), It.IsAny<string?>(), null), Times.Once);
+        catalogCache.Verify(x => x.InvalidateAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RetryRefundRequest_WhenRemoteStateSucceeded_CompletesRefundAndReleasesSoldSeat()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
+        Guid refundId;
+        Guid ticketId;
+        await using (var seed = new ApplicationDbContext(options))
+        {
+            await seed.Database.EnsureCreatedAsync();
+            (refundId, ticketId) = await SeedRefundAsync(seed);
+            var refund = await seed.RefundRequests.SingleAsync(x => x.Id == refundId);
+            refund.MarkNeedsReview("Manual check", "PROCESSING");
+            await seed.SaveChangesAsync();
+        }
+
+        var payout = new FakePayoutService
+        {
+            Find = (_, _) => Task.FromResult(new PayOSPayoutResult("payout-reconciled", "SUCCEEDED", null, "970415", "123456789", "TEST ACCOUNT"))
+        };
+        var protector = new Mock<IRefundBankAccountProtector>();
+        protector.Setup(x => x.Unprotect("encrypted-destination"))
+            .Returns(new RefundBankAccountDetails("970415", "TEST ACCOUNT", "123456789"));
+        var locks = new Mock<IDistributedLockService>();
+        var lease = new Mock<IDistributedLockLease>();
+        lease.SetupGet(x => x.IsValid).Returns(true);
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(lease.Object);
+        var seatNotifications = new Mock<ISeatNotificationService>();
+        var catalogCache = new Mock<ICustomerEventCatalogCache>();
+
+        await using var db = new ApplicationDbContext(options);
+        var handler = new TickeX.Application.Admin.Commands.RetryRefundRequestCommandHandler(
+            db, payout, protector.Object, locks.Object, seatNotifications.Object, catalogCache.Object);
+
+        var outcome = await handler.Handle(new TickeX.Application.Admin.Commands.RetryRefundRequestCommand(refundId), CancellationToken.None);
+
+        outcome.Should().Be("REFUND_COMPLETED");
+        var seat = await db.Seats.AsNoTracking().SingleAsync();
+        seat.Status.Should().Be(SeatStatus.Available);
+        seatNotifications.Verify(x => x.NotifySeatStatusChanged(It.IsAny<Guid>(), seat.Id, SeatStatus.Available.ToString(), It.IsAny<string?>(), null), Times.Once);
+        catalogCache.Verify(x => x.InvalidateAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static ServiceCollection CreateWorkerServices(
+        DbContextOptions<ApplicationDbContext> options,
+        FakePayoutService payout,
+        ISeatNotificationService? seatNotifications = null,
+        ICustomerEventCatalogCache? catalogCache = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -142,6 +234,8 @@ public sealed class RefundPayoutWorkerTests
         var protector = new Mock<IRefundBankAccountProtector>();
         protector.Setup(x => x.Unprotect("encrypted-destination")).Returns(new RefundBankAccountDetails("970415", "TEST ACCOUNT", "123456789"));
         services.AddSingleton(protector.Object);
+        if (seatNotifications is not null) services.AddSingleton(seatNotifications);
+        if (catalogCache is not null) services.AddSingleton(catalogCache);
         return services;
     }
 

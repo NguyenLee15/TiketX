@@ -18,6 +18,7 @@ public class RefundRequestConfiguration : IEntityTypeConfiguration<RefundRequest
         builder.Property(x => x.ProviderReference).HasMaxLength(180);
         builder.Property(x => x.ProviderStatus).HasMaxLength(40);
         builder.Property(x => x.LeaseOwner).HasMaxLength(80);
+        builder.Property(x => x.Version).IsConcurrencyToken();
         builder.HasIndex(x => x.IdempotencyKey).IsUnique();
         builder.HasIndex(x => new { x.Status, x.NextAttemptAt });
         builder.HasIndex(x => x.TicketId);

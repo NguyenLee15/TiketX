@@ -1,8 +1,11 @@
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using TickeX.Application.Events.Commands;
 using TickeX.Application.Events.Queries;
+using TickeX.Application.Interfaces;
+using TickeX.Application.Seats;
 using TickeX.Domain.Entities;
 using TickeX.Domain.Enums;
 using TickeX.Infrastructure.Persistence;
@@ -222,6 +225,39 @@ public class EventLifecycleAndDeletionTests : IDisposable
         var audit = await _context.AuditLogs.FirstOrDefaultAsync(al => al.Action == "CANCEL_EVENT" && al.EntityId == ev.Id.ToString());
         audit.Should().NotBeNull();
         audit!.AfterState.Should().Contain("Typhoon Weather Warning");
+    }
+
+    [Fact]
+    public async Task CancelEvent_WhenLockedSeatsAreReleased_NotifiesSeatHubSubscribersPostCommit()
+    {
+        var user = new User("Alice", "alice@example.com", "hash", "Customer");
+        var ev = new Event("Rock Fest", "Desc", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(3), "Loc", "Venue", 10, basePrice: 150000m);
+        ev.GenerateSeatsMatrix(rowCount: 1, seatsPerRow: 2);
+        _context.Users.Add(user);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var seat = ev.Seats.First();
+        seat.Lock(user.Id);
+        await _context.SaveChangesAsync();
+
+        var seatNotificationService = new Mock<ISeatNotificationService>();
+        var handler = new CancelEventCommandHandler(
+            _context,
+            new RefundRequestPort(_context),
+            lockService: null,
+            seatNotificationService: seatNotificationService.Object);
+
+        var command = new CancelEventCommand(ev.Id, "Safety Cancellation", Convert.ToBase64String(ev.Version), AdminEmail: "admin@tickex.com");
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+
+        seatNotificationService.Verify(
+            s => s.NotifySeatStatusChanged(ev.Id, seat.Id, SeatStatus.Available.ToString(), null, null),
+            Times.Once);
     }
 
     [Fact]

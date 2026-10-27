@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using TickeX.Application.Interfaces;
 using TickeX.Application.Payments.Events;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -118,47 +119,7 @@ public class TicketPaidEventConsumer : BackgroundService
                 _logger.LogInformation("Received TicketPaidEvent for Ticket {TicketId}, User {UserId}. Generating QR Code and Email...", ticketEvent.TicketId, ticketEvent.UserId);
 
                 using var scope = _scopeFactory.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<TickeX.Application.Interfaces.IApplicationDbContext>();
-                var emailService = scope.ServiceProvider.GetRequiredService<TickeX.Application.Interfaces.IEmailService>();
-
-                var user = await dbContext.Users.FindAsync(new object[] { ticketEvent.UserId }, stoppingToken);
-                if (user != null)
-                {
-                    var ticket = await dbContext.Tickets
-                        .AsNoTracking()
-                        .Include(t => t.Event)
-                        .Include(t => t.Seat)
-                        .FirstOrDefaultAsync(t => t.Id == ticketEvent.TicketId, stoppingToken);
-
-                    var subject = $"Xác nhận vé điện tử TickeX: #{ticket?.OrderCode.ToString() ?? ticketEvent.TicketId.ToString()}";
-                    var safeName = System.Net.WebUtility.HtmlEncode(user.Name);
-                    var safeEventTitle = System.Net.WebUtility.HtmlEncode(ticket?.Event?.Title ?? "Sự kiện TickeX");
-                    var safeVenue = System.Net.WebUtility.HtmlEncode(ticket?.Event?.VenueName ?? ticket?.Event?.Location ?? "N/A");
-                    var seatLabel = ticket?.Seat is not null
-                        ? System.Net.WebUtility.HtmlEncode($"{ticket.Seat.Row}{ticket.Seat.Number} ({ticket.Seat.Tier})")
-                        : "N/A";
-                    var safeQrToken = System.Net.WebUtility.HtmlEncode(
-                        !string.IsNullOrWhiteSpace(ticket?.QrCodeSignature)
-                            ? ticket.QrCodeSignature
-                            : ticketEvent.TicketId.ToString());
-
-                    var emailBody = $@"
-                            <div style=""font-family: Arial, sans-serif; line-height: 1.6; color: #111827;"">
-                                <h1>Cảm ơn bạn đã đặt vé, {safeName}!</h1>
-                                <p>Vé điện tử của bạn (Mã vé: <strong>{ticketEvent.TicketId}</strong>) đã được xác nhận thanh toán thành công.</p>
-                                <ul>
-                                    <li><strong>Sự kiện:</strong> {safeEventTitle}</li>
-                                    <li><strong>Địa điểm:</strong> {safeVenue}</li>
-                                    <li><strong>Vị trí ghế:</strong> {seatLabel}</li>
-                                </ul>
-                                <p><strong>Mã định danh QR (dùng để đối chiếu tại cổng soát vé hoặc xem trực tiếp trong mục Vé của tôi):</strong></p>
-                                <pre style=""background:#f3f4f6;padding:12px;border-radius:6px;word-break:break-all;"">{safeQrToken}</pre>
-                            </div>
-                        ";
-
-                    await emailService.SendEmailAsync(user.Email, subject, emailBody);
-                    _logger.LogInformation("Ticket notification sent for User {UserId} and Ticket {TicketId}.", ticketEvent.UserId, ticketEvent.TicketId);
-                }
+                await ProcessEventWithIdempotencyAsync(ticketEvent, scope.ServiceProvider, _logger, stoppingToken);
 
                 await _channel.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
             }
@@ -297,5 +258,92 @@ public class TicketPaidEventConsumer : BackgroundService
             VirtualHost = !string.IsNullOrWhiteSpace(_virtualHost) ? _virtualHost : "/",
             Ssl = new SslOption { Enabled = _useTls }
         };
+    }
+
+    public static async Task ProcessEventWithIdempotencyAsync(
+        TicketPaidEvent ticketEvent,
+        IServiceProvider serviceProvider,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var idempotencyStore = serviceProvider.GetService<IIdempotencyStore>();
+        IdempotencyClaim? claim = null;
+        string? idempotencyKey = null;
+
+        if (idempotencyStore is not null)
+        {
+            idempotencyKey = $"idempotency:consumer:ticket_paid:{ticketEvent.TicketId:N}";
+            claim = await idempotencyStore.TryClaimAsync(idempotencyKey, "PROCESSING", TimeSpan.FromHours(24), cancellationToken);
+            if (!claim.Acquired)
+            {
+                logger.LogInformation("Duplicate ticket paid event ignored for ticket {TicketId}.", ticketEvent.TicketId);
+                return;
+            }
+        }
+
+        try
+        {
+            var dbContext = serviceProvider.GetRequiredService<IApplicationDbContext>();
+            var emailService = serviceProvider.GetRequiredService<IEmailService>();
+
+            var user = await dbContext.Users.FindAsync(new object[] { ticketEvent.UserId }, cancellationToken);
+            if (user != null)
+            {
+                var ticket = await dbContext.Tickets
+                    .AsNoTracking()
+                    .Include(t => t.Event)
+                    .Include(t => t.Seat)
+                    .FirstOrDefaultAsync(t => t.Id == ticketEvent.TicketId, cancellationToken);
+
+                var subject = $"Xác nhận vé điện tử TickeX: #{ticket?.OrderCode.ToString() ?? ticketEvent.TicketId.ToString()}";
+                var safeName = System.Net.WebUtility.HtmlEncode(user.Name);
+                var safeEventTitle = System.Net.WebUtility.HtmlEncode(ticket?.Event?.Title ?? "Sự kiện TickeX");
+                var safeVenue = System.Net.WebUtility.HtmlEncode(ticket?.Event?.VenueName ?? ticket?.Event?.Location ?? "N/A");
+                var seatLabel = ticket?.Seat is not null
+                    ? System.Net.WebUtility.HtmlEncode($"{ticket.Seat.Row}{ticket.Seat.Number} ({ticket.Seat.Tier})")
+                    : "N/A";
+                var safeQrToken = System.Net.WebUtility.HtmlEncode(
+                    !string.IsNullOrWhiteSpace(ticket?.QrCodeSignature)
+                        ? ticket.QrCodeSignature
+                        : ticketEvent.TicketId.ToString());
+
+                var emailBody = $@"
+                        <div style=""font-family: Arial, sans-serif; line-height: 1.6; color: #111827;"">
+                            <h1>Cảm ơn bạn đã đặt vé, {safeName}!</h1>
+                            <p>Vé điện tử của bạn (Mã vé: <strong>{ticketEvent.TicketId}</strong>) đã được xác nhận thanh toán thành công.</p>
+                            <ul>
+                                <li><strong>Sự kiện:</strong> {safeEventTitle}</li>
+                                <li><strong>Địa điểm:</strong> {safeVenue}</li>
+                                <li><strong>Vị trí ghế:</strong> {seatLabel}</li>
+                            </ul>
+                            <p><strong>Mã định danh QR (dùng để đối chiếu tại cổng soát vé hoặc xem trực tiếp trong mục Vé của tôi):</strong></p>
+                            <pre style=""background:#f3f4f6;padding:12px;border-radius:6px;word-break:break-all;"">{safeQrToken}</pre>
+                        </div>
+                    ";
+
+                await emailService.SendEmailAsync(user.Email, subject, emailBody);
+                logger.LogInformation("Ticket notification sent for User {UserId} and Ticket {TicketId}.", ticketEvent.UserId, ticketEvent.TicketId);
+            }
+
+            if (idempotencyStore is not null && claim is not null && idempotencyKey is not null)
+            {
+                await idempotencyStore.CompleteAsync(idempotencyKey, claim.OwnerToken, "COMPLETED", TimeSpan.FromHours(24), cancellationToken);
+            }
+        }
+        catch
+        {
+            if (idempotencyStore is not null && claim is not null && idempotencyKey is not null)
+            {
+                try
+                {
+                    await idempotencyStore.ReleaseAsync(idempotencyKey, claim.OwnerToken, cancellationToken);
+                }
+                catch
+                {
+                    // Non-fatal cleanup suppression
+                }
+            }
+            throw;
+        }
     }
 }

@@ -42,6 +42,24 @@ public partial class ProcessPaymentCommandHandler
             return false;
         }
 
+        IDistributedLockLease? seatLease;
+        try
+        {
+            seatLease = await _lockService.AcquireLockAsync(
+                $"seat:lock:{initialTicket.SeatId:N}", TimeSpan.FromSeconds(30), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Required seat lock is unavailable for payment order {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
+            return false;
+        }
+
+        if (seatLease is null || !seatLease.IsValid)
+        {
+            _logger.LogWarning("Could not acquire seat lock for payment order {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
+            return false;
+        }
+
         string lockKey = $"payment:lock:{initialTicket.OrderCode}";
         IDistributedLockLease? lease;
         try
@@ -54,13 +72,14 @@ public partial class ProcessPaymentCommandHandler
             return false;
         }
 
-        if (lease is null)
+        if (lease is null || !lease.IsValid)
         {
             _logger.LogWarning("Could not acquire payment lock for {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
             return false;
         }
 
         await using (eventLease)
+        await using (seatLease)
         await using (lease)
         {
             // Re-fetch the ticket inside the lock with Event and Seat included
@@ -96,24 +115,33 @@ public partial class ProcessPaymentCommandHandler
             var providerTxId = PaymentWebhookPolicy.ProviderTransactionId(data);
             var auditSummary = PaymentWebhookPolicy.AuditSummary(data, providerTxId);
 
+            var seatReclaimedByAnotherUser = ticket.Seat != null &&
+                ticket.Seat.LockedByUserId.HasValue &&
+                ticket.Seat.LockedByUserId.Value != ticket.UserId;
+
             // Invariant 2: Ticket must be Pending AND within the reservation hold window to process payment
-            var isHoldExpired = ticket.Status == TicketStatus.Pending && (_time.UtcNow - ticket.CreatedAt > _holdDuration);
+            var isHoldExpired = (ticket.Status == TicketStatus.Pending && (_time.UtcNow - ticket.CreatedAt > _holdDuration))
+                || seatReclaimedByAnotherUser;
 
             if (ticket.Status != TicketStatus.Pending || isHoldExpired)
             {
                 if (data.Success)
                 {
+                    bool seatReleased = false;
                     if (isHoldExpired)
                     {
                         ticket.Cancel();
-                        if (ticket.Seat != null)
+                        if (ticket.Seat != null && ticket.Seat.Status == SeatStatus.Locked && (ticket.Seat.LockedByUserId == null || ticket.Seat.LockedByUserId == ticket.UserId))
                         {
                             ticket.Seat.Release();
+                            seatReleased = true;
                         }
                     }
 
                     var reason = isHoldExpired
-                        ? $"Reservation hold expired ({_holdDuration.TotalMinutes:0}m limit exceeded)"
+                        ? (seatReclaimedByAnotherUser
+                            ? "Reservation seat reclaimed by another customer"
+                            : $"Reservation hold expired ({_holdDuration.TotalMinutes:0}m limit exceeded)")
                         : $"Hold expired or invalid status: {ticket.Status}";
 
                     _logger.LogError("ORPHANED PAYMENT DETECTED: Order {OrderCode}, Ticket {TicketId}, Amount {Amount}. Ticket status is {Status}, HoldExpired: {IsHoldExpired}. Money captured but reservation hold expired or invalid. Recording OrphanedPaid transaction for compensation.",
@@ -165,11 +193,11 @@ public partial class ProcessPaymentCommandHandler
                         _context.RefundRequests.Add(refundReq);
                     }
 
-                    if (!lease.IsValid) return false;
+                    if (!lease.IsValid || !eventLease.IsValid || !seatLease.IsValid) return false;
                     await _context.SaveChangesAsync(cancellationToken);
                     if (_catalogCache is not null) await _catalogCache.InvalidateAsync(CancellationToken.None);
 
-                    if (isHoldExpired && ticket.Seat != null)
+                    if (seatReleased && ticket.Seat != null)
                     {
                         await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString());
                     }
@@ -180,14 +208,16 @@ public partial class ProcessPaymentCommandHandler
                 if (isHoldExpired)
                 {
                     ticket.Cancel();
-                    if (ticket.Seat != null)
+                    bool seatReleased = false;
+                    if (ticket.Seat != null && ticket.Seat.Status == SeatStatus.Locked && (ticket.Seat.LockedByUserId == null || ticket.Seat.LockedByUserId == ticket.UserId))
                     {
                         ticket.Seat.Release();
+                        seatReleased = true;
                     }
-                    if (lease.IsValid)
+                    if (lease.IsValid && eventLease.IsValid && seatLease.IsValid)
                     {
                         await _context.SaveChangesAsync(cancellationToken);
-                        if (ticket.Seat != null)
+                        if (seatReleased && ticket.Seat != null)
                         {
                             await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString());
                         }
@@ -251,7 +281,7 @@ public partial class ProcessPaymentCommandHandler
                 }
 
                 // Explicitly commit financial, seat state, and outbox atomically into database
-                if (!lease.IsValid) return false;
+                if (!lease.IsValid || !eventLease.IsValid || !seatLease.IsValid) return false;
                 await _context.SaveChangesAsync(cancellationToken);
                 if (_catalogCache is not null) await _catalogCache.InvalidateAsync(CancellationToken.None);
 
@@ -265,9 +295,11 @@ public partial class ProcessPaymentCommandHandler
             {
                 // Payment failed: Release seat and cancel ticket
                 ticket.Cancel();
-                if (ticket.Seat != null)
+                bool seatReleased = false;
+                if (ticket.Seat != null && ticket.Seat.Status == SeatStatus.Locked && (ticket.Seat.LockedByUserId == null || ticket.Seat.LockedByUserId == ticket.UserId))
                 {
                     ticket.Seat.Release();
+                    seatReleased = true;
                 }
 
                 if (existingTx == null)
@@ -288,11 +320,11 @@ public partial class ProcessPaymentCommandHandler
                     existingTx.SetWebhookPayloadHash(data.PayloadHash);
                 }
 
-                if (!lease.IsValid) return false;
+                if (!lease.IsValid || !eventLease.IsValid || !seatLease.IsValid) return false;
                 await _context.SaveChangesAsync(cancellationToken);
                 if (_catalogCache is not null) await _catalogCache.InvalidateAsync(CancellationToken.None);
 
-                if (ticket.Seat != null)
+                if (seatReleased && ticket.Seat != null)
                 {
                     await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString());
                 }

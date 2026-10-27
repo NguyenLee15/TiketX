@@ -1,7 +1,13 @@
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using TickeX.Application.Interfaces;
+using TickeX.Application.Payments.Events;
+using TickeX.Domain.Entities;
+using TickeX.Infrastructure.Messaging;
 using TickeX.Infrastructure.Persistence;
 using TickeX.Infrastructure.Services;
 using Xunit;
@@ -122,6 +128,69 @@ public sealed class NotificationOutboxTests : IDisposable
 
         itemsA.Should().HaveCount(2);
         itemsB.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task TicketPaidEventConsumer_ProcessEvent_DeduplicatesRepeatedDeliveriesAndReleasesClaimOnFailure()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection).Options;
+        await using var context = new ApplicationDbContext(options);
+        await context.Database.EnsureCreatedAsync();
+
+        var user = new User("Customer", "customer@test.local", "hash");
+        var @event = new Event("Concert", "Desc", DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(1).AddHours(2), "Loc", "Venue", 100);
+        @event.GenerateSeatsMatrix(1, 1);
+        context.AddRange(user, @event);
+        await context.SaveChangesAsync();
+
+        var seat = await context.Seats.SingleAsync();
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, 100000m);
+        context.Tickets.Add(ticket);
+        await context.SaveChangesAsync();
+
+        var emailService = new Mock<IEmailService>();
+        var idempotencyStore = new Mock<IIdempotencyStore>();
+
+        var services = new ServiceCollection();
+        services.AddScoped<IApplicationDbContext>(_ => context);
+        services.AddSingleton(emailService.Object);
+        services.AddSingleton(idempotencyStore.Object);
+        var provider = services.BuildServiceProvider();
+
+        var ticketEvent = new TicketPaidEvent(ticket.Id, user.Id, @event.Id);
+        var expectedKey = $"idempotency:consumer:ticket_paid:{ticket.Id:N}";
+
+        // Step 1: First delivery -> Claim acquired
+        idempotencyStore.Setup(s => s.TryClaimAsync(expectedKey, "PROCESSING", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IdempotencyClaim(true, null, "owner-token-1"));
+
+        await TicketPaidEventConsumer.ProcessEventWithIdempotencyAsync(
+            ticketEvent, provider, NullLogger.Instance, CancellationToken.None);
+
+        emailService.Verify(e => e.SendEmailAsync(user.Email, It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        idempotencyStore.Verify(s => s.CompleteAsync(expectedKey, "owner-token-1", "COMPLETED", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        // Step 2: Second (duplicate) delivery -> Claim NOT acquired
+        idempotencyStore.Setup(s => s.TryClaimAsync(expectedKey, "PROCESSING", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IdempotencyClaim(false, "owner-token-1\nCOMPLETED", string.Empty));
+
+        await TicketPaidEventConsumer.ProcessEventWithIdempotencyAsync(
+            ticketEvent, provider, NullLogger.Instance, CancellationToken.None);
+
+        // Email service must STILL have been called only once!
+        emailService.Verify(e => e.SendEmailAsync(user.Email, It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+
+        // Step 3: Transient error during processing -> Claim released
+        idempotencyStore.Setup(s => s.TryClaimAsync(expectedKey, "PROCESSING", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IdempotencyClaim(true, null, "owner-token-2"));
+        emailService.Setup(e => e.SendEmailAsync(user.Email, It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("SMTP connection dropped"));
+
+        Func<Task> act = async () => await TicketPaidEventConsumer.ProcessEventWithIdempotencyAsync(
+            ticketEvent, provider, NullLogger.Instance, CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        idempotencyStore.Verify(s => s.ReleaseAsync(expectedKey, "owner-token-2", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     public void Dispose() => _connection.Dispose();

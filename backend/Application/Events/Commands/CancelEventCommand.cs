@@ -22,12 +22,18 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
     private readonly IApplicationDbContext _context;
     private readonly IRefundRequestPort _refundRequestPort;
     private readonly IDistributedLockService? _lockService;
+    private readonly ISeatNotificationService? _seatNotificationService;
 
-    public CancelEventCommandHandler(IApplicationDbContext context, IRefundRequestPort refundRequestPort, IDistributedLockService? lockService = null)
+    public CancelEventCommandHandler(
+        IApplicationDbContext context, 
+        IRefundRequestPort refundRequestPort, 
+        IDistributedLockService? lockService = null,
+        ISeatNotificationService? seatNotificationService = null)
     {
         _context = context;
         _refundRequestPort = refundRequestPort;
         _lockService = lockService;
+        _seatNotificationService = seatNotificationService;
     }
 
     public async Task<AdminOperationResult> Handle(CancelEventCommand request, CancellationToken cancellationToken)
@@ -88,6 +94,7 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
             var refundedCount = 0;
             decimal refundPendingAmount = 0m;
             var releasedSeatCount = 0;
+            var releasedSeatIds = new List<Guid>();
 
         while (true)
         {
@@ -157,7 +164,11 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
                 .ToListAsync(cancellationToken);
             if (seats.Count == 0) break;
 
-            foreach (var seat in seats) seat.Release();
+            foreach (var seat in seats)
+            {
+                seat.Release();
+                releasedSeatIds.Add(seat.Id);
+            }
             releasedSeatCount += seats.Count;
             await _context.SaveChangesAsync(cancellationToken);
             DetachProcessedEntities();
@@ -183,6 +194,21 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
             return AdminOperationResult.Conflict(
                 "Sự kiện vừa được cập nhật bởi quản trị viên khác. Vui lòng tải lại dữ liệu mới nhất.",
                 "EVENT_CONCURRENCY_CONFLICT");
+        }
+
+        if (_seatNotificationService is not null)
+        {
+            foreach (var seatId in releasedSeatIds)
+            {
+                try
+                {
+                    await _seatNotificationService.NotifySeatStatusChanged(request.Id, seatId, SeatStatus.Available.ToString());
+                }
+                catch
+                {
+                    // Non-fatal post-commit notification failure
+                }
+            }
         }
 
             return AdminOperationResult.Ok($"Hủy sự kiện thành công. Đã tạo yêu cầu hoàn tiền cho {refundedCount} vé và giải phóng {releasedSeatCount} ghế chưa bán.");

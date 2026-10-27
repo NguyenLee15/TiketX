@@ -10,7 +10,9 @@ public sealed class RetryRefundRequestCommandHandler(
     IApplicationDbContext context,
     IPayOSPayoutService payOs,
     IRefundBankAccountProtector protector,
-    IDistributedLockService locks) : IRequestHandler<RetryRefundRequestCommand, string>
+    IDistributedLockService locks,
+    ISeatNotificationService? seatNotifications = null,
+    ICustomerEventCatalogCache? catalogCache = null) : IRequestHandler<RetryRefundRequestCommand, string>
 {
     public async Task<string> Handle(RetryRefundRequestCommand request, CancellationToken cancellationToken)
     {
@@ -54,7 +56,44 @@ public sealed class RetryRefundRequestCommandHandler(
                     if (ticket.Status == TickeX.Domain.Enums.TicketStatus.RefundPending) ticket.CompleteRefund(refund.Amount);
                     payment?.MarkRefunded(remote.PayoutId ?? refund.ProviderReference ?? stableReference, "PayOS payout reconciled as SUCCEEDED");
                     refund.MarkCompleted(remote.PayoutId ?? refund.ProviderReference ?? stableReference);
+
+                    var seat = await context.Seats.FirstOrDefaultAsync(s => s.Id == ticket.SeatId, cancellationToken);
+                    var seatReleased = false;
+                    if (seat != null && seat.Status == TickeX.Domain.Enums.SeatStatus.Sold)
+                    {
+                        var hasOtherActiveTicket = await context.Tickets.AnyAsync(
+                            t => t.SeatId == ticket.SeatId && t.Id != ticket.Id &&
+                                 (t.Status == TickeX.Domain.Enums.TicketStatus.Pending || t.Status == TickeX.Domain.Enums.TicketStatus.Paid || t.Status == TickeX.Domain.Enums.TicketStatus.Used || t.Status == TickeX.Domain.Enums.TicketStatus.RefundPending),
+                            cancellationToken);
+
+                        if (!hasOtherActiveTicket)
+                        {
+                            seat.Release();
+                            seatReleased = true;
+                        }
+                    }
+
                     await context.SaveChangesAsync(cancellationToken);
+
+                    if (catalogCache != null)
+                    {
+                        try { await catalogCache.InvalidateAsync(CancellationToken.None); } catch { }
+                    }
+
+                    if (seatNotifications != null && seat != null && seatReleased)
+                    {
+                        try
+                        {
+                            await seatNotifications.NotifySeatStatusChanged(
+                                ticket.EventId,
+                                seat.Id,
+                                seat.Status.ToString(),
+                                Convert.ToBase64String(seat.Version),
+                                null);
+                        }
+                        catch { }
+                    }
+
                     return "REFUND_COMPLETED";
                 }
                 if (remote.Error is not null || remote.State is not ("FAILED" or "CANCELLED" or "REJECTED" or "ERROR"))
