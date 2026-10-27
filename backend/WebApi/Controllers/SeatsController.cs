@@ -32,9 +32,15 @@ public class SeatsController : ControllerBase
         {
             return Unauthorized(new 
             { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Unauthorized",
+                status = StatusCodes.Status401Unauthorized,
                 success = false, 
                 code = "UNAUTHORIZED", 
                 message = "User is not authenticated.",
+                detail = "User is not authenticated.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 error = new { code = "UNAUTHORIZED", message = "User is not authenticated." }
             });
         }
@@ -48,9 +54,15 @@ public class SeatsController : ControllerBase
         {
             return BadRequest(new 
             { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Invalid Seat Version",
+                status = StatusCodes.Status400BadRequest,
                 success = false, 
                 code = "INVALID_SEAT_VERSION", 
                 message = "Invalid seat version token format. Valid Base64 string is required.",
+                detail = "Invalid seat version token format. Valid Base64 string is required.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 error = new { code = "INVALID_SEAT_VERSION", message = "Invalid seat version token format. Valid Base64 string is required." }
             });
         }
@@ -58,9 +70,15 @@ public class SeatsController : ControllerBase
         {
             return BadRequest(new 
             { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Invalid Seat Version",
+                status = StatusCodes.Status400BadRequest,
                 success = false, 
                 code = "INVALID_SEAT_VERSION", 
                 message = "Invalid seat version token length.",
+                detail = "Invalid seat version token length.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 error = new { code = "INVALID_SEAT_VERSION", message = "Invalid seat version token length." }
             });
         }
@@ -80,9 +98,15 @@ public class SeatsController : ControllerBase
             };
             return StatusCode(statusCode, new 
             { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Seat Lock Failed",
+                status = statusCode,
                 success = false, 
                 code = lockResult.Code, 
                 message = lockResult.Message,
+                detail = lockResult.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 error = new { code = lockResult.Code, message = lockResult.Message }
             });
         }

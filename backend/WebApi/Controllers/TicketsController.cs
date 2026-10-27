@@ -33,11 +33,37 @@ public class TicketsController : ControllerBase
         var effectivePage = page ?? 1;
         var effectivePageSize = pageSize ?? 10;
         if (effectivePage < 1 || effectivePageSize is < 1 or > 50 || ((long)effectivePage - 1) * effectivePageSize > int.MaxValue)
-            return BadRequest(new { success = false, code = "PAGINATION_OUT_OF_RANGE", message = "page phải dương và pageSize phải nằm trong khoảng 1–50." });
+        {
+            return BadRequest(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Pagination Out Of Range",
+                status = StatusCodes.Status400BadRequest,
+                success = false, 
+                code = "PAGINATION_OUT_OF_RANGE", 
+                message = "page phải dương và pageSize phải nằm trong khoảng 1–50.",
+                detail = "page phải dương và pageSize phải nằm trong khoảng 1–50.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "PAGINATION_OUT_OF_RANGE", message = "page phải dương và pageSize phải nằm trong khoảng 1–50." }
+            });
+        }
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
         {
-            return Unauthorized(new { success = false, code = "UNAUTHORIZED", message = "User is not authenticated", error = new { code = "UNAUTHORIZED", message = "User is not authenticated" } });
+            return Unauthorized(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Unauthorized",
+                status = StatusCodes.Status401Unauthorized,
+                success = false, 
+                code = "UNAUTHORIZED", 
+                message = "User is not authenticated", 
+                detail = "User is not authenticated",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "UNAUTHORIZED", message = "User is not authenticated" } 
+            });
         }
 
         var result = await _mediator.Send(new GetMyTicketsQuery(userId, page, pageSize, status), cancellationToken);
@@ -48,11 +74,39 @@ public class TicketsController : ControllerBase
     public async Task<IActionResult> GetMyTicketsCursor([FromQuery] string? cursor = null, [FromQuery] int limit = 10, [FromQuery] string? status = null, CancellationToken cancellationToken = default)
     {
         if (limit is < 1 or > 50)
-            return BadRequest(new { success = false, code = "PAGINATION_OUT_OF_RANGE", message = "limit phải nằm trong khoảng 1–50." });
+        {
+            return BadRequest(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Pagination Out Of Range",
+                status = StatusCodes.Status400BadRequest,
+                success = false, 
+                code = "PAGINATION_OUT_OF_RANGE", 
+                message = "limit phải nằm trong khoảng 1–50.",
+                detail = "limit phải nằm trong khoảng 1–50.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "PAGINATION_OUT_OF_RANGE", message = "limit phải nằm trong khoảng 1–50." }
+            });
+        }
 
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
-            return Unauthorized(new { success = false, code = "UNAUTHORIZED", message = "User is not authenticated" });
+        {
+            return Unauthorized(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Unauthorized",
+                status = StatusCodes.Status401Unauthorized,
+                success = false, 
+                code = "UNAUTHORIZED", 
+                message = "User is not authenticated",
+                detail = "User is not authenticated",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "UNAUTHORIZED", message = "User is not authenticated" }
+            });
+        }
 
         try
         {
@@ -61,7 +115,19 @@ public class TicketsController : ControllerBase
         }
         catch (ArgumentException ex) when (cursor is not null)
         {
-            return BadRequest(new { success = false, code = "INVALID_CURSOR", message = ex.Message });
+            return BadRequest(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Invalid Cursor",
+                status = StatusCodes.Status400BadRequest,
+                success = false, 
+                code = "INVALID_CURSOR", 
+                message = ex.Message,
+                detail = ex.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "INVALID_CURSOR", message = ex.Message }
+            });
         }
     }
 
@@ -74,7 +140,19 @@ public class TicketsController : ControllerBase
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
         {
-            return Unauthorized(new { success = false, code = "UNAUTHORIZED", message = "User is not authenticated.", error = new { code = "UNAUTHORIZED", message = "User is not authenticated." } });
+            return Unauthorized(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Unauthorized",
+                status = StatusCodes.Status401Unauthorized,
+                success = false, 
+                code = "UNAUTHORIZED", 
+                message = "User is not authenticated.", 
+                detail = "User is not authenticated.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "UNAUTHORIZED", message = "User is not authenticated." } 
+            });
         }
 
         var command = new RefundTicketCommand(
@@ -99,9 +177,15 @@ public class TicketsController : ControllerBase
 
             return StatusCode(statusCode, new
             {
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = result.Code,
+                status = statusCode,
                 success = false,
                 code = result.Code,
                 message = result.Message,
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 error = new { code = result.Code, message = result.Message }
             });
         }
@@ -122,9 +206,15 @@ public class TicketsController : ControllerBase
         {
             return Unauthorized(new 
             { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Unauthorized",
+                status = StatusCodes.Status401Unauthorized,
                 success = false, 
                 code = "UNAUTHORIZED", 
                 message = "Không xác định được danh tính nhân viên từ token.",
+                detail = "Không xác định được danh tính nhân viên từ token.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 error = new { code = "UNAUTHORIZED", message = "Không xác định được danh tính nhân viên từ token." }
             });
         }
@@ -140,9 +230,15 @@ public class TicketsController : ControllerBase
         {
             return StatusCode(result.StatusCode, new 
             { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = result.Code,
+                status = result.StatusCode,
                 success = false, 
                 code = result.Code, 
                 message = result.Message,
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 error = new { code = result.Code, message = result.Message }
             });
         }

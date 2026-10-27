@@ -55,7 +55,7 @@ public sealed class ReservationOperations : IReservationOperations
             if (pendingCount >= _options.MaximumPendingSeatsPerEvent)
                 return Fail("RESERVATION_LIMIT_REACHED", $"Mỗi khách chỉ được giữ tối đa {_options.MaximumPendingSeatsPerEvent} ghế cho một sự kiện.");
 
-            var seatKey = $"seat:lock:{seatId}";
+            var seatKey = $"seat:lock:{seatId:N}";
             var seatLease = await TryAcquireAsync(seatKey, TimeSpan.FromMinutes(_options.HoldMinutes), cancellationToken);
             if (seatLease is null)
                 return Fail("RESERVATION_LOCK_UNAVAILABLE", "Ghế đang được xử lý hoặc dịch vụ khóa tạm thời chưa sẵn sàng.");
@@ -155,7 +155,7 @@ public sealed class ReservationOperations : IReservationOperations
         if (ticket.Status != TicketStatus.Pending)
             return Fail("RESERVATION_NOT_PENDING", "Lượt giữ ghế không còn ở trạng thái chờ.");
 
-        var lockKey = $"seat:lock:{ticket.SeatId}";
+        var lockKey = $"seat:lock:{ticket.SeatId:N}";
         var lease = await TryAcquireAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
         if (lease is null)
             return Fail("RESERVATION_LOCK_UNAVAILABLE", "Không thể khóa thao tác hủy giữ ghế lúc này.");

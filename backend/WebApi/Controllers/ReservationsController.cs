@@ -25,9 +25,15 @@ public sealed class ReservationsController : ControllerBase
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
             return Unauthorized(new 
             { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Unauthorized",
+                status = StatusCodes.Status401Unauthorized,
                 success = false, 
                 code = "UNAUTHORIZED", 
                 message = "User is not authenticated.",
+                detail = "User is not authenticated.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 error = new { code = "UNAUTHORIZED", message = "User is not authenticated." }
             });
         var result = await _operations.ReleaseAsync(ticketId, userId, request?.Reason ?? "Customer cancelled checkout", cancellationToken);
@@ -42,9 +48,15 @@ public sealed class ReservationsController : ControllerBase
             };
             return StatusCode(status, new 
             { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = result.Code,
+                status,
                 success = false, 
                 code = result.Code, 
                 message = result.Message,
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 error = new { code = result.Code, message = result.Message }
             });
         }

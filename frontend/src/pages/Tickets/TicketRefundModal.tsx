@@ -54,7 +54,7 @@ export const TicketRefundModal: React.FC<TicketRefundModalProps> = React.memo(({
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate('/profile');
+                  navigate('/profile?refundBankAccount=1');
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary/90 transition-colors shadow-sm"
               >

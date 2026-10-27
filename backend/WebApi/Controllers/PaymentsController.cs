@@ -74,7 +74,19 @@ public class PaymentsController : ControllerBase
         if (!TryGetUserId(out var userId)) return UnauthorizedEnvelope();
         var result = await _checkout.SimulateSuccessAsync(orderCode, userId, cancellationToken);
         return result.Code == "PAYMENT_SIMULATION_DISABLED" 
-            ? NotFound(new { success = false, code = "PAYMENT_SIMULATION_DISABLED", message = "Môi trường mô phỏng thanh toán đã bị vô hiệu hóa.", error = new { code = "PAYMENT_SIMULATION_DISABLED", message = "Môi trường mô phỏng thanh toán đã bị vô hiệu hóa." } }) 
+            ? NotFound(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Payment Simulation Disabled",
+                status = StatusCodes.Status404NotFound,
+                success = false, 
+                code = "PAYMENT_SIMULATION_DISABLED", 
+                message = "Môi trường mô phỏng thanh toán đã bị vô hiệu hóa.", 
+                detail = "Môi trường mô phỏng thanh toán đã bị vô hiệu hóa.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "PAYMENT_SIMULATION_DISABLED", message = "Môi trường mô phỏng thanh toán đã bị vô hiệu hóa." } 
+            }) 
             : Respond(result, notFound: true);
     }
 
@@ -82,9 +94,15 @@ public class PaymentsController : ControllerBase
 
     private IActionResult UnauthorizedEnvelope() => Unauthorized(new
     {
+        type = "https://tools.ietf.org/html/rfc9457",
+        title = "Unauthorized",
+        status = StatusCodes.Status401Unauthorized,
         success = false,
         code = "UNAUTHORIZED",
         message = "User is not authenticated.",
+        detail = "User is not authenticated.",
+        instance = HttpContext.Request.Path.Value,
+        traceId = HttpContext.TraceIdentifier,
         error = new { code = "UNAUTHORIZED", message = "User is not authenticated." }
     });
 
@@ -97,11 +115,59 @@ public class PaymentsController : ControllerBase
                 status = result.Status, ticketId = result.TicketId, refundStatus = result.RefundStatus
             }});
         if (notFound && result.Code == "PAYMENT_NOT_FOUND")
-            return NotFound(new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
+            return NotFound(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = result.Code,
+                status = StatusCodes.Status404NotFound,
+                success = false, 
+                code = result.Code, 
+                message = result.Message, 
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = result.Code, message = result.Message } 
+            });
         if (result.Code == "PAYMENT_FORBIDDEN")
-            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
+            return StatusCode(StatusCodes.Status403Forbidden, new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = result.Code,
+                status = StatusCodes.Status403Forbidden,
+                success = false, 
+                code = result.Code, 
+                message = result.Message, 
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = result.Code, message = result.Message } 
+            });
         if (result.Code == "PAYMENT_PROVIDER_UNAVAILABLE")
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
-        return BadRequest(new { success = false, code = result.Code, message = result.Message, error = new { code = result.Code, message = result.Message } });
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = result.Code,
+                status = StatusCodes.Status503ServiceUnavailable,
+                success = false, 
+                code = result.Code, 
+                message = result.Message, 
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = result.Code, message = result.Message } 
+            });
+        return BadRequest(new 
+        { 
+            type = "https://tools.ietf.org/html/rfc9457",
+            title = result.Code,
+            status = StatusCodes.Status400BadRequest,
+            success = false, 
+            code = result.Code, 
+            message = result.Message, 
+            detail = result.Message,
+            instance = HttpContext.Request.Path.Value,
+            traceId = HttpContext.TraceIdentifier,
+            error = new { code = result.Code, message = result.Message } 
+        });
     }
 }

@@ -57,6 +57,34 @@ public class GlobalExceptionMiddleware
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(response));
         }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid argument at {Path} (TraceId: {TraceId}): {Message}", context.Request.Path, context.TraceIdentifier, ex.Message);
+            context.Response.ContentType = "application/problem+json";
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+
+            var response = new
+            {
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Bad Request",
+                status = (int)HttpStatusCode.BadRequest,
+                success = false,
+                message = ex.Message,
+                code = "INVALID_ARGUMENT",
+                traceId = context.TraceIdentifier,
+                instance = context.Request.Path.Value,
+                errors = new[] { ex.Message },
+                error = new
+                {
+                    code = "INVALID_ARGUMENT",
+                    message = ex.Message,
+                    traceId = context.TraceIdentifier,
+                    details = new[] { ex.Message }
+                }
+            };
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An unhandled exception occurred at {Path} (TraceId: {TraceId}): {Message}",

@@ -92,6 +92,15 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
     }
 
     [Fact]
+    public async Task SearchAsync_WhenCursorIsInvalid_ThrowsArgumentException()
+    {
+        var catalog = new CustomerEventCatalogAdapter(_context, new UtcTimePolicy());
+        var act = () => catalog.SearchAsync(new GetEventsQuery(Cursor: "invalid-cursor-format-!@#$"), CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*Cursor không hợp lệ*");
+    }
+
+    [Fact]
     public async Task PublicDetail_DoesNotExposeDeletedOrAlreadyStartedEvents()
     {
         var deleted = CreateEvent("Deleted", DateTime.UtcNow.AddDays(2));
@@ -195,6 +204,40 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         (await _context.Seats.AsNoTracking().SingleAsync()).Status.Should().Be(SeatStatus.Locked);
         notifications.Verify(x => x.NotifyOwnSeatLockChanged(
             user.Id, @event.Id, seat.Id, "Locked", It.IsAny<string>(), It.IsAny<DateTime>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReservationOperations_ReserveAndRelease_UsesNormalizedLockKeyFormatMatchingPaymentWebhook()
+    {
+        var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
+        var @event = CreateEvent("LockKeyFormatConcert", DateTime.UtcNow.AddDays(2));
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+
+        var seat = await _context.Seats.SingleAsync();
+        var locks = new Mock<IDistributedLockService>();
+        locks.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestDistributedLockLease());
+
+        var operations = new ReservationOperations(
+            _context, locks.Object, Mock.Of<ISeatNotificationService>(), Mock.Of<IReservationExpiryScheduler>(),
+            Options.Create(new ReservationOptions()), NullLogger<ReservationOperations>.Instance);
+
+        // Act 1: Reserve
+        var reserveResult = await operations.ReserveAsync(@event.Id, seat.Id, user.Id, seat.Version, CancellationToken.None);
+        reserveResult.Success.Should().BeTrue();
+
+        // Assert 1: Lock key format must be seat:lock:{seatId:N} (exact 32-hex character lowercase, no dashes)
+        var expectedSeatLockKey = $"seat:lock:{seat.Id:N}";
+        locks.Verify(x => x.AcquireLockAsync(expectedSeatLockKey, It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        // Act 2: Release
+        var releaseResult = await operations.ReleaseAsync(reserveResult.TicketId!.Value, user.Id, "CustomerCancelled", CancellationToken.None);
+        releaseResult.Success.Should().BeTrue();
+
+        // Assert 2: Release lock key format must also be seat:lock:{seatId:N}
+        locks.Verify(x => x.AcquireLockAsync(expectedSeatLockKey, It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]

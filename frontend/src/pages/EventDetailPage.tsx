@@ -129,6 +129,7 @@ export default function EventDetailPage() {
   );
 
   const handleSeatClick = (seat: Seat) => {
+    if (locking) return;
     const isLockedByMe = Boolean(seat.isLockedByCurrentUser || seat.isLockedByMe);
     if (seat.status !== 0 && !isLockedByMe) return; // Allow available seats or seats locked by current user
     if (isHydrating) return;
