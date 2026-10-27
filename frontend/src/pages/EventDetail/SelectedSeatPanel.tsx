@@ -24,12 +24,12 @@ export const SelectedSeatPanel: React.FC<SelectedSeatPanelProps> = ({
 }) => {
   return (
     <div className="surface-panel p-5 sm:p-6 relative overflow-hidden">
-      <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+      <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
         <div className="w-6 h-6 rounded-lg bg-surface-3 flex items-center justify-center text-brand-primary">
           <Check className="w-3.5 h-3.5" />
         </div>
         Thông Tin Ghế Đang Chọn
-      </h3>
+      </h2>
 
       {selectedSeat ? (
         <div className="space-y-4 animate-slide-up">

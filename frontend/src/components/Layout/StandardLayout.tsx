@@ -21,6 +21,10 @@ export default function StandardLayout() {
   };
 
   useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
     if (!mobileOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -121,9 +125,45 @@ export default function StandardLayout() {
           </header>
           {mobileOpen && (
             <nav ref={mobileNavRef} aria-label="Điều hướng chính" className="md:hidden mt-2 surface-raised p-3 flex flex-col gap-1 pointer-events-auto overscroll-contain">
-              <Link onClick={() => setMobileOpen(false)} to="/" className="p-3 rounded-xl hover:bg-surface-2 flex items-center gap-2"><Calendar className="w-4 h-4" /> Sự kiện</Link>
-              {isAuth && <Link onClick={() => setMobileOpen(false)} to="/my-tickets" className="p-3 rounded-xl hover:bg-surface-2 flex items-center gap-2"><Ticket className="w-4 h-4" /> Vé của tôi</Link>}
-              {isAuth && <Link onClick={() => setMobileOpen(false)} to="/profile" className="p-3 rounded-xl hover:bg-surface-2">Hồ sơ</Link>}
+              <Link onClick={() => setMobileOpen(false)} to="/" className="p-3 rounded-xl hover:bg-surface-2 flex items-center gap-2">
+                <Calendar className="w-4 h-4" /> Sự kiện
+              </Link>
+              {isAuth && (
+                <Link onClick={() => setMobileOpen(false)} to="/my-tickets" className="p-3 rounded-xl hover:bg-surface-2 flex items-center gap-2">
+                  <Ticket className="w-4 h-4" /> Vé của tôi
+                </Link>
+              )}
+              {isAuth && (
+                <Link onClick={() => setMobileOpen(false)} to="/profile" className="p-3 rounded-xl hover:bg-surface-2">
+                  Hồ sơ
+                </Link>
+              )}
+              {isAdmin() && (
+                <Link onClick={() => setMobileOpen(false)} to="/admin" className="p-3 rounded-xl hover:bg-surface-2 flex items-center gap-2 text-brand-primary font-semibold">
+                  <ShieldCheck className="w-4 h-4" /> Quản trị
+                </Link>
+              )}
+              {isAuth ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    void handleLogout();
+                  }}
+                  className="p-3 rounded-xl hover:bg-danger/10 text-danger flex items-center gap-2 text-left font-semibold cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" /> Đăng xuất
+                </button>
+              ) : (
+                <div className="pt-2 border-t border-border-subtle flex flex-col gap-2">
+                  <Link onClick={() => setMobileOpen(false)} to="/login" className="p-3 rounded-xl hover:bg-surface-2 text-center text-sm font-medium">
+                    Đăng nhập
+                  </Link>
+                  <Link onClick={() => setMobileOpen(false)} to="/register" className="p-3 rounded-xl bg-brand-primary text-white text-center text-sm font-bold">
+                    Đăng ký
+                  </Link>
+                </div>
+              )}
             </nav>
           )}
         </div>

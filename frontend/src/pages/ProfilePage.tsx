@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Shield, Loader2 } from 'lucide-react';
@@ -18,6 +19,7 @@ import { RefundBankAccountForm } from './Profile/RefundBankAccountForm';
 import { RefundBankAccountFormValues } from './Profile/profileSchemas';
 
 export default function ProfilePage() {
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -108,6 +110,19 @@ export default function ProfilePage() {
     };
   }, [refreshProfile]);
 
+  useEffect(() => {
+    if (!loading && !loadError && searchParams.get('refundBankAccount') === '1') {
+      const el = document.getElementById('refund-bank-title');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const input = document.getElementById('refund-bank-bin');
+        if (input) {
+          setTimeout(() => input.focus(), 300);
+        }
+      }
+    }
+  }, [loading, loadError, searchParams]);
+
   const onUpdateProfile = async (values: ProfileFormValues) => {
     try {
       const res = await api.put('/api/users/profile', {
@@ -197,7 +212,7 @@ export default function ProfilePage() {
           <Shield className="w-3.5 h-3.5 text-brand-primary" />
           <span className="text-xs font-bold text-brand-primary uppercase tracking-wider">Cài Đặt Tài Khoản</span>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">Hồ Sơ Cá Nhân</h2>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">Hồ Sơ Cá Nhân</h1>
         <p className="text-text-secondary text-xs sm:text-sm">Quản lý thông tin cá nhân và cài đặt bảo mật tài khoản của bạn.</p>
       </div>
 

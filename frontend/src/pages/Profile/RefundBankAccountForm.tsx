@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Banknote, Loader2, Save, Trash2 } from 'lucide-react';
@@ -15,10 +15,18 @@ interface RefundBankAccountFormProps {
 
 export function RefundBankAccountForm({ bankBin, accountName, maskedAccount, onSave, onDelete, isSubmitting }: RefundBankAccountFormProps) {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<RefundBankAccountFormValues>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<RefundBankAccountFormValues>({
     resolver: zodResolver(refundBankAccountSchema),
     defaultValues: { bankBin: bankBin ?? '', accountName: accountName ?? '', accountNumber: '' }
   });
+
+  useEffect(() => {
+    reset({
+      bankBin: bankBin ?? '',
+      accountName: accountName ?? '',
+      accountNumber: '',
+    });
+  }, [bankBin, accountName, maskedAccount, reset]);
 
   const fieldClass = 'w-full rounded-lg border border-border-subtle bg-surface-2 px-3 py-2.5 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-brand-primary';
 

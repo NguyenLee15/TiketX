@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, MapPin, Sparkles } from 'lucide-react';
 import { EventDetail } from '../../types';
 import { formatDate } from '../../utils/formatters';
+import { ResilientImage } from '../../components/ResilientImage';
 
 interface EventInfoCardProps {
   event: EventDetail;
@@ -11,7 +12,13 @@ export const EventInfoCard: React.FC<EventInfoCardProps> = ({ event }) => {
   return (
     <div className="surface-panel p-5 sm:p-6 relative overflow-hidden">
       {event.imageUrl && (
-        <img src={event.imageUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-10" />
+        <ResilientImage
+          src={event.imageUrl}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover opacity-10 pointer-events-none"
+          fallbackClassName="absolute inset-0 h-full w-full bg-surface-3 opacity-10 pointer-events-none"
+        />
       )}
       
       <div className="relative z-10 space-y-3.5">

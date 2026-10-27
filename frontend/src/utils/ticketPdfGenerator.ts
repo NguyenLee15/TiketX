@@ -15,6 +15,17 @@ export interface TicketPdfData {
   status: string;
 }
 
+export function toPdfSafeText(input: string | null | undefined): string {
+  if (!input) return '';
+  return input
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, (match) => (match === 'đ' ? 'd' : 'D'))
+    .replace(/[—–]/g, '-')
+    .replace(/[^\x20-\x7E]/g, '')
+    .trim();
+}
+
 export const getQrImageDataUrl = (ticketId: string): Promise<string> => {
   return new Promise((resolve) => {
     const svgEl = document.getElementById(`qr-svg-${ticketId}`);
@@ -82,22 +93,25 @@ export async function generateTicketPdf(ticket: TicketPdfData): Promise<void> {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
-    const displayTitle = ticket.eventTitle.length > 36 ? ticket.eventTitle.substring(0, 33) + '...' : ticket.eventTitle;
+    const safeTitle = toPdfSafeText(ticket.eventTitle);
+    const displayTitle = safeTitle.length > 36 ? safeTitle.substring(0, 33) + '...' : safeTitle;
     doc.text(displayTitle, 15, 28);
 
     // Event Date & Location
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(209, 213, 219);
-    const dateStr = new Intl.DateTimeFormat('vi-VN', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(new Date(ticket.eventDate));
-    doc.text(`Thoi gian: ${dateStr}`, 15, 35);
+    const dateObj = new Date(ticket.eventDate);
+    const safeDateStr = Number.isNaN(dateObj.getTime())
+      ? toPdfSafeText(ticket.eventDate)
+      : `${dateObj.getUTCHours().toString().padStart(2, '0')}:${dateObj.getUTCMinutes().toString().padStart(2, '0')} - ${dateObj.getUTCDate().toString().padStart(2, '0')}/${(dateObj.getUTCMonth() + 1).toString().padStart(2, '0')}/${dateObj.getUTCFullYear()}`;
+    doc.text(`Thoi gian: ${safeDateStr}`, 15, 35);
 
-    const locationStr = (ticket.venueName || ticket.location).length > 45 
-      ? (ticket.venueName || ticket.location).substring(0, 42) + '...' 
-      : (ticket.venueName || ticket.location);
+    const rawLocation = ticket.venueName || ticket.location;
+    const safeLocation = toPdfSafeText(rawLocation);
+    const locationStr = safeLocation.length > 45 
+      ? safeLocation.substring(0, 42) + '...' 
+      : safeLocation;
     doc.text(`Dia diem: ${locationStr}`, 15, 41);
 
     // Seat Details Card
@@ -116,7 +130,7 @@ export async function generateTicketPdf(ticket: TicketPdfData): Promise<void> {
     doc.setFontSize(10.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
-    doc.text(ticket.row, 20, 59);
+    doc.text(toPdfSafeText(ticket.row), 20, 59);
     doc.text(ticket.number.toString(), 45, 59);
 
     const tierName = ticket.tier === 1 ? 'VIP' : ticket.tier === 2 ? 'ECONOMY' : 'STANDARD';
