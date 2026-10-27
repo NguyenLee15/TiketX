@@ -166,8 +166,11 @@ export default function MyTicketsPage() {
       }
       toast.error(response.data?.message || 'Không thể tạo liên kết thanh toán cho vé này.');
     } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { message?: string } } };
+      const apiErr = err as { response?: { data?: { message?: string; code?: string } } };
       toast.error(apiErr.response?.data?.message || 'Không thể kết nối đến máy chủ thanh toán.');
+      if (apiErr.response?.data?.code === 'RESERVATION_EXPIRED' || apiErr.response?.data?.code === 'PAYMENT_NOT_PENDING') {
+        void queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      }
     } finally {
       setResumingTicketId(null);
     }

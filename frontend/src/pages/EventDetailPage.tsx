@@ -34,15 +34,17 @@ export default function EventDetailPage() {
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [lockExpiresAt, setLockExpiresAt] = useState<string | null>(null);
 
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, isHydrating } = useAuthStore();
   const navigate = useNavigate();
   const bookingIdempotencyKeyRef = useRef<string | null>(null);
+  const lockingSeatRef = useRef<Seat | null>(null);
 
   // Reset seat selection & checkout states when switching between event routes
   useEffect(() => {
     setSelectedSeat(null);
     setIsCheckoutOpen(false);
     bookingIdempotencyKeyRef.current = null;
+    lockingSeatRef.current = null;
     const cleared = clearCheckoutState();
     setTicketId(cleared.ticketId);
     setLockExpiresAt(cleared.lockExpiresAt);
@@ -51,6 +53,7 @@ export default function EventDetailPage() {
   // Lock expiration callback
   const handleLockExpire = useCallback(() => {
     toast.error('Hạn giữ chỗ 5 phút đã hết. Ghế đã được tự động mở khóa!', { duration: 5000 });
+    lockingSeatRef.current = null;
     setSelectedSeat(null);
     setIsCheckoutOpen(false);
     bookingIdempotencyKeyRef.current = null;
@@ -76,16 +79,40 @@ export default function EventDetailPage() {
         void refetchEvent();
         return prev;
       }
+      const isLockedByMe = Boolean(
+        payload.isLockedByCurrentUser ||
+        payload.isLockedByMe ||
+        lockingSeatRef.current?.id === payload.seatId ||
+        (user?.id && (payload.reservationOwnerId === user.id || (payload as Record<string, unknown>).ReservationOwnerId === user.id))
+      );
       const newSeats = seats.map(seat => 
-        seat.id === payload.seatId ? { ...seat, status: payload.status, version: payload.version ?? seat.version, isLockedByMe: payload.isLockedByCurrentUser ?? payload.isLockedByMe } : seat
+        seat.id === payload.seatId ? { ...seat, status: payload.status, version: payload.version ?? seat.version, isLockedByMe } : seat
       );
       return { ...prev, seats: newSeats };
     });
 
     // If our currently selected seat was locked or bought by someone else
     setSelectedSeat(prev => {
-      if (prev?.id === payload.seatId && !shouldPreserveSeatSelection(prev.id, payload, user?.id)) {
-        return null;
+      const activeSeat = prev ?? (lockingSeatRef.current?.id === payload.seatId ? lockingSeatRef.current : null);
+      if (activeSeat?.id === payload.seatId) {
+        const isMySeat = Boolean(
+          lockingSeatRef.current?.id === payload.seatId ||
+          activeSeat.isLockedByMe ||
+          activeSeat.isLockedByCurrentUser ||
+          shouldPreserveSeatSelection(activeSeat.id, payload, user?.id)
+        );
+
+        if (!isMySeat) {
+          return null;
+        }
+
+        return {
+          ...activeSeat,
+          status: payload.status,
+          version: payload.version ?? activeSeat.version,
+          isLockedByMe: true,
+          isLockedByCurrentUser: true,
+        };
       }
       return prev;
     });
@@ -104,6 +131,7 @@ export default function EventDetailPage() {
   const handleSeatClick = (seat: Seat) => {
     const isLockedByMe = Boolean(seat.isLockedByCurrentUser || seat.isLockedByMe);
     if (seat.status !== 0 && !isLockedByMe) return; // Allow available seats or seats locked by current user
+    if (isHydrating) return;
     if (!isAuthenticated()) {
       toast('Vui lòng đăng nhập để chọn ghế và đặt vé.', { icon: '🔐' });
       navigate('/login', { state: { from: location } });
@@ -123,6 +151,7 @@ export default function EventDetailPage() {
   const handleBookTicket = async () => {
     if (!selectedSeat || !event) return;
     setLocking(true);
+    lockingSeatRef.current = selectedSeat;
 
     if (!bookingIdempotencyKeyRef.current) {
       bookingIdempotencyKeyRef.current = typeof crypto !== 'undefined' && crypto.randomUUID
@@ -147,6 +176,15 @@ export default function EventDetailPage() {
       if (res.data.success) {
         bookingIdempotencyKeyRef.current = null;
         setTicketId(res.data.data.ticketId);
+        const lockedSeat = selectedSeat ?? lockingSeatRef.current;
+        if (lockedSeat) {
+          setSelectedSeat({
+            ...lockedSeat,
+            status: 1,
+            isLockedByMe: true,
+            isLockedByCurrentUser: true,
+          });
+        }
         
         // Sync timer with server expiresAt
         if (res.data.data.expiresAt) {
@@ -254,6 +292,7 @@ export default function EventDetailPage() {
           expiresAt={lockExpiresAt || undefined}
            onClose={() => {
             setIsCheckoutOpen(false);
+            lockingSeatRef.current = null;
             const cleared = clearCheckoutState();
             setTicketId(cleared.ticketId);
             setLockExpiresAt(cleared.lockExpiresAt);

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Check, Clock, Loader2, ArrowRight, ShieldAlert, Zap } from 'lucide-react';
 import { Seat } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
@@ -64,20 +65,30 @@ export const SelectedSeatPanel: React.FC<SelectedSeatPanelProps> = ({
             </div>
           )}
 
-          <button
-            onClick={onBookTicket}
-            disabled={locking}
-            className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
-          >
-            {locking ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <span>Khóa Ghế & Đặt Vé</span>
-                <ArrowRight className="ml-1.5 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </>
-            )}
-          </button>
+          {Boolean(selectedSeat.isLockedByCurrentUser || selectedSeat.isLockedByMe) ? (
+            <Link
+              to="/my-tickets"
+              className="w-full py-3.5 bg-warning hover:bg-warning/90 text-surface-base font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-warning"
+            >
+              <span>Ghế Đang Giữ - Tiếp Tục Thanh Toán</span>
+              <ArrowRight className="ml-1.5 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          ) : (
+            <button
+              onClick={onBookTicket}
+              disabled={locking}
+              className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
+            >
+              {locking ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <span>Khóa Ghế & Đặt Vé</span>
+                  <ArrowRight className="ml-1.5 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+          )}
 
           <div className="flex items-start gap-2 bg-warning/10 p-3 rounded-lg border border-warning/20 text-warning text-[11px] font-medium leading-relaxed">
             <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />

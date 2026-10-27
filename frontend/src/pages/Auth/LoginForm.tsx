@@ -50,7 +50,7 @@ export default function LoginForm({ serverError, onSubmit, onClearServerError }:
 
   const fillDemoCredentials = (email: string) => {
     setValue('email', email, { shouldValidate: true });
-    setValue('password', 'Admin@123', { shouldValidate: true });
+    setValue('password', 'Admin@123456', { shouldValidate: true });
     onClearServerError();
   };
 
