@@ -365,7 +365,8 @@ app.Use(async (context, next) =>
         string.IsNullOrWhiteSpace(context.Request.Headers.Authorization);
     var exempt = context.Request.Path.StartsWithSegments("/api/auth/login") ||
         context.Request.Path.StartsWithSegments("/api/auth/register") ||
-        context.Request.Path.StartsWithSegments("/api/payments/webhook");
+        context.Request.Path.StartsWithSegments("/api/payments/webhook") ||
+        context.Request.Path.StartsWithSegments("/hubs");
     if (isUnsafe && isCookieAuthenticated && !exempt && !CookieAuthenticationSupport.HasValidCsrfToken(
             context.Request.Cookies[cookieSettings.CsrfCookieName], context.Request.Headers["X-CSRF-TOKEN"].FirstOrDefault()))
     {

@@ -8,7 +8,12 @@
       "launchUrl": "swagger",
       "applicationUrl": "http://localhost:5000",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Jwt__Key": "TickeX_Local_Jwt_Signing_Key_2026_AtLeast32Chars",
+        "TicketSecurity__SecretKeys__key-2026-v1": "TickeX_Local_Ticket_Signing_Key_2026_AtLeast32Chars",
+        "SEED_ADMIN_PASSWORD": "Admin@123456",
+        "RabbitMQ__UserName": "tickex_local",
+        "RabbitMQ__Password": "TickeX_Local_Rabbit_2026!Strong"
       }
     }
   }

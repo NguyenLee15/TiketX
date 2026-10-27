@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { SeatStatus, SeatStatusChangedPayload } from '../types';
 import { API_BASE_URL } from '../services/api';
+import { readCsrfToken } from '../utils/csrf';
 
 export type SeatConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
@@ -22,9 +23,11 @@ export const useSeatSignalR = (
     }
 
     let active = true;
+    const csrfToken = readCsrfToken();
     let connection: signalR.HubConnection | null = new signalR.HubConnectionBuilder()
       .withUrl(`${API_BASE_URL}/hubs/seat`, {
         withCredentials: true,
+        headers: csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : undefined,
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .build();

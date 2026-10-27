@@ -10,15 +10,16 @@ interface EventInfoCardProps {
 
 export const EventInfoCard: React.FC<EventInfoCardProps> = ({ event }) => {
   return (
-    <div className="surface-panel p-5 sm:p-6 relative overflow-hidden">
+    <div className="surface-panel p-5 sm:p-6 relative overflow-hidden space-y-4">
       {event.imageUrl && (
-        <ResilientImage
-          src={event.imageUrl}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover opacity-10 pointer-events-none"
-          fallbackClassName="absolute inset-0 h-full w-full bg-surface-3 opacity-10 pointer-events-none"
-        />
+        <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden border border-border-subtle bg-surface-2 shadow-md">
+          <ResilientImage
+            src={event.imageUrl}
+            alt={event.title}
+            className="w-full h-full object-cover"
+            fallbackClassName="w-full h-full flex items-center justify-center bg-surface-3 text-text-tertiary"
+          />
+        </div>
       )}
       
       <div className="relative z-10 space-y-3.5">
