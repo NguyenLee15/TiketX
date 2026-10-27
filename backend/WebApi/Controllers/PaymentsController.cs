@@ -15,7 +15,7 @@ public class PaymentsController : ControllerBase
     private readonly ICustomerCheckoutOperations _checkout;
     public PaymentsController(ICustomerCheckoutOperations checkout) => _checkout = checkout;
 
-    public record CreatePaymentLinkRequest(Guid TicketId, string? ReturnUrl = null, string? CancelUrl = null);
+    public record CreatePaymentLinkRequest(Guid TicketId);
 
     [Authorize]
     [HttpGet("status/{orderCode:long}")]

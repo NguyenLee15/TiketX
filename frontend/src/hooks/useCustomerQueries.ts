@@ -294,13 +294,13 @@ export function useMyTicketsCursorQuery(cursor?: string, limit = 10, status?: st
       if (status && status !== 'All') params.set('status', status);
       const response = await api.get(`/api/tickets/my-tickets/cursor?${params.toString()}`, { signal });
       if (!response.data.success) {
-        throw new Error(response.data.message || 'KhÃ´ng thá»ƒ táº£i danh sÃ¡ch vÃ©');
+        throw new Error(response.data.message || 'Không thể tải danh sách vé');
       }
 
       const parsed = ticketCursorResponseSchema.safeParse(response.data?.data);
       if (!parsed.success) {
         const issues = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
-        throw new Error(`Dá»¯ liá»‡u cursor vÃ© khÃ´ng há»£p lá»‡ tá»« mÃ¡y chá»§: ${issues}`);
+        throw new Error(`Dữ liệu cursor vé không hợp lệ từ máy chủ: ${issues}`);
       }
 
       return {

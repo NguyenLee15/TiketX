@@ -24,7 +24,7 @@ export default function AdminScanTicketPage() {
 
     try {
       // Validate structure before making HTTP request
-      if (!trimmed.includes('.') && !trimmed.startsWith('{')) {
+      if (!trimmed.includes('.')) {
         playAudioFeedback('failure');
         const result: ScanResult = {
           status: 'invalid',

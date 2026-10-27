@@ -74,13 +74,9 @@ export default function CheckoutModal({
       try {
         setLoadingPayment(true);
         setPaymentInitError(null);
-        const returnUrl = `${window.location.origin}/payment/result`;
-        const cancelUrl = `${window.location.origin}/payment/result`;
         
         const response = await api.post('/api/payments/create-link', {
           ticketId,
-          returnUrl,
-          cancelUrl,
         }, { signal: controller.signal });
 
         if (isMounted && response.data.success) {
