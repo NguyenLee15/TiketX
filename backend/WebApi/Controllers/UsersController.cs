@@ -2,6 +2,7 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TickeX.Application.Users.Commands;
 using TickeX.Application.Users.Queries;
 using TickeX.WebApi.Filters;
@@ -11,6 +12,7 @@ namespace TickeX.WebApi.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[EnableRateLimiting("BookingPolicy")]
 public class UsersController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -54,6 +56,7 @@ public class UsersController : ControllerBase
 
     [HttpPost("change-password")]
     [Idempotent]
+    [EnableRateLimiting("AuthPolicy")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken = default)
     {
         var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -71,6 +74,7 @@ public class UsersController : ControllerBase
 
     [HttpPut("me/refund-bank-account")]
     [Idempotent]
+    [EnableRateLimiting("AuthPolicy")]
     public async Task<IActionResult> SaveRefundBankAccount([FromBody] SaveRefundBankAccountRequest request, CancellationToken cancellationToken = default)
     {
         var userId = GetAuthenticatedUserId();

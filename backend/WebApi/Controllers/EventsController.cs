@@ -25,6 +25,7 @@ public class EventsController : ControllerBase
 
     [AllowAnonymous]
     [HttpGet]
+    [EnableRateLimiting("PublicReadPolicy")]
     public async Task<IActionResult> GetEvents([FromQuery] GetEventsQuery query, CancellationToken cancellationToken = default)
     {
         try
@@ -40,6 +41,7 @@ public class EventsController : ControllerBase
 
     [HttpGet("admin-all")]
     [Authorize(Roles = "Admin")]
+    [EnableRateLimiting("AdminPolicy")]
     public async Task<IActionResult> GetAdminEvents([FromQuery] GetAdminEventsQuery query, CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(query, cancellationToken);
@@ -48,6 +50,7 @@ public class EventsController : ControllerBase
 
     [AllowAnonymous]
     [HttpGet("{id}")]
+    [EnableRateLimiting("PublicReadPolicy")]
     public async Task<IActionResult> GetEvent(Guid id, CancellationToken cancellationToken = default)
     {
         Guid? currentUserId = null;

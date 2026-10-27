@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TickeX.Application.Interfaces;
 using TickeX.WebApi.Filters;
 
@@ -9,6 +10,7 @@ namespace TickeX.WebApi.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/[controller]")]
+[EnableRateLimiting("BookingPolicy")]
 public sealed class ReservationsController : ControllerBase
 {
     private readonly IReservationOperations _operations;

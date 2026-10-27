@@ -29,6 +29,7 @@ public static class RateLimitingExtensions
             AddPolicy(options, "AuthPolicy", 15);
             AddPolicy(options, "BookingPolicy", 30);
             AddPolicy(options, "AdminPolicy", 60);
+            AddPolicy(options, "PublicReadPolicy", 120);
         });
 
         return services;

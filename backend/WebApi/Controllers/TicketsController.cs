@@ -13,6 +13,7 @@ namespace TickeX.WebApi.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[EnableRateLimiting("BookingPolicy")]
 public class TicketsController : ControllerBase
 {
     private readonly IMediator _mediator;
