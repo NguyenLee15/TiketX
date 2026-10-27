@@ -4,6 +4,7 @@ import { Event } from '../../../types';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import { EventStatusBadge } from './EventStatusBadge';
 import { AdminEventActions } from './AdminEventActions';
+import { ResilientImage } from '../../../components/ResilientImage';
 
 interface AdminEventsTableProps {
   events: Event[];
@@ -55,11 +56,11 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                     <tr key={event.id} className="hover:bg-surface-2/20 transition-colors group">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <img 
+                          <ResilientImage 
                             src={event.imageUrl} 
                             alt={event.title} 
-                            width="48"
-                            height="48"
+                            width={48}
+                            height={48}
                             loading="lazy"
                             className="w-12 h-12 rounded-xl object-cover shrink-0 border border-border-subtle group-hover:border-brand-primary/40 transition-colors shadow-sm"
                           />
@@ -122,16 +123,16 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
             <div key={event.id} className="surface-panel p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <img 
+                  <ResilientImage 
                     src={event.imageUrl} 
                     alt={event.title} 
-                    width="48"
-                    height="48"
+                    width={48}
+                    height={48}
                     loading="lazy"
                     className="w-12 h-12 rounded-xl object-cover shrink-0 border border-border-subtle"
                   />
                   <div className="min-w-0">
-                    <h3 className="font-bold text-white text-sm truncate">{event.title}</h3>
+                    <h2 className="font-bold text-white text-sm truncate">{event.title}</h2>
                     <p className="text-xs text-text-secondary">{event.category} • {event.totalSeats} Ghế</p>
                   </div>
                 </div>
@@ -146,7 +147,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-text-tertiary">Thời gian:</span>
                   <span className="text-white">
-                    {formatDate(event.date, { dateStyle: 'medium', hour: '2-digit', minute: '2-digit' })}
+                    {formatDate(event.date, { dateStyle: 'medium', timeStyle: 'short' })}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">

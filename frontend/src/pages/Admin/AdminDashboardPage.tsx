@@ -69,6 +69,26 @@ export default function AdminDashboardPage() {
     return () => requestRef.current?.abort();
   }, [fetchStats]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchStats();
+      }
+    }, 60_000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchStats();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchStats]);
+
   if (loading) {
     return (
       <div className="space-y-6 pb-8 animate-pulse max-w-7xl mx-auto">
