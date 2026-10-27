@@ -16,10 +16,10 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
   };
 
   const getSeatTierInfo = (seat: Seat) => {
-    if (seat.tier === 1 || seat.row === 'A' || seat.row === 'B') {
+    if (seat.tier === 1) {
       return { name: 'VIP', color: 'amber', isVip: true };
     }
-    if (seat.tier === 2 || seat.row === 'E') {
+    if (seat.tier === 2) {
       return { name: 'Economy (Tiết kiệm)', color: 'emerald', isVip: false };
     }
     return { name: 'Standard (Tiêu chuẩn)', color: 'indigo', isVip: false };
@@ -28,6 +28,10 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
   const getSeatColor = (seat: Seat, isSelected: boolean) => {
     if (isSelected) {
       return 'bg-brand-primary border-brand-primary text-white scale-105 z-20 ring-2 ring-brand-accent/60';
+    }
+    const isLockedByMe = seat.isLockedByCurrentUser || seat.isLockedByMe;
+    if (isLockedByMe) {
+      return 'bg-warning/25 border-warning text-warning hover:border-warning hover:bg-warning/35 cursor-pointer ring-1 ring-warning/50';
     }
     if (seat.status === 1) {
       return 'bg-warning/20 border-warning/50 text-warning/50 cursor-not-allowed opacity-60'; // Locked
@@ -77,27 +81,39 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
       {/* Seat Matrix Grid */}
       <div className="flex flex-col gap-3 sm:gap-3.5 items-center flex-1 justify-center relative z-10 overflow-x-auto pb-3 hide-scrollbar">
         {sortedRowKeys.map(rowName => {
-          const isVip = rowName === 'A' || rowName === 'B';
+          const rowSeats = rows[rowName] || [];
+          const isVipRow = rowSeats.some(s => s.tier === 1);
           return (
             <div key={rowName} className="flex gap-2.5 sm:gap-4 items-center group/row">
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black shadow-inner ${
-                isVip ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40' : 'bg-surface-3 text-text-secondary border border-border-subtle'
+                isVipRow ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40' : 'bg-surface-3 text-text-secondary border border-border-subtle'
               }`}>
                 {rowName}
               </div>
               
               <div className="flex gap-1.5 sm:gap-2 md:gap-2.5">
-                {[...rows[rowName]].sort((a, b) => a.number - b.number).map((seat, index) => {
+                {[...rowSeats].sort((a, b) => a.number - b.number).map((seat, index) => {
                   const isSelected = selectedSeat?.id === seat.id;
+                  const isLockedByMe = Boolean(seat.isLockedByCurrentUser || seat.isLockedByMe);
+                  const isClickable = seat.status === 0 || isLockedByMe;
                   const tierInfo = getSeatTierInfo(seat);
+                  const statusLabel = isSelected
+                    ? 'đang chọn'
+                    : isLockedByMe
+                      ? 'đang được bạn giữ chỗ'
+                      : seat.status === 0
+                        ? 'còn trống'
+                        : seat.status === 1
+                          ? 'đang được người khác giữ'
+                          : 'đã bán';
                   return (
                     <button
                       key={seat.id}
                       type="button"
                       onClick={() => onSeatClick(seat)}
-                      disabled={seat.status !== 0}
+                      disabled={!isClickable}
                       aria-pressed={isSelected}
-                      aria-label={`Hàng ${seat.row}, ghế ${seat.number}, hạng ${tierInfo.name}, ${seat.status === 0 ? (isSelected ? 'đang chọn' : 'còn trống') : seat.status === 1 ? 'đang được giữ' : 'đã bán'}, giá ${formatVND(seat.price)}`}
+                      aria-label={`Hàng ${seat.row}, ghế ${seat.number}, hạng ${tierInfo.name}, ${statusLabel}, giá ${formatVND(seat.price)}`}
                       className={`w-11 h-11 sm:w-10 sm:h-10 md:w-9 md:h-9 rounded-lg border-2 flex items-center justify-center text-xs font-bold transition-[opacity,background-color,border-color] duration-150 ease-out relative group/seat focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 ${getSeatColor(seat, isSelected)}`}
                       style={{ animationDelay: `${(sortedRowKeys.indexOf(rowName) * 0.04) + (index * 0.015)}s` }}
                     >
@@ -105,7 +121,10 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
                       {isSelected && (
                         <Check className="w-2.5 h-2.5 text-white absolute -top-1 -right-1" aria-hidden="true" />
                       )}
-                      {!isSelected && seat.status === 1 && (
+                      {!isSelected && isLockedByMe && (
+                        <Lock className="w-2.5 h-2.5 text-warning absolute -top-1 -right-1" aria-hidden="true" />
+                      )}
+                      {!isSelected && !isLockedByMe && seat.status === 1 && (
                         <Lock className="w-2.5 h-2.5 text-warning/80 absolute -top-1 -right-1" aria-hidden="true" />
                       )}
                       {!isSelected && seat.status === 2 && (
@@ -121,7 +140,7 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
               </div>
 
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black shadow-inner ${
-                isVip ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40' : 'bg-surface-3 text-text-secondary border border-border-subtle'
+                isVipRow ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40' : 'bg-surface-3 text-text-secondary border border-border-subtle'
               }`}>
                 {rowName}
               </div>

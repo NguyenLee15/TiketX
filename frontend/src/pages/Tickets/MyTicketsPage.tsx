@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Ticket, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
+import { checkoutLinkResponseSchema } from '../../schemas/customerSchemas';
 import { TicketCard, TicketItemData } from './TicketCard';
 import { TicketFilterTabs, allowedTicketTabs, TicketTabType } from './TicketFilterTabs';
 import { TicketRefundModal } from './TicketRefundModal';
@@ -14,8 +15,11 @@ const PAGE_SIZE = 10;
 
 export default function MyTicketsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [resumingTicketId, setResumingTicketId] = useState<string | null>(null);
+  const [releasingTicketId, setReleasingTicketId] = useState<string | null>(null);
   const [refundCandidate, setRefundCandidate] = useState<TicketItemData | null>(null);
   const [cursorHistory, setCursorHistory] = useState<string[]>([]);
 
@@ -144,6 +148,54 @@ export default function MyTicketsPage() {
     }
   }, [queryClient]);
 
+  const handleResumePayment = useCallback(async (ticket: TicketItemData) => {
+    setResumingTicketId(ticket.id);
+    try {
+      const response = await api.post('/api/payments/create-link', { ticketId: ticket.id });
+      if (response.data?.success) {
+        const parsed = checkoutLinkResponseSchema.safeParse(response.data.data);
+        if (parsed.success && parsed.data.checkoutUrl) {
+          toast.success('Đang chuyển hướng tới cổng thanh toán…');
+          if (parsed.data.checkoutUrl.startsWith('http')) {
+            window.location.href = parsed.data.checkoutUrl;
+          } else {
+            navigate(parsed.data.checkoutUrl);
+          }
+          return;
+        }
+      }
+      toast.error(response.data?.message || 'Không thể tạo liên kết thanh toán cho vé này.');
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      toast.error(apiErr.response?.data?.message || 'Không thể kết nối đến máy chủ thanh toán.');
+    } finally {
+      setResumingTicketId(null);
+    }
+  }, [navigate]);
+
+  const handleReleaseReservation = useCallback(async (ticket: TicketItemData) => {
+    setReleasingTicketId(ticket.id);
+    try {
+      const response = await api.post(`/api/reservations/${ticket.id}/release`, {
+        reason: 'CustomerCancelledFromTicketPortal',
+      });
+      if (response.data?.success) {
+        toast.success('Đã hủy giữ chỗ và trả ghế thành công!');
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['tickets'] }),
+          queryClient.invalidateQueries({ queryKey: ['events'] }),
+        ]);
+      } else {
+        toast.error(response.data?.message || 'Không thể hủy giữ chỗ lúc này.');
+      }
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      toast.error(apiErr.response?.data?.message || 'Có lỗi xảy ra khi hủy giữ chỗ.');
+    } finally {
+      setReleasingTicketId(null);
+    }
+  }, [queryClient]);
+
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto space-y-4 pb-12 animate-pulse" aria-busy="true" aria-live="polite">
@@ -217,6 +269,10 @@ export default function MyTicketsPage() {
               ticket={ticket}
               refundingId={refundingId}
               onInitiateRefund={setRefundCandidate}
+              onResumePayment={handleResumePayment}
+              onReleaseReservation={handleReleaseReservation}
+              isResuming={resumingTicketId === ticket.id}
+              isReleasing={releasingTicketId === ticket.id}
             />
           ))}
         </div>

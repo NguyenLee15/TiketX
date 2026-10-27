@@ -102,7 +102,8 @@ export default function EventDetailPage() {
   );
 
   const handleSeatClick = (seat: Seat) => {
-    if (seat.status !== 0) return; // Only allow Available seats
+    const isLockedByMe = Boolean(seat.isLockedByCurrentUser || seat.isLockedByMe);
+    if (seat.status !== 0 && !isLockedByMe) return; // Allow available seats or seats locked by current user
     if (!isAuthenticated()) {
       toast('Vui lòng đăng nhập để chọn ghế và đặt vé.', { icon: '🔐' });
       navigate('/login', { state: { from: location } });

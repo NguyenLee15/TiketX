@@ -2,6 +2,7 @@ import React from 'react';
 import { Clock } from 'lucide-react';
 import { EventDetail, Seat } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { ResilientImage } from '../ResilientImage';
 
 interface CheckoutInvoiceProps {
   event: EventDetail;
@@ -18,8 +19,8 @@ export const CheckoutInvoice: React.FC<CheckoutInvoiceProps> = React.memo(({
   formatTime,
   status,
 }) => {
-  const getTierName = (tier: number, row: string) => {
-    if (tier === 1 || row === 'A' || row === 'B') return 'Hạng VIP';
+  const getTierName = (tier: number) => {
+    if (tier === 1) return 'Hạng VIP';
     if (tier === 2) return 'Tiết Kiệm';
     return 'Tiêu Chuẩn';
   };
@@ -29,7 +30,14 @@ export const CheckoutInvoice: React.FC<CheckoutInvoiceProps> = React.memo(({
       {/* Event Meta Header */}
       <div className="flex gap-4 p-4 rounded-2xl bg-surface-2/40 border border-border-subtle items-center">
         {event.imageUrl ? (
-          <img src={event.imageUrl} alt={event.title} className="w-16 h-16 rounded-xl object-cover border border-border-subtle shrink-0" />
+          <ResilientImage
+            src={event.imageUrl}
+            alt={event.title}
+            width="64"
+            height="64"
+            className="w-16 h-16 rounded-xl object-cover border border-border-subtle shrink-0"
+            fallbackClassName="w-16 h-16 rounded-xl bg-surface-3 flex items-center justify-center text-text-tertiary shrink-0 font-bold border border-border-subtle text-xs"
+          />
         ) : (
           <div className="w-16 h-16 rounded-xl bg-surface-3 flex items-center justify-center text-text-tertiary shrink-0 font-bold">
             TICKEX
@@ -60,7 +68,7 @@ export const CheckoutInvoice: React.FC<CheckoutInvoiceProps> = React.memo(({
         <div className="flex justify-between items-center text-text-secondary">
           <span>Vị trí ghế:</span>
           <span className="font-bold text-white bg-surface-3 px-2 py-0.5 rounded-md border border-border-subtle">
-            Hàng {seat.row} - Ghế {seat.number} ({getTierName(seat.tier, seat.row)})
+            Hàng {seat.row} - Ghế {seat.number} ({getTierName(seat.tier)})
           </span>
         </div>
 

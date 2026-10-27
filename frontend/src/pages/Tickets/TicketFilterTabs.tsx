@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const allowedTicketTabs = ['All', 'Paid', 'Used', 'RefundPending', 'Cancelled'] as const;
+export const allowedTicketTabs = ['All', 'Pending', 'Paid', 'Used', 'RefundPending', 'Cancelled'] as const;
 export type TicketTabType = (typeof allowedTicketTabs)[number];
 
 interface TicketFilterTabsProps {
@@ -10,6 +10,7 @@ interface TicketFilterTabsProps {
 
 const TAB_LABELS: Record<TicketTabType, string> = {
   All: 'Tất cả',
+  Pending: 'Chờ thanh toán',
   Paid: 'Còn hạn',
   Used: 'Đã qua cửa',
   RefundPending: 'Đang hoàn',

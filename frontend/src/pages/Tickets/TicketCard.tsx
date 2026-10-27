@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Loader2, Download, RotateCcw, Crown, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Calendar, MapPin, Loader2, Download, RotateCcw, Crown, CheckCircle2, XCircle, Clock, CreditCard, Ban } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { formatCurrency, formatDate, formatTime } from '../../utils/formatters';
 import { toast } from 'react-hot-toast';
@@ -36,14 +36,22 @@ interface TicketCardProps {
   ticket: TicketItemData;
   refundingId: string | null;
   onInitiateRefund: (ticket: TicketItemData) => void;
+  onResumePayment?: (ticket: TicketItemData) => void;
+  onReleaseReservation?: (ticket: TicketItemData) => void;
+  isResuming?: boolean;
+  isReleasing?: boolean;
 }
 
 export const TicketCard: React.FC<TicketCardProps> = React.memo(({
   ticket,
   refundingId,
   onInitiateRefund,
+  onResumePayment,
+  onReleaseReservation,
+  isResuming = false,
+  isReleasing = false,
 }) => {
-  const isVip = ticket.tier === 1 || ticket.row === 'A' || ticket.row === 'B';
+  const isVip = ticket.tier === 1;
   const hasSignedQr = Boolean(ticket.qrCodeSignature?.trim());
   const canShowQr = hasSignedQr && ['paid', 'used'].includes(ticket.status.toLowerCase());
   const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false);
@@ -161,6 +169,50 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
             </div>
           </div>
         </div>
+
+        {/* Pending Actions (Resume Checkout / Release Hold) */}
+        {ticket.status.toLowerCase() === 'pending' && (
+          <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 border-t border-border-subtle/60 text-xs">
+            <div className="text-warning flex items-center gap-1.5 text-[11px] whitespace-nowrap">
+              <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>Chưa hoàn tất thanh toán. Ghế đang được giữ tạm thời.</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {onResumePayment && (
+                <button
+                  type="button"
+                  onClick={() => onResumePayment(ticket)}
+                  disabled={isResuming || isReleasing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-primary hover:bg-brand-primary/90 text-white font-bold transition-colors text-xs whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isResuming ? (
+                    <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <CreditCard className="w-3 h-3" aria-hidden="true" />
+                  )}
+                  <span>Tiếp Tục Thanh Toán</span>
+                </button>
+              )}
+
+              {onReleaseReservation && (
+                <button
+                  type="button"
+                  onClick={() => onReleaseReservation(ticket)}
+                  disabled={isResuming || isReleasing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-3 hover:bg-danger/20 text-text-secondary hover:text-danger border border-border-subtle hover:border-danger/40 font-bold transition-colors text-xs whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isReleasing ? (
+                    <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Ban className="w-3 h-3" aria-hidden="true" />
+                  )}
+                  <span>Hủy Giữ Chỗ</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Refund Notice / Button */}
         {ticket.status.toLowerCase() === 'paid' && (
