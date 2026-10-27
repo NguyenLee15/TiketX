@@ -105,6 +105,15 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
 
             if (existing.Status == "Pending" && string.IsNullOrWhiteSpace(existing.CheckoutUrl))
             {
+                var configuredClientId = _configuration["PayOS:ClientId"];
+                if (IsDevMockPayOs(configuredClientId))
+                {
+                    var mockUrl = $"/mock-payos?orderCode={ticket.OrderCode}";
+                    existing.SetCheckoutUrl(mockUrl);
+                    await _context.SaveChangesAsync(cancellationToken);
+                    return Link(ticket, mockUrl);
+                }
+
                 PaymentLinkLookupResult? lookup;
                 try
                 {
@@ -162,7 +171,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
 
         var clientId = _configuration["PayOS:ClientId"];
         var checkoutUrl = string.Empty;
-        if (string.IsNullOrWhiteSpace(clientId) || clientId == "YOUR_PAYOS_CLIENT_ID")
+        if (IsDevMockPayOs(clientId))
         {
             if (!_environment.IsDevelopment())
             {
@@ -233,6 +242,11 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
 
     private CustomerCheckoutResult Link(Ticket ticket, string checkoutUrl) =>
         new(true, "PAYMENT_LINK_CREATED", "Đã tạo liên kết thanh toán.", ticket.OrderCode, ticket.Price, checkoutUrl, "Pending", ticket.Id);
+    private static bool IsDevMockPayOs(string? clientId) =>
+        string.IsNullOrWhiteSpace(clientId)
+        || clientId.Equals("YOUR_PAYOS_CLIENT_ID", StringComparison.OrdinalIgnoreCase)
+        || clientId.StartsWith("local-dev", StringComparison.OrdinalIgnoreCase);
+
     private string ReturnUrl(long orderCode) => $"{_configuration["PayOS:ReturnUrl"] ?? "http://localhost:5173/payment-result"}?orderCode={orderCode}";
     private string CancelUrl(long orderCode) => $"{_configuration["PayOS:CancelUrl"] ?? "http://localhost:5173/my-tickets"}?orderCode={orderCode}";
     private static CustomerCheckoutResult Fail(string code, string message) => new(false, code, message);

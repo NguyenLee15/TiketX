@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using TickeX.Application.Interfaces;
 
@@ -22,6 +23,7 @@ public class PayOSService : IPayOSService
     {
     }
 
+    [ActivatorUtilitiesConstructor]
     public PayOSService(HttpClient httpClient, IConfiguration configuration, ILogger<PayOSService> logger, PayOSResilienceGate? resilience = null)
     {
         _httpClient = httpClient;
