@@ -662,6 +662,30 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         notifications.Verify(n => n.NotifySeatStatusChanged(@event.Id, seat.Id, SeatStatus.Available.ToString(), null, null), Times.Once);
     }
 
+    [Fact]
+    public async Task PublicCatalog_CountsExpiredSeatLocksAsAvailable_MatchingDetailView()
+    {
+        var user = new User("Customer", $"{Guid.NewGuid():N}@test.local", "hash");
+        var future = CreateEvent("FutureWithExpiredLock", DateTime.UtcNow.AddDays(2));
+        future.GenerateSeatsMatrix(1, 2); // 2 seats total
+        _context.AddRange(user, future);
+        await _context.SaveChangesAsync();
+
+        var seats = await _context.Seats.Where(s => s.EventId == future.Id).ToListAsync();
+        seats[0].Lock(user.Id);
+        _context.Entry(seats[0]).Property(nameof(Seat.LockedAt)).CurrentValue = DateTime.UtcNow.AddMinutes(-15);
+        await _context.SaveChangesAsync();
+
+        var catalog = new CustomerEventCatalogAdapter(_context, new UtcTimePolicy());
+        var catalogResult = await catalog.SearchAsync(new GetEventsQuery(), CancellationToken.None);
+        var detailResult = await new GetEventWithSeatsQueryHandler(_context, time: new UtcTimePolicy())
+            .Handle(new GetEventWithSeatsQuery(future.Id), CancellationToken.None);
+
+        var catalogEvent = catalogResult.Items.Single(x => x.Id == future.Id);
+        catalogEvent.AvailableSeatsCount.Should().Be(2);
+        detailResult!.AvailableSeatsCount.Should().Be(2);
+    }
+
     private static Event CreateEvent(string title, DateTime date) =>
         new(title, "Description", date, date.AddHours(2), "HCM", "Venue", 1);
 

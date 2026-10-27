@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using TickeX.Application.Interfaces;
+using TickeX.Application.Seats;
 using TickeX.Domain.Enums;
 
 namespace TickeX.Application.Events.Queries;
@@ -18,10 +20,17 @@ public record GetAdminEventsQuery(
 public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, PagedResult<EventDto>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly TimeSpan _holdDuration;
+    private readonly ITimePolicy _time;
 
-    public GetAdminEventsQueryHandler(IApplicationDbContext context)
+    public GetAdminEventsQueryHandler(
+        IApplicationDbContext context,
+        IOptions<ReservationOptions>? options = null,
+        ITimePolicy? time = null)
     {
         _context = context;
+        _holdDuration = TimeSpan.FromMinutes(options?.Value.HoldMinutes ?? new ReservationOptions().HoldMinutes);
+        _time = time ?? new UtcTimePolicy();
     }
 
     public async Task<PagedResult<EventDto>> Handle(GetAdminEventsQuery request, CancellationToken cancellationToken)
@@ -84,8 +93,10 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
             .ToListAsync(cancellationToken);
 
         var eventIds = rawEvents.Select(e => e.Id).ToArray();
+        var lockExpiry = _time.UtcNow.Subtract(_holdDuration);
         var availableSeats = await _context.Seats
-            .Where(s => eventIds.Contains(s.EventId) && s.Status == SeatStatus.Available)
+            .Where(s => eventIds.Contains(s.EventId)
+                && (s.Status == SeatStatus.Available || (s.Status == SeatStatus.Locked && s.LockedAt <= lockExpiry)))
             .GroupBy(s => s.EventId)
             .Select(g => new { EventId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.EventId, x => x.Count, cancellationToken);

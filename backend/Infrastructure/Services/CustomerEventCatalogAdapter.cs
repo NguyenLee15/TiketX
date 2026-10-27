@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Text;
 using System.Text.Json;
 using TickeX.Application.Events.Queries;
 using TickeX.Application.Interfaces;
+using TickeX.Application.Seats;
 using TickeX.Domain.Enums;
 
 namespace TickeX.Infrastructure.Services;
@@ -12,12 +14,18 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
     private readonly IApplicationDbContext _context;
     private readonly ITimePolicy _time;
     private readonly ICustomerEventCatalogCache? _cache;
+    private readonly TimeSpan _holdDuration;
 
-    public CustomerEventCatalogAdapter(IApplicationDbContext context, ITimePolicy time, ICustomerEventCatalogCache? cache = null)
+    public CustomerEventCatalogAdapter(
+        IApplicationDbContext context,
+        ITimePolicy time,
+        ICustomerEventCatalogCache? cache = null,
+        IOptions<ReservationOptions>? options = null)
     {
         _context = context;
         _time = time;
         _cache = cache;
+        _holdDuration = TimeSpan.FromMinutes(options?.Value.HoldMinutes ?? new ReservationOptions().HoldMinutes);
     }
 
     public async Task<PagedResult<EventDto>> SearchAsync(GetEventsQuery request, CancellationToken cancellationToken)
@@ -27,7 +35,6 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
 
         var now = _time.UtcNow;
         var query = _context.Events.AsNoTracking()
-            .Include(e => e.Seats)
             .Where(e => e.Status == EventStatus.Published && !e.IsDeleted && e.Date > now);
 
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -80,14 +87,41 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
 
         var hasMore = rows.Count > pageSize;
         if (hasMore) rows.RemoveAt(pageSize);
+
+        var eventIds = rows.Select(e => e.Id).ToArray();
+        var lockExpiry = now.Subtract(_holdDuration);
+
+        var availableSeats = eventIds.Length == 0
+            ? new Dictionary<Guid, int>()
+            : await _context.Seats
+                .AsNoTracking()
+                .Where(s => eventIds.Contains(s.EventId)
+                    && (s.Status == SeatStatus.Available || (s.Status == SeatStatus.Locked && s.LockedAt <= lockExpiry)))
+                .GroupBy(s => s.EventId)
+                .Select(g => new { EventId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.EventId, x => x.Count, cancellationToken);
+
+        var seatPrices = eventIds.Length == 0
+            ? new Dictionary<Guid, (decimal MinPrice, decimal MaxPrice)>()
+            : await _context.Seats
+                .AsNoTracking()
+                .Where(s => eventIds.Contains(s.EventId))
+                .GroupBy(s => s.EventId)
+                .Select(g => new { EventId = g.Key, MinPrice = g.Min(s => (double)s.Price), MaxPrice = g.Max(s => (double)s.Price) })
+                .ToDictionaryAsync(x => x.EventId, x => (MinPrice: (decimal)x.MinPrice, MaxPrice: (decimal)x.MaxPrice), cancellationToken);
+
         var items = rows
-            .Select(e => new EventDto(
-                e.Id, e.Title, e.Description, e.Date, e.EndDate, e.Location, e.VenueName,
-                e.Category, e.ImageUrl, e.BannerUrl, e.OrganizerName, e.TotalSeats,
-                e.Seats.Count(s => s.Status == SeatStatus.Available), e.BasePrice,
-                e.Seats.Any() ? (decimal)e.Seats.Min(s => (double)s.Price) : e.BasePrice,
-                e.Seats.Any() ? (decimal)e.Seats.Max(s => (double)s.Price) : e.BasePrice,
-                e.Status, e.RefundCutoffHours, false, false, null))
+            .Select(e =>
+            {
+                var hasSeatPrices = seatPrices.TryGetValue(e.Id, out var prices);
+                return new EventDto(
+                    e.Id, e.Title, e.Description, e.Date, e.EndDate, e.Location, e.VenueName,
+                    e.Category, e.ImageUrl, e.BannerUrl, e.OrganizerName, e.TotalSeats,
+                    availableSeats.GetValueOrDefault(e.Id), e.BasePrice,
+                    hasSeatPrices ? prices.MinPrice : e.BasePrice,
+                    hasSeatPrices ? prices.MaxPrice : e.BasePrice,
+                    e.Status, e.RefundCutoffHours, false, false, null);
+            })
             .ToList();
 
         var last = rows.LastOrDefault();
