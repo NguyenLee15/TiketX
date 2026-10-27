@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -123,12 +124,36 @@ public class TicketPaidEventConsumer : BackgroundService
                 var user = await dbContext.Users.FindAsync(new object[] { ticketEvent.UserId }, stoppingToken);
                 if (user != null)
                 {
-                    var subject = $"Your TickeX Ticket: {ticketEvent.TicketId}";
+                    var ticket = await dbContext.Tickets
+                        .AsNoTracking()
+                        .Include(t => t.Event)
+                        .Include(t => t.Seat)
+                        .FirstOrDefaultAsync(t => t.Id == ticketEvent.TicketId, stoppingToken);
+
+                    var subject = $"Xác nhận vé điện tử TickeX: #{ticket?.OrderCode.ToString() ?? ticketEvent.TicketId.ToString()}";
                     var safeName = System.Net.WebUtility.HtmlEncode(user.Name);
+                    var safeEventTitle = System.Net.WebUtility.HtmlEncode(ticket?.Event?.Title ?? "Sự kiện TickeX");
+                    var safeVenue = System.Net.WebUtility.HtmlEncode(ticket?.Event?.VenueName ?? ticket?.Event?.Location ?? "N/A");
+                    var seatLabel = ticket?.Seat is not null
+                        ? System.Net.WebUtility.HtmlEncode($"{ticket.Seat.Row}{ticket.Seat.Number} ({ticket.Seat.Tier})")
+                        : "N/A";
+                    var safeQrToken = System.Net.WebUtility.HtmlEncode(
+                        !string.IsNullOrWhiteSpace(ticket?.QrCodeSignature)
+                            ? ticket.QrCodeSignature
+                            : ticketEvent.TicketId.ToString());
+
                     var emailBody = $@"
-                            <h1>Thank you for your purchase, {safeName}!</h1>
-                            <p>Your ticket (ID: {ticketEvent.TicketId}) is confirmed.</p>
-                            <p>Here is your QR Code: [QR_CODE_IMG]</p>
+                            <div style=""font-family: Arial, sans-serif; line-height: 1.6; color: #111827;"">
+                                <h1>Cảm ơn bạn đã đặt vé, {safeName}!</h1>
+                                <p>Vé điện tử của bạn (Mã vé: <strong>{ticketEvent.TicketId}</strong>) đã được xác nhận thanh toán thành công.</p>
+                                <ul>
+                                    <li><strong>Sự kiện:</strong> {safeEventTitle}</li>
+                                    <li><strong>Địa điểm:</strong> {safeVenue}</li>
+                                    <li><strong>Vị trí ghế:</strong> {seatLabel}</li>
+                                </ul>
+                                <p><strong>Mã định danh QR (dùng để đối chiếu tại cổng soát vé hoặc xem trực tiếp trong mục Vé của tôi):</strong></p>
+                                <pre style=""background:#f3f4f6;padding:12px;border-radius:6px;word-break:break-all;"">{safeQrToken}</pre>
+                            </div>
                         ";
 
                     await emailService.SendEmailAsync(user.Email, subject, emailBody);

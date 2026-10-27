@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using TickeX.Application.Interfaces;
 using TickeX.Application.Tickets.Commands;
 using TickeX.Domain.Entities;
@@ -363,5 +364,34 @@ public class CheckInSecurityTests : IDisposable
         result.Success.Should().BeFalse();
         result.StatusCode.Should().Be(409);
         result.Code.Should().Be("CHECKIN_CONCURRENCY_CONFLICT");
+    }
+
+    [Fact]
+    public async Task CheckIn_WhenTicketRefundLockIsHeld_Returns409ConflictWithoutMutation()
+    {
+        var (ev, _, _, ticket) = await SeedTicketAsync(status: TicketStatus.Paid);
+        var validToken = _ticketSecurityService.GenerateSignedQrToken(
+            ticket.Id,
+            ev.Id,
+            ticket.OrderCode,
+            DateTime.UtcNow.AddHours(2)
+        );
+        ticket.SetQrSignature(validToken);
+        await _context.SaveChangesAsync();
+
+        var lockService = new Moq.Mock<IDistributedLockService>();
+        lockService
+            .Setup(x => x.AcquireLockAsync($"lock:refund:{ticket.Id}", Moq.It.IsAny<TimeSpan>(), Moq.It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IDistributedLockLease?)null);
+
+        var handler = new CheckInTicketCommandHandler(_context, _ticketSecurityService, lockService: lockService.Object);
+        var command = new CheckInTicketCommand(validToken, Guid.NewGuid(), StaffRole: "Admin");
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(409);
+        result.Code.Should().Be("CHECKIN_LOCK_CONFLICT");
+        (await _context.Tickets.AsNoTracking().SingleAsync(t => t.Id == ticket.Id)).Status.Should().Be(TicketStatus.Paid);
     }
 }
