@@ -46,7 +46,7 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
             return Invalid();
         }
 
-        return new AuthResult(true, _jwt.GenerateToken(user), "Đã làm mới phiên.", user.Id, user.Name, user.Role, replacementRaw, user.Email);
+        return new AuthResult(true, _jwt.GenerateToken(user), "Đã làm mới phiên.", user.Id, user.Name, user.Role, replacementRaw, user.Email, user.AvatarUrl);
     }
 
     private static AuthResult Invalid() => new(false, string.Empty, "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");

@@ -21,7 +21,7 @@ public class User : BaseEntity
 
     public User(string name, string email, string passwordHash, string role = "Customer")
     {
-        Name = name;
+        Name = name?.Trim() ?? string.Empty;
         Email = email;
         PasswordHash = passwordHash;
         Role = role;
@@ -62,9 +62,11 @@ public class User : BaseEntity
 
     public void UpdateProfile(string name, string phone, string avatarUrl)
     {
-        Name = name;
-        Phone = phone;
-        AvatarUrl = avatarUrl;
+        Name = name?.Trim() ?? string.Empty;
+        Phone = phone?.Trim() ?? string.Empty;
+        AvatarUrl = avatarUrl?.Trim() ?? string.Empty;
+        UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public void ChangePassword(string newHash)

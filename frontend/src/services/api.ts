@@ -116,6 +116,7 @@ api.interceptors.response.use(
               name: refreshData.name || refreshData.user?.name || '',
               email: refreshData.email || refreshData.user?.email || '',
               role: refreshData.role || refreshData.user?.role || 'Customer',
+              avatarUrl: refreshData.avatarUrl || useAuthStore.getState().user?.avatarUrl || '',
             },
             newToken
           );

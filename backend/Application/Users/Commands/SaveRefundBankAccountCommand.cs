@@ -18,7 +18,9 @@ public sealed class SaveRefundBankAccountCommandHandler(
             || string.IsNullOrWhiteSpace(request.AccountNumber) || request.AccountNumber.Length is < 6 or > 30
             || request.AccountNumber.Any(c => !char.IsAsciiDigit(c))) return false;
 
-        if (!await context.Users.AnyAsync(x => x.Id == request.UserId, cancellationToken)) return false;
+        var user = await context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
+        if (user is null) return false;
+        var userEmail = user.Email;
         var details = new RefundBankAccountDetails(request.BankBin.Trim(), request.AccountName.Trim(), request.AccountNumber.Trim());
         var encrypted = protector.Protect(details);
         var strategy = context.CreateExecutionStrategy();
@@ -56,7 +58,7 @@ public sealed class SaveRefundBankAccountCommandHandler(
                     }
                 }
 
-                context.AuditLogs.Add(new AuditLog(request.UserId, string.Empty, "REFUND_BANK_ACCOUNT_UPDATED", nameof(RefundBankAccount), request.UserId.ToString(), "Configured", "Updated"));
+                context.AuditLogs.Add(new AuditLog(request.UserId, userEmail, "REFUND_BANK_ACCOUNT_UPDATED", nameof(RefundBankAccount), request.UserId.ToString(), "Configured", "Updated"));
                 await context.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 return true;
@@ -78,8 +80,10 @@ public sealed class DeleteRefundBankAccountCommandHandler(IApplicationDbContext 
     {
         var account = await context.RefundBankAccounts.SingleOrDefaultAsync(x => x.UserId == request.UserId, cancellationToken);
         if (account is null) return false;
+        var user = await context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
+        var userEmail = user?.Email ?? string.Empty;
         context.RefundBankAccounts.Remove(account);
-        context.AuditLogs.Add(new AuditLog(request.UserId, string.Empty, "REFUND_BANK_ACCOUNT_DELETED", nameof(RefundBankAccount), request.UserId.ToString(), "Configured", "Deleted"));
+        context.AuditLogs.Add(new AuditLog(request.UserId, userEmail, "REFUND_BANK_ACCOUNT_DELETED", nameof(RefundBankAccount), request.UserId.ToString(), "Configured", "Deleted"));
         await context.SaveChangesAsync(cancellationToken);
         return true;
     }

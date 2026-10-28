@@ -20,7 +20,11 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
         if (user == null) return false;
 
-        user.UpdateProfile(request.Name, request.Phone, request.AvatarUrl);
+        var name = request.Name?.Trim() ?? string.Empty;
+        var phone = request.Phone?.Trim() ?? string.Empty;
+        var avatarUrl = request.AvatarUrl?.Trim() ?? string.Empty;
+
+        user.UpdateProfile(name, phone, avatarUrl);
         await _context.SaveChangesAsync(cancellationToken);
 
         return true;

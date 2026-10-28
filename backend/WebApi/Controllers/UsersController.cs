@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using TickeX.Application.Users.Commands;
@@ -32,7 +33,19 @@ public class UsersController : ControllerBase
         var result = await _mediator.Send(new GetUserProfileQuery(userId), cancellationToken);
 
         if (result == null) 
-            return NotFound(new { success = false, code = "USER_NOT_FOUND", message = "User not found", error = new { code = "USER_NOT_FOUND", message = "User not found" } });
+            return NotFound(new
+            {
+                type = "https://tools.ietf.org/html/rfc9110#section-15.5.5",
+                title = "Not Found",
+                status = StatusCodes.Status404NotFound,
+                detail = "User not found",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                success = false,
+                code = "USER_NOT_FOUND",
+                message = "User not found",
+                error = new { code = "USER_NOT_FOUND", message = "User not found" }
+            });
 
         return Ok(new { success = true, data = result });
     }
@@ -49,7 +62,19 @@ public class UsersController : ControllerBase
         var success = await _mediator.Send(command, cancellationToken);
 
         if (!success) 
-            return NotFound(new { success = false, code = "USER_NOT_FOUND", message = "User not found", error = new { code = "USER_NOT_FOUND", message = "User not found" } });
+            return NotFound(new
+            {
+                type = "https://tools.ietf.org/html/rfc9110#section-15.5.5",
+                title = "Not Found",
+                status = StatusCodes.Status404NotFound,
+                detail = "User not found",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                success = false,
+                code = "USER_NOT_FOUND",
+                message = "User not found",
+                error = new { code = "USER_NOT_FOUND", message = "User not found" }
+            });
 
         return Ok(new { success = true, message = "Profile updated successfully" });
     }
@@ -67,7 +92,19 @@ public class UsersController : ControllerBase
         var success = await _mediator.Send(command, cancellationToken);
 
         if (!success) 
-            return BadRequest(new { success = false, code = "PASSWORD_CHANGE_FAILED", message = "Invalid current password or user not found", error = new { code = "PASSWORD_CHANGE_FAILED", message = "Invalid current password or user not found" } });
+            return BadRequest(new
+            {
+                type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+                title = "Bad Request",
+                status = StatusCodes.Status400BadRequest,
+                detail = "Invalid current password or user not found",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                success = false,
+                code = "PASSWORD_CHANGE_FAILED",
+                message = "Invalid current password or user not found",
+                error = new { code = "PASSWORD_CHANGE_FAILED", message = "Invalid current password or user not found" }
+            });
 
         return Ok(new { success = true, message = "Password changed successfully" });
     }
@@ -80,7 +117,19 @@ public class UsersController : ControllerBase
         var userId = GetAuthenticatedUserId();
         if (userId is null) return UnauthorizedEnvelope();
         var saved = await _mediator.Send(new SaveRefundBankAccountCommand(userId.Value, request.BankBin, request.AccountName, request.AccountNumber), cancellationToken);
-        if (!saved) return BadRequest(new { success = false, code = "REFUND_BANK_ACCOUNT_INVALID", message = "Thông tin tài khoản nhận tiền không hợp lệ." });
+        if (!saved) return BadRequest(new
+        {
+            type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+            title = "Bad Request",
+            status = StatusCodes.Status400BadRequest,
+            detail = "Thông tin tài khoản nhận tiền không hợp lệ.",
+            instance = HttpContext.Request.Path.Value,
+            traceId = HttpContext.TraceIdentifier,
+            success = false,
+            code = "REFUND_BANK_ACCOUNT_INVALID",
+            message = "Thông tin tài khoản nhận tiền không hợp lệ.",
+            error = new { code = "REFUND_BANK_ACCOUNT_INVALID", message = "Thông tin tài khoản nhận tiền không hợp lệ." }
+        });
         return NoContent();
     }
 
@@ -99,6 +148,12 @@ public class UsersController : ControllerBase
 
     private IActionResult UnauthorizedEnvelope() => Unauthorized(new
     {
+        type = "https://tools.ietf.org/html/rfc9110#section-15.5.2",
+        title = "Unauthorized",
+        status = StatusCodes.Status401Unauthorized,
+        detail = "User is not authenticated.",
+        instance = HttpContext.Request.Path.Value,
+        traceId = HttpContext.TraceIdentifier,
         success = false,
         code = "UNAUTHORIZED",
         message = "User is not authenticated.",

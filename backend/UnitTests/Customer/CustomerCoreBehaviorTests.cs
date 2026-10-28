@@ -701,8 +701,8 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         // Assert AuditLog was recorded
         (await _context.AuditLogs.AnyAsync(a => a.Action == "ORPHANED_PAYMENT_DETECTED")).Should().BeTrue();
 
-        // Assert seat status notification was emitted
-        notifications.Verify(n => n.NotifySeatStatusChanged(@event.Id, seat.Id, SeatStatus.Available.ToString(), null, null), Times.Once);
+        // Assert seat status notification was emitted with refreshed seat version
+        notifications.Verify(n => n.NotifySeatStatusChanged(@event.Id, seat.Id, SeatStatus.Available.ToString(), It.IsAny<string?>(), null), Times.Once);
     }
 
     [Fact]

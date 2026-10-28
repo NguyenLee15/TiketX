@@ -1,15 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Calendar, LogOut, Ticket, Users, Home, QrCode, Menu, X, Banknote } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useModalAccessibility } from '../Admin/useModalAccessibility';
+import { ResilientImage } from '../ResilientImage';
 import api from '../../services/api';
 
 export default function AdminLayout() {
   const { pathname } = useLocation();
+  const queryClient = useQueryClient();
   const { logout, user } = useAuthStore();
   const handleLogout = async () => {
     try { await api.post('/api/auth/logout', {}); } catch { /* expired session is already logged out */ }
+    queryClient.clear();
     logout();
   };
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -122,9 +126,18 @@ export default function AdminLayout() {
           </Link>
 
           <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-surface-2 border border-border-subtle">
-            <div className="w-8 h-8 rounded-full bg-surface-3 flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">
-              {user?.name?.[0] || 'U'}
-            </div>
+            {user?.avatarUrl ? (
+              <ResilientImage
+                src={user.avatarUrl}
+                alt={user.name || 'Admin'}
+                className="w-8 h-8 rounded-full object-cover shrink-0"
+                fallbackClassName="w-8 h-8 rounded-full bg-surface-3 flex items-center justify-center font-bold text-xs text-white uppercase shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-surface-3 flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">
+                {user?.name?.[0] || 'U'}
+              </div>
+            )}
             <div className="flex-1 overflow-hidden min-w-0">
               <p className="text-xs font-bold text-white truncate">{user?.name}</p>
               <p className="text-[10px] text-text-tertiary truncate">{user?.email}</p>
@@ -163,7 +176,7 @@ export default function AdminLayout() {
               <Link
                 key={item.name}
                 to={item.href}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary group ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary group ${
                   isActive 
                     ? 'bg-surface-2 text-white border border-border-focus shadow-sm font-bold' 
                     : 'text-text-secondary hover:text-white hover:bg-surface-2/50 border border-transparent'
@@ -187,9 +200,18 @@ export default function AdminLayout() {
           </Link>
 
           <div className="flex items-center gap-3 px-3 py-2 mt-2 rounded-lg bg-surface-2 border border-border-subtle">
-            <div className="w-8 h-8 rounded bg-surface-3 flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">
-              {user?.name?.[0] || 'U'}
-            </div>
+            {user?.avatarUrl ? (
+              <ResilientImage
+                src={user.avatarUrl}
+                alt={user.name || 'Admin'}
+                className="w-8 h-8 rounded-lg object-cover shrink-0"
+                fallbackClassName="w-8 h-8 rounded bg-surface-3 flex items-center justify-center font-bold text-xs text-white uppercase shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded bg-surface-3 flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">
+                {user?.name?.[0] || 'U'}
+              </div>
+            )}
             <div className="flex-1 overflow-hidden min-w-0">
               <p className="text-xs font-bold text-white truncate">{user?.name}</p>
               <p className="text-[10px] text-text-tertiary truncate">{user?.email}</p>

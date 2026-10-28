@@ -1,7 +1,9 @@
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using TickeX.Application.Events.Commands;
+using TickeX.Application.Interfaces;
 using TickeX.Domain.Entities;
 using TickeX.Domain.Enums;
 using TickeX.Infrastructure.Persistence;
@@ -330,5 +332,103 @@ public class EventConcurrencyAndAdminAuditTests : IDisposable
 
         var eventInDb = await _context.Events.IgnoreQueryFilters().FirstOrDefaultAsync(e => e.Id == ev.Id);
         eventInDb!.IsDeleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateEvent_WhenBasePriceChangesBeforeSales_UpdatesAllSeatPrices()
+    {
+        // Arrange
+        var ev = new Event("Concert", "Desc", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(3), "Loc", "Venue", 4, basePrice: 200000);
+        ev.GenerateSeatsMatrix(2, 2); // 4 seats total: VIP rows (tier = VIP, multiplier 1.75m -> 350,000)
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var versionStr = Convert.ToBase64String(ev.Version);
+        var handler = new UpdateEventCommandHandler(_context);
+
+        var newBasePrice = 300000m;
+        var command = new UpdateEventCommand(
+            ev.Id,
+            ev.Title,
+            ev.Description,
+            ev.Date,
+            ev.EndDate,
+            ev.Location,
+            ev.VenueName,
+            ev.TotalSeats,
+            ev.Category,
+            ev.ImageUrl,
+            ev.BannerUrl,
+            ev.OrganizerName,
+            newBasePrice,
+            ev.Status,
+            ev.RefundCutoffHours,
+            ExpectedVersion: versionStr
+        );
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var seats = await _context.Seats.Where(s => s.EventId == ev.Id).ToListAsync();
+        seats.Should().NotBeEmpty();
+        // Standard seats (multiplier 1.0) must be 300,000, VIP seats (multiplier 1.75) must be 525,000
+        foreach (var seat in seats)
+        {
+            if (seat.Tier == SeatTier.VIP)
+            {
+                seat.Price.Should().Be(525000m);
+            }
+            else
+            {
+                seat.Price.Should().Be(300000m);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WithNullPhoneAndAvatar_NormalizesToEmptyString()
+    {
+        // Arrange
+        var user = new User("Alice", "alice@test.local", "hash");
+        user.UpdateProfile("Alice", "0912345678", "https://avatar.png");
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var handler = new TickeX.Application.Users.Commands.UpdateProfileCommandHandler(_context);
+
+        // Act - Client sends null phone and avatar
+        var result = await handler.Handle(new TickeX.Application.Users.Commands.UpdateProfileCommand(user.Id, "Alice New", null!, null!), CancellationToken.None);
+
+        // Assert
+        result.Should().BeTrue();
+        var updated = await _context.Users.FindAsync(user.Id);
+        updated!.Phone.Should().Be(string.Empty);
+        updated.AvatarUrl.Should().Be(string.Empty);
+    }
+
+    [Fact]
+    public async Task SaveRefundBankAccount_RecordsUserEmailInAuditLog()
+    {
+        // Arrange
+        var user = new User("Bob", "bob@test.local", "hash");
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var protector = new Mock<IRefundBankAccountProtector>();
+        protector.Setup(x => x.Protect(It.IsAny<RefundBankAccountDetails>()))
+            .Returns("encrypted-token");
+
+        var handler = new TickeX.Application.Users.Commands.SaveRefundBankAccountCommandHandler(_context, protector.Object);
+
+        // Act
+        var result = await handler.Handle(new TickeX.Application.Users.Commands.SaveRefundBankAccountCommand(user.Id, "970415", "BOB TEST", "1234567890"), CancellationToken.None);
+
+        // Assert
+        result.Should().BeTrue();
+        var log = await _context.AuditLogs.FirstOrDefaultAsync(l => l.Action == "REFUND_BANK_ACCOUNT_UPDATED");
+        log.Should().NotBeNull();
+        log!.UserEmail.Should().Be("bob@test.local");
     }
 }

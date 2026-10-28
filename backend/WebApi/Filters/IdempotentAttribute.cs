@@ -110,7 +110,14 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
             else if (existing?.Status == "Completed")
             {
                 http.Response.Headers[ReplayHeaderName] = "true";
-                context.Result = new ContentResult { StatusCode = existing.StatusCode, ContentType = existing.ContentType ?? "application/json", Content = existing.Body };
+                if (existing.StatusCode is StatusCodes.Status204NoContent or StatusCodes.Status304NotModified || string.IsNullOrEmpty(existing.Body))
+                {
+                    context.Result = new StatusCodeResult(existing.StatusCode);
+                }
+                else
+                {
+                    context.Result = new ContentResult { StatusCode = existing.StatusCode, ContentType = existing.ContentType ?? "application/json", Content = existing.Body };
+                }
             }
             else
                 context.Result = Error(http, 409, "IDEMPOTENCY_IN_FLIGHT", "Operation In Flight", "Yêu cầu với Idempotency-Key này đang được xử lý. Vui lòng chờ kết quả.");
@@ -140,7 +147,9 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
             },
             StatusCodeResult result when result.StatusCode is >= 200 and < 300 => new IdempotencyRecord
             {
-                Status = "Completed", Fingerprint = fingerprint, StatusCode = result.StatusCode, ContentType = "application/json", Body = "{}"
+                Status = "Completed", Fingerprint = fingerprint, StatusCode = result.StatusCode,
+                ContentType = result.StatusCode is StatusCodes.Status204NoContent or StatusCodes.Status304NotModified ? null : "application/json",
+                Body = result.StatusCode is StatusCodes.Status204NoContent or StatusCodes.Status304NotModified ? null : "{}"
             },
             _ => null
         };

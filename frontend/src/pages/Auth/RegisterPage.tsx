@@ -60,12 +60,14 @@ export default function RegisterPage() {
             id: data.userId,
             name: data.name || values.name.trim(),
             email: data.email || values.email.trim(),
-            role: data.role || 'Customer'
+            role: data.role || 'Customer',
+            avatarUrl: data.avatarUrl || undefined
           };
           useAuthStore.getState().setAuth(userData, data.token ?? null);
         }
         toast.success('Đăng ký tài khoản thành công!');
-        const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/';
+        const rawFrom = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/';
+        const from = (rawFrom.startsWith('/') && !rawFrom.startsWith('//')) ? rawFrom : '/';
         navigate(from, { replace: true });
       } else {
         const msg = res.data.message || 'Đăng ký thất bại';

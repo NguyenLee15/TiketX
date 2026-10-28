@@ -24,13 +24,13 @@ export default function LoginPage() {
     } else {
       const searchParams = new URLSearchParams(location.search);
       const fromQuery = searchParams.get('from');
-      if (fromQuery && fromQuery.startsWith('/')) {
+      if (fromQuery && fromQuery.startsWith('/') && !fromQuery.startsWith('//')) {
         targetPath = fromQuery;
       }
     }
 
     // Guard against open redirect and auth loop
-    if (!targetPath || targetPath.startsWith('/login') || targetPath.startsWith('/register') || !targetPath.startsWith('/')) {
+    if (!targetPath || targetPath.startsWith('/login') || targetPath.startsWith('/register') || !targetPath.startsWith('/') || targetPath.startsWith('//')) {
       if (role === 'Staff') return '/admin/scan-ticket';
       if (role === 'Admin') return '/admin';
       return '/';
@@ -61,12 +61,13 @@ export default function LoginPage() {
       });
 
       if (res.data?.success && res.data?.data) {
-        const { token, userId, name, role } = res.data.data;
+        const { token, userId, name, role, avatarUrl } = res.data.data;
         const userData = {
           id: userId,
           name: name,
           email: values.email.trim(),
-          role: role
+          role: role,
+          avatarUrl: avatarUrl || undefined
         };
 
         setAuth(userData, token);

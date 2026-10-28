@@ -42,6 +42,12 @@ public class PaymentsController : ControllerBase
         if (Request.ContentLength is > 65_536)
             return StatusCode(StatusCodes.Status413PayloadTooLarge, new
             {
+                type = "https://tools.ietf.org/html/rfc9110#section-15.5.14",
+                title = "Payload Too Large",
+                status = StatusCodes.Status413PayloadTooLarge,
+                detail = "Dữ liệu thanh toán vượt quá kích thước cho phép.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 success = false,
                 code = "PAYMENT_WEBHOOK_TOO_LARGE",
                 message = "Dữ liệu thanh toán vượt quá kích thước cho phép.",
@@ -55,6 +61,12 @@ public class PaymentsController : ControllerBase
         {
             return StatusCode(StatusCodes.Status413PayloadTooLarge, new
             {
+                type = "https://tools.ietf.org/html/rfc9110#section-15.5.14",
+                title = "Payload Too Large",
+                status = StatusCodes.Status413PayloadTooLarge,
+                detail = "Dữ liệu thanh toán vượt quá kích thước cho phép.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 success = false,
                 code = "PAYMENT_WEBHOOK_TOO_LARGE",
                 message = "Dữ liệu thanh toán vượt quá kích thước cho phép.",

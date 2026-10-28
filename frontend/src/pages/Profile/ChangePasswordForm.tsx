@@ -24,7 +24,7 @@ export function ChangePasswordForm({
             <Lock className="w-5 h-5 text-brand-secondary" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white tracking-tight">Bảo Mật & Mật Khẩu</h3>
+            <h2 className="text-lg font-bold text-white tracking-tight">Bảo Mật & Mật Khẩu</h2>
             <p className="text-xs text-text-secondary">Thay đổi mật khẩu đăng nhập tài khoản.</p>
           </div>
         </div>

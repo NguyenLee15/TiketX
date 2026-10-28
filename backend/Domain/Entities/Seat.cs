@@ -32,6 +32,24 @@ public class Seat : BaseEntity
         Version = Guid.NewGuid().ToByteArray();
     }
 
+    public void UpdatePriceFromBase(decimal basePrice)
+    {
+        if (basePrice <= 0)
+            throw new ArgumentOutOfRangeException(nameof(basePrice), "Base price must be positive.");
+
+        decimal multiplier = Tier switch
+        {
+            SeatTier.VIP => 1.75m,
+            SeatTier.Standard => 1.0m,
+            SeatTier.Economy => 0.75m,
+            _ => 1.0m
+        };
+
+        Price = Math.Round(basePrice * multiplier, 0);
+        UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
+    }
+
     public void Lock(Guid userId)
     {
         if (Status != SeatStatus.Available)

@@ -371,7 +371,19 @@ app.Use(async (context, next) =>
             context.Request.Cookies[cookieSettings.CsrfCookieName], context.Request.Headers["X-CSRF-TOKEN"].FirstOrDefault()))
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
-        await context.Response.WriteAsJsonAsync(new { success = false, code = "CSRF_TOKEN_INVALID", message = "Yêu cầu không có CSRF token hợp lệ." });
+        await context.Response.WriteAsJsonAsync(new
+        {
+            type = "https://tools.ietf.org/html/rfc9110#section-15.5.4",
+            title = "Forbidden",
+            status = StatusCodes.Status403Forbidden,
+            detail = "Yêu cầu không có CSRF token hợp lệ.",
+            instance = context.Request.Path.Value,
+            traceId = context.TraceIdentifier,
+            success = false,
+            code = "CSRF_TOKEN_INVALID",
+            message = "Yêu cầu không có CSRF token hợp lệ.",
+            error = new { code = "CSRF_TOKEN_INVALID", message = "Yêu cầu không có CSRF token hợp lệ." }
+        });
         return;
     }
     await next();

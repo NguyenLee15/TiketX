@@ -7,6 +7,11 @@ import AdminRefundsPage from './AdminRefundsPage';
 import AdminDashboardPage from './AdminDashboardPage';
 import AdminUsersPage from './AdminUsersPage';
 import AdminEventsPage from './AdminEventsPage';
+import AdminLayout from '../../components/Layout/AdminLayout';
+import { ProfileInfoForm } from '../Profile/ProfileInfoForm';
+import { ChangePasswordForm } from '../Profile/ChangePasswordForm';
+import { RefundBankAccountForm } from '../Profile/RefundBankAccountForm';
+import { useAuthStore } from '../../stores/useAuthStore';
 import EventModal from '../../components/Admin/EventModal';
 import api from '../../services/api';
 import type { Event as EventModel } from '../../types';
@@ -332,6 +337,98 @@ describe('Admin Portal Remediation Verification', () => {
       await waitFor(() => {
         expect(api.get).toHaveBeenCalledTimes(2);
       });
+    });
+  });
+
+  describe('Round 5 Remediation Verification', () => {
+    it('AdminLayout clears QueryClient cache on logout and renders resilient avatar', async () => {
+      useAuthStore.getState().setAuth({
+        id: 'admin-1',
+        name: 'Admin User',
+        email: 'admin@tickex.com',
+        role: 'Admin',
+        avatarUrl: 'https://example.com/avatar.jpg',
+      }, 'test-token');
+
+      const clearSpy = vi.spyOn(queryClient, 'clear');
+      vi.mocked(api.post).mockResolvedValueOnce({ data: { success: true } });
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <AdminLayout />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      const logoutButtons = screen.getAllByRole('button', { name: /Đăng xuất/i });
+      fireEvent.click(logoutButtons[0]);
+
+      await waitFor(() => {
+        expect(clearSpy).toHaveBeenCalled();
+        expect(useAuthStore.getState().user).toBeNull();
+      });
+    });
+
+    it('AdminRefundsPage uses a section/div container instead of a nested main landmark', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: {
+          data: {
+            items: [],
+            totalCount: 0,
+            page: 1,
+            pageSize: 20,
+          },
+        },
+      });
+
+      const { container } = render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <AdminRefundsPage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Chưa có yêu cầu hoàn tiền.')).toBeInTheDocument();
+      });
+
+      // Crucial: Must NOT contain a nested <main> landmark because AdminLayout already provides the <main>
+      expect(container.querySelector('main')).toBeNull();
+    });
+
+    it('Profile sub-forms use level 2 headings for accessible hierarchy under ProfilePage h1', () => {
+      render(
+        <MemoryRouter>
+          <ProfileInfoForm
+            email="test@test.local"
+            currentAvatarUrl=""
+            register={vi.fn() as any}
+            errors={{}}
+            onSubmit={vi.fn()}
+            isSubmitting={false}
+          />
+          <ChangePasswordForm
+            register={vi.fn() as any}
+            errors={{}}
+            onSubmit={vi.fn()}
+            isSubmitting={false}
+          />
+          <RefundBankAccountForm
+            bankBin="970415"
+            accountName="Test User"
+            maskedAccount="****1234"
+            onSave={vi.fn()}
+            onDelete={vi.fn()}
+            isSubmitting={false}
+          />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByRole('heading', { level: 2, name: /Thông Tin Cá Nhân/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: /Bảo Mật & Mật Khẩu/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: /Tài khoản nhận hoàn tiền/i })).toBeInTheDocument();
     });
   });
 });

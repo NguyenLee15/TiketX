@@ -38,60 +38,65 @@ public partial class ProcessPaymentCommandHandler
 
         if (eventLease is null || !eventLease.IsValid)
         {
+            if (eventLease != null) await eventLease.DisposeAsync();
             _logger.LogWarning("Could not acquire event lock for payment order {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
             return false;
         }
 
-        IDistributedLockLease? seatLease;
-        try
-        {
-            seatLease = await _lockService.AcquireLockAsync(
-                $"seat:lock:{initialTicket.SeatId:N}", TimeSpan.FromSeconds(30), cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Required seat lock is unavailable for payment order {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
-            return false;
-        }
-
-        if (seatLease is null || !seatLease.IsValid)
-        {
-            _logger.LogWarning("Could not acquire seat lock for payment order {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
-            return false;
-        }
-
-        string lockKey = $"payment:lock:{initialTicket.OrderCode}";
-        IDistributedLockLease? lease;
-        try
-        {
-            lease = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Required payment lock is unavailable for {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
-            return false;
-        }
-
-        if (lease is null || !lease.IsValid)
-        {
-            _logger.LogWarning("Could not acquire payment lock for {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
-            return false;
-        }
-
         await using (eventLease)
-        await using (seatLease)
-        await using (lease)
         {
-            // Re-fetch the ticket inside the lock with Event and Seat included
-            var ticket = await _context.Tickets
-                .Include(t => t.Seat)
-                .Include(t => t.Event)
-                .FirstOrDefaultAsync(t => t.Id == initialTicket.Id, cancellationToken);
-
-            if (ticket == null)
+            IDistributedLockLease? seatLease;
+            try
             {
+                seatLease = await _lockService.AcquireLockAsync(
+                    $"seat:lock:{initialTicket.SeatId:N}", TimeSpan.FromSeconds(30), cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Required seat lock is unavailable for payment order {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
                 return false;
             }
+
+            if (seatLease is null || !seatLease.IsValid)
+            {
+                if (seatLease != null) await seatLease.DisposeAsync();
+                _logger.LogWarning("Could not acquire seat lock for payment order {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
+                return false;
+            }
+
+            await using (seatLease)
+            {
+                string lockKey = $"payment:lock:{initialTicket.OrderCode}";
+                IDistributedLockLease? lease;
+                try
+                {
+                    lease = await _lockService.AcquireLockAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Required payment lock is unavailable for {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
+                    return false;
+                }
+
+                if (lease is null || !lease.IsValid)
+                {
+                    if (lease != null) await lease.DisposeAsync();
+                    _logger.LogWarning("Could not acquire payment lock for {OrderCode}; leaving webhook unprocessed for retry.", data.OrderCode);
+                    return false;
+                }
+
+                await using (lease)
+                {
+                    // Re-fetch the ticket inside the lock with Event and Seat included
+                    var ticket = await _context.Tickets
+                        .Include(t => t.Seat)
+                        .Include(t => t.Event)
+                        .FirstOrDefaultAsync(t => t.Id == initialTicket.Id, cancellationToken);
+
+                    if (ticket == null)
+                    {
+                        return false;
+                    }
 
             // 1. Check existing PaymentTransaction for idempotency
             var existingTx = await _context.PaymentTransactions
@@ -199,7 +204,15 @@ public partial class ProcessPaymentCommandHandler
 
                     if (seatReleased && ticket.Seat != null)
                     {
-                        await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString());
+                        string? versionToken = ticket.Seat.Version != null && ticket.Seat.Version.Length > 0 ? Convert.ToBase64String(ticket.Seat.Version) : null;
+                        try
+                        {
+                            await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString(), versionToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to broadcast seat status change via SignalR for event {EventId}, seat {SeatId}", ticket.EventId, ticket.SeatId);
+                        }
                     }
 
                     return true; // Acknowledge webhook to avoid endless retries while preserving compensation state
@@ -219,7 +232,15 @@ public partial class ProcessPaymentCommandHandler
                         await _context.SaveChangesAsync(cancellationToken);
                         if (seatReleased && ticket.Seat != null)
                         {
-                            await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString());
+                            string? versionToken = ticket.Seat.Version != null && ticket.Seat.Version.Length > 0 ? Convert.ToBase64String(ticket.Seat.Version) : null;
+                            try
+                            {
+                                await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString(), versionToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to broadcast seat status change via SignalR for event {EventId}, seat {SeatId}", ticket.EventId, ticket.SeatId);
+                            }
                         }
                     }
                 }
@@ -287,7 +308,15 @@ public partial class ProcessPaymentCommandHandler
 
                 if (ticket.Seat != null)
                 {
-                    await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString());
+                    string? versionToken = ticket.Seat.Version != null && ticket.Seat.Version.Length > 0 ? Convert.ToBase64String(ticket.Seat.Version) : null;
+                    try
+                    {
+                        await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString(), versionToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to broadcast seat status change via SignalR for event {EventId}, seat {SeatId}", ticket.EventId, ticket.SeatId);
+                    }
                 }
 
             }
@@ -326,11 +355,21 @@ public partial class ProcessPaymentCommandHandler
 
                 if (seatReleased && ticket.Seat != null)
                 {
-                    await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString());
+                    string? versionToken = ticket.Seat.Version != null && ticket.Seat.Version.Length > 0 ? Convert.ToBase64String(ticket.Seat.Version) : null;
+                    try
+                    {
+                        await _notificationService.NotifySeatStatusChanged(ticket.EventId, ticket.SeatId, ticket.Seat.Status.ToString(), versionToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to broadcast seat status change via SignalR for event {EventId}, seat {SeatId}", ticket.EventId, ticket.SeatId);
+                    }
                 }
             }
 
             return true;
+                }
+            }
         }
     }
 }

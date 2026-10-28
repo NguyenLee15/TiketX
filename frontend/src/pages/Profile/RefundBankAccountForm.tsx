@@ -35,7 +35,7 @@ export function RefundBankAccountForm({ bankBin, accountName, maskedAccount, onS
       <div className="mb-5 flex items-center gap-3 border-b border-border-subtle pb-4">
         <Banknote className="h-5 w-5 text-brand-primary" aria-hidden="true" />
         <div>
-          <h3 id="refund-bank-title" className="text-lg font-bold text-white">Tài khoản nhận hoàn tiền</h3>
+          <h2 id="refund-bank-title" className="text-lg font-bold text-white">Tài khoản nhận hoàn tiền</h2>
           <p className="text-xs text-text-secondary">Thông tin được mã hóa; số tài khoản chỉ hiển thị bốn số cuối.</p>
         </div>
       </div>

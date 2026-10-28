@@ -70,6 +70,7 @@ function App() {
           name: data.name ?? '',
           email: data.email ?? existingUser.email ?? '',
           role: data.role ?? 'Customer',
+          avatarUrl: data.avatarUrl || existingUser.avatarUrl || '',
         }, data.token ?? null);
       })
       .catch(() => {

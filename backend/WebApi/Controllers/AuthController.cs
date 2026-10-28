@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
@@ -35,6 +36,12 @@ public class AuthController : ControllerBase
         {
             return BadRequest(new 
             { 
+                type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+                title = "Bad Request",
+                status = StatusCodes.Status400BadRequest,
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 success = false, 
                 code = "REGISTRATION_FAILED", 
                 message = result.Message,
@@ -52,6 +59,12 @@ public class AuthController : ControllerBase
         {
             return Unauthorized(new 
             { 
+                type = "https://tools.ietf.org/html/rfc9110#section-15.5.2",
+                title = "Unauthorized",
+                status = StatusCodes.Status401Unauthorized,
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 success = false, 
                 code = "INVALID_CREDENTIALS", 
                 message = result.Message,
@@ -81,6 +94,12 @@ public class AuthController : ControllerBase
         {
             return Unauthorized(new 
             { 
+                type = "https://tools.ietf.org/html/rfc9110#section-15.5.2",
+                title = "Unauthorized",
+                status = StatusCodes.Status401Unauthorized,
+                detail = "Không tìm thấy token làm mới hợp lệ trong cookie phiên làm việc.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 success = false, 
                 code = "REFRESH_COOKIE_MISSING", 
                 message = "Không tìm thấy token làm mới hợp lệ trong cookie phiên làm việc.",
@@ -92,6 +111,12 @@ public class AuthController : ControllerBase
         if (!result.Success) 
             return Unauthorized(new 
             { 
+                type = "https://tools.ietf.org/html/rfc9110#section-15.5.2",
+                title = "Unauthorized",
+                status = StatusCodes.Status401Unauthorized,
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 success = false, 
                 code = "REFRESH_TOKEN_INVALID", 
                 message = result.Message,
@@ -111,7 +136,16 @@ public class AuthController : ControllerBase
         return Ok(new
         {
             success = true,
-            data = new { token = legacyToken, refreshToken = legacyToken is null ? null : result.RefreshToken, userId = result.UserId, name = result.Name, email = result.Email, role = result.Role },
+            data = new
+            {
+                token = legacyToken,
+                refreshToken = legacyToken is null ? null : result.RefreshToken,
+                userId = result.UserId,
+                name = result.Name,
+                email = result.Email,
+                role = result.Role,
+                avatarUrl = result.AvatarUrl
+            },
             message = result.Message
         });
     }

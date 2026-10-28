@@ -29,7 +29,7 @@ export function ProfileInfoForm({
             <User className="w-5 h-5 text-brand-primary" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white tracking-tight">Thông Tin Cá Nhân</h3>
+            <h2 className="text-lg font-bold text-white tracking-tight">Thông Tin Cá Nhân</h2>
             <p className="text-xs text-text-secondary">Cập nhật tên hiển thị, ảnh đại diện và liên hệ.</p>
           </div>
         </div>

@@ -78,6 +78,6 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResult>
         string token = _jwtService.GenerateToken(user);
         _logger.LogInformation("User {UserId} logged in successfully.", user.Id);
         
-        return new AuthResult(true, token, "Đăng nhập thành công.", user.Id, user.Name, user.Role, refreshToken, user.Email);
+        return new AuthResult(true, token, "Đăng nhập thành công.", user.Id, user.Name, user.Role, refreshToken, user.Email, user.AvatarUrl);
     }
 }

@@ -127,6 +127,7 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
             }
         }
 
+        bool basePriceChanged = request.BasePrice > 0 && request.BasePrice != ev.BasePrice;
         var beforeState = $"Title={ev.Title},Date={ev.Date:O},Status={ev.Status},BasePrice={ev.BasePrice}";
 
         ev.Update(
@@ -144,6 +145,18 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
             request.BasePrice,
             request.Status,
             request.RefundCutoffHours);
+
+        if (basePriceChanged && !hasSoldTickets)
+        {
+            var seats = await _context.Seats
+                .Where(s => s.EventId == ev.Id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var seat in seats)
+            {
+                seat.UpdatePriceFromBase(request.BasePrice);
+            }
+        }
 
         var audit = new AuditLog(
             userId: request.AdminUserId,

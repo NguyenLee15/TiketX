@@ -62,7 +62,7 @@ export default function AdminRefundsPage() {
   const pages = Math.max(1, Math.ceil(data.totalCount / data.pageSize));
 
   return (
-    <main className="space-y-5 p-4 sm:p-6">
+    <div className="space-y-5 p-4 sm:p-6">
       <header><h1 className="text-2xl font-bold text-white">Hoàn tiền</h1><p className="mt-1 text-sm text-text-secondary">Theo dõi lệnh chi và xử lý các yêu cầu cần đối soát.</p></header>
       <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface-1">
         <table className="w-full min-w-[850px] text-left text-sm">
@@ -81,6 +81,6 @@ export default function AdminRefundsPage() {
         </table>
       </div>
       <nav aria-label="Phân trang yêu cầu hoàn tiền" className="flex items-center justify-between text-sm text-text-secondary"><span>{data.totalCount} yêu cầu · Trang {page}/{pages}</span><div className="flex gap-2"><button disabled={page <= 1} onClick={() => setPage(value => Math.max(1, value - 1))} className="min-h-10 rounded-lg border border-border-subtle px-3 disabled:opacity-40">Trước</button><button disabled={page >= pages} onClick={() => setPage(value => Math.min(pages, value + 1))} className="min-h-10 rounded-lg border border-border-subtle px-3 disabled:opacity-40">Sau</button></div></nav>
-    </main>
+    </div>
   );
 }

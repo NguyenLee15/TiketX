@@ -7,6 +7,7 @@ export const authRefreshResponseSchema = z.object({
   role: z.string().optional().default('Customer'),
   token: z.string().nullable().optional(),
   refreshToken: z.string().nullable().optional(),
+  avatarUrl: z.string().optional().nullable().default(''),
 }).passthrough();
 
 export type AuthRefreshResponse = z.infer<typeof authRefreshResponseSchema>;
