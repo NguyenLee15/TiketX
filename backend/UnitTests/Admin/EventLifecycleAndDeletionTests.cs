@@ -440,4 +440,24 @@ public class EventLifecycleAndDeletionTests : IDisposable
         result.StatusCode.Should().Be(400);
         result.ErrorCode.Should().Be("INVALID_VERSION");
     }
+
+    [Fact]
+    public async Task DeleteEvent_WhenEventLockUnavailable_ReturnsConflict()
+    {
+        var ev = new Event("Locked Event", "Desc", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(2), "Loc", "Venue", 100, basePrice: 150000m);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var mockLockService = new Mock<IDistributedLockService>();
+        mockLockService
+            .Setup(l => l.AcquireLockAsync($"event:cancel:{ev.Id:N}", It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IDistributedLockLease?)null);
+
+        var handler = new DeleteEventCommandHandler(_context, mockLockService.Object);
+        var result = await handler.Handle(new DeleteEventCommand(ev.Id), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(409);
+        result.ErrorCode.Should().Be("EVENT_LOCK_UNAVAILABLE");
+    }
 }

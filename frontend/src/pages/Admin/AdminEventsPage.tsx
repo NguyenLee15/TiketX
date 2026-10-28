@@ -188,7 +188,9 @@ export default function AdminEventsPage() {
     if (!modalState.deleteTarget) return;
     setIsSubmitting(true);
     try {
-      const res = await api.delete(`/api/events/${modalState.deleteTarget.id}`);
+      const res = await api.delete(`/api/events/${modalState.deleteTarget.id}`, {
+        params: modalState.deleteTarget.version ? { expectedVersion: modalState.deleteTarget.version } : undefined,
+      });
       if (res.data.success) {
         toast.success(`Đã xóa sự kiện "${modalState.deleteTarget.title}"`);
         setModalState(current => ({ ...current, deleteTarget: null }));
@@ -197,8 +199,14 @@ export default function AdminEventsPage() {
         toast.error(res.data.message || 'Không thể xóa sự kiện.');
       }
     } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { message?: string } } };
-      toast.error(apiErr.response?.data?.message || 'Không thể xóa sự kiện. Sự kiện đã có vé liên quan.');
+      const apiErr = err as { response?: { status?: number; data?: { code?: string; message?: string } } };
+      if (apiErr.response?.status === 409 || apiErr.response?.data?.code === 'EVENT_CONCURRENCY_CONFLICT') {
+        toast.error('Sự kiện vừa được chỉnh sửa bởi quản trị viên khác. Vui lòng tải lại dữ liệu.');
+        setModalState(current => ({ ...current, deleteTarget: null }));
+        await fetchEvents();
+      } else {
+        toast.error(apiErr.response?.data?.message || 'Không thể xóa sự kiện. Sự kiện đã có vé liên quan.');
+      }
     } finally {
       setIsSubmitting(false);
     }

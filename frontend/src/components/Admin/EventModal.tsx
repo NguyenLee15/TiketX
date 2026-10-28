@@ -100,8 +100,11 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
   const onFormSubmit = async (data: EventFormValues) => {
     const transformed: EventFormValues = {
       ...data,
-      date: toUtcIsoString(data.date),
-      endDate: data.endDate ? toUtcIsoString(data.endDate) : getDefaultEventEndDate(data.date).toISOString(),
+      date: hasTicketHistory && event ? event.date : toUtcIsoString(data.date),
+      endDate: hasTicketHistory && event
+        ? (event.endDate || getDefaultEventEndDate(event.date).toISOString())
+        : (data.endDate ? toUtcIsoString(data.endDate) : getDefaultEventEndDate(data.date).toISOString()),
+      basePrice: hasTicketHistory && event ? Number(event.basePrice) : data.basePrice,
     };
     await onSubmit(transformed);
   };
@@ -195,7 +198,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <option value="Published" className="bg-surface-1 text-white">Đang mở bán (Published)</option>
-                  <option value="Draft" className="bg-surface-1 text-white">Bản nháp (Draft)</option>
+                  <option value="Draft" disabled={hasTicketHistory && (event?.status === 1 || event?.status === ('Published' as unknown as number))} className="bg-surface-1 text-white">Bản nháp (Draft)</option>
                   {watchedStatus === 'Completed' && <option value="Completed" className="bg-surface-1 text-white">Đã kết thúc (Completed)</option>}
                   {watchedStatus === 'Cancelled' && <option value="Cancelled" className="bg-surface-1 text-white">Đã hủy (Cancelled)</option>}
                 </select>
@@ -280,7 +283,15 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
 
           <div className="pt-3 border-t border-border-subtle space-y-2">
             <label htmlFor="event-base-price" className="block text-xs font-bold uppercase tracking-wider text-text-secondary">Giá vé cơ sở (VNĐ)</label>
-            <input id="event-base-price" type="number" min={1} {...register('basePrice', { valueAsNumber: true })} disabled={isLoading} className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary" />
+            <input 
+              id="event-base-price" 
+              type="number" 
+              min={1} 
+              {...register('basePrice', { valueAsNumber: true })} 
+              disabled={hasTicketHistory || isLoading} 
+              aria-describedby={hasTicketHistory ? 'event-history-lock' : undefined}
+              className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-50 disabled:cursor-not-allowed" 
+            />
             {errors.basePrice && <p role="alert" className="text-danger text-xs">{errors.basePrice.message}</p>}
             <p className="text-[11px] text-text-secondary">Giá ghế được tạo tự động theo hạng: VIP 1,75×, Standard 1×, Economy 0,75×.</p>
           </div>

@@ -103,7 +103,7 @@ public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, Adm
                     "CANNOT_DEMOTE_PUBLISHED_EVENT_WITH_TICKETS");
             }
 
-            if (request.Date != default && request.Date != ev.Date)
+            if ((request.Date != default && request.Date != ev.Date) || (request.EndDate != default && request.EndDate != ev.EndDate))
             {
                 return AdminOperationResult.BadRequest(
                     "Không thể thay đổi thời gian sự kiện sau khi đã phát sinh vé bán ra.",

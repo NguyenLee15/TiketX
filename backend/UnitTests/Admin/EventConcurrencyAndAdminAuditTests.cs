@@ -261,4 +261,74 @@ public class EventConcurrencyAndAdminAuditTests : IDisposable
         (await _context.Events.FindAsync(ev.Id))!.Status.Should().NotBe(EventStatus.Cancelled);
         (await _context.RefundRequests.CountAsync()).Should().Be(0);
     }
+
+    [Fact]
+    public async Task UpdateEvent_WhenSoldTicketsExistAndEndDateModified_ReturnsBadRequestCannotModifyDate()
+    {
+        // Arrange
+        var user = new User("Customer", "cust@example.com", "hash", "Customer");
+        _context.Users.Add(user);
+        var ev = new Event("Show With Ticket", "Desc", DateTime.UtcNow.AddDays(10), DateTime.UtcNow.AddDays(10).AddHours(3), "Loc", "Venue", 10, basePrice: 100000m);
+        ev.GenerateSeatsMatrix(1, 2);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var ticket = new Ticket(ev.Id, ev.Seats.First().Id, user.Id, 100000m);
+        ticket.MarkAsPaid();
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        var validVersionStr = Convert.ToBase64String(ev.Version);
+        var handler = new UpdateEventCommandHandler(_context);
+
+        // Act: modify EndDate while keeping Date identical
+        var command = new UpdateEventCommand(
+            ev.Id,
+            ev.Title,
+            ev.Description,
+            ev.Date,
+            ev.EndDate.AddHours(2), // EndDate modified
+            ev.Location,
+            ev.VenueName,
+            ev.TotalSeats,
+            ev.Category,
+            ev.ImageUrl,
+            ev.BannerUrl,
+            ev.OrganizerName,
+            ev.BasePrice,
+            ev.Status,
+            ev.RefundCutoffHours,
+            ExpectedVersion: validVersionStr
+        );
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.ErrorCode.Should().Be("CANNOT_MODIFY_DATE_AFTER_SALES");
+    }
+
+    [Fact]
+    public async Task DeleteEvent_WithStaleExpectedVersion_ReturnsConflictWithoutDeleting()
+    {
+        // Arrange
+        var ev = new Event("Delete Candidate", "Desc", DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(5).AddHours(3), "Loc", "Venue", 10);
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var staleVersion = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        var handler = new DeleteEventCommandHandler(_context);
+
+        // Act
+        var result = await handler.Handle(new DeleteEventCommand(ev.Id, ExpectedVersion: staleVersion), CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(409);
+        result.ErrorCode.Should().Be("EVENT_CONCURRENCY_CONFLICT");
+
+        var eventInDb = await _context.Events.IgnoreQueryFilters().FirstOrDefaultAsync(e => e.Id == ev.Id);
+        eventInDb!.IsDeleted.Should().BeFalse();
+    }
 }

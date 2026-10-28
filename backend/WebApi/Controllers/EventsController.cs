@@ -35,7 +35,19 @@ public class EventsController : ControllerBase
         }
         catch (ArgumentException ex) when (query.Cursor is not null)
         {
-            return BadRequest(new { success = false, code = "INVALID_CURSOR", message = ex.Message });
+            return BadRequest(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Invalid Cursor",
+                status = StatusCodes.Status400BadRequest,
+                success = false, 
+                code = "INVALID_CURSOR", 
+                message = ex.Message,
+                detail = ex.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "INVALID_CURSOR", message = ex.Message }
+            });
         }
     }
 
@@ -64,13 +76,33 @@ public class EventsController : ControllerBase
         if (result == null) 
             return NotFound(new 
             { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Event Not Found",
+                status = StatusCodes.Status404NotFound,
                 success = false, 
                 code = "EVENT_NOT_FOUND", 
                 message = "Event not found",
+                detail = "Event not found",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
                 error = new { code = "EVENT_NOT_FOUND", message = "Event not found" }
             });
         return Ok(new { success = true, data = result });
     }
+
+    private IActionResult UnauthorizedEnvelope(string detail = "User is not authenticated.") => Unauthorized(new
+    {
+        type = "https://tools.ietf.org/html/rfc9457",
+        title = "Unauthorized",
+        status = StatusCodes.Status401Unauthorized,
+        success = false,
+        code = "UNAUTHORIZED",
+        message = detail,
+        detail,
+        instance = HttpContext.Request.Path.Value,
+        traceId = HttpContext.TraceIdentifier,
+        error = new { code = "UNAUTHORIZED", message = detail }
+    });
 
     [HttpPost]
     [Idempotent]
@@ -79,10 +111,23 @@ public class EventsController : ControllerBase
     public async Task<IActionResult> CreateEvent([FromBody] CreateEventRequest? request, CancellationToken cancellationToken = default)
     {
         if (request is null)
-            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu dữ liệu sự kiện.", error = new { code = "INVALID_REQUEST", message = "Thiếu dữ liệu sự kiện." } });
+            return BadRequest(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Invalid Request",
+                status = StatusCodes.Status400BadRequest,
+                success = false, 
+                code = "INVALID_REQUEST", 
+                message = "Thiếu dữ liệu sự kiện.", 
+                detail = "Thiếu dữ liệu sự kiện.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "INVALID_REQUEST", message = "Thiếu dữ liệu sự kiện." } 
+            });
 
         var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        Guid.TryParse(adminUserIdStr, out var adminUserId);
+        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId))
+            return UnauthorizedEnvelope("Không xác định được danh tính quản trị viên từ token.");
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
@@ -103,7 +148,7 @@ public class EventsController : ControllerBase
             request.RowCount,
             request.SeatsPerRow,
             request.Status,
-            adminUserId == Guid.Empty ? null : adminUserId,
+            adminUserId,
             adminEmail,
             ipAddress);
         var id = await _adminEventOperations.CreateAsync(command, cancellationToken);
@@ -153,12 +198,37 @@ public class EventsController : ControllerBase
     public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] UpdateEventRequest? request, CancellationToken cancellationToken = default)
     {
         if (request is null)
-            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu dữ liệu cập nhật sự kiện.", error = new { code = "INVALID_REQUEST", message = "Thiếu dữ liệu cập nhật sự kiện." } });
+            return BadRequest(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Invalid Request",
+                status = StatusCodes.Status400BadRequest,
+                success = false, 
+                code = "INVALID_REQUEST", 
+                message = "Thiếu dữ liệu cập nhật sự kiện.", 
+                detail = "Thiếu dữ liệu cập nhật sự kiện.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "INVALID_REQUEST", message = "Thiếu dữ liệu cập nhật sự kiện." } 
+            });
         if (request.Id.HasValue && id != request.Id.Value)
-            return BadRequest(new { success = false, code = "ID_MISMATCH", message = "Định danh sự kiện không trùng khớp.", error = new { code = "ID_MISMATCH", message = "Định danh sự kiện không trùng khớp." } });
+            return BadRequest(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Id Mismatch",
+                status = StatusCodes.Status400BadRequest,
+                success = false, 
+                code = "ID_MISMATCH", 
+                message = "Định danh sự kiện không trùng khớp.", 
+                detail = "Định danh sự kiện không trùng khớp.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "ID_MISMATCH", message = "Định danh sự kiện không trùng khớp." } 
+            });
 
         var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        Guid.TryParse(adminUserIdStr, out var adminUserId);
+        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId))
+            return UnauthorizedEnvelope("Không xác định được danh tính quản trị viên từ token.");
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
@@ -178,13 +248,25 @@ public class EventsController : ControllerBase
             request.BasePrice,
             request.Status,
             request.RefundCutoffHours,
-            adminUserId == Guid.Empty ? null : adminUserId,
+            adminUserId,
             adminEmail,
             ipAddress,
             request.ExpectedVersion), cancellationToken);
 
         if (!result.Success)
-            return StatusCode(result.StatusCode, new { success = false, code = result.ErrorCode, message = result.Message, error = new { code = result.ErrorCode, message = result.Message } });
+            return StatusCode(result.StatusCode, new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = result.ErrorCode,
+                status = result.StatusCode,
+                success = false, 
+                code = result.ErrorCode, 
+                message = result.Message, 
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = result.ErrorCode, message = result.Message } 
+            });
 
         return Ok(new { success = true, code = "OK", message = result.Message, data = (object?)null });
     }
@@ -198,16 +280,41 @@ public class EventsController : ControllerBase
     public async Task<IActionResult> CancelEvent(Guid id, [FromBody] CancelEventRequest? request, CancellationToken cancellationToken = default)
     {
         if (request is null)
-            return BadRequest(new { success = false, code = "INVALID_REQUEST", message = "Thiếu lý do hủy sự kiện.", error = new { code = "INVALID_REQUEST", message = "Thiếu lý do hủy sự kiện." } });
+            return BadRequest(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Invalid Request",
+                status = StatusCodes.Status400BadRequest,
+                success = false, 
+                code = "INVALID_REQUEST", 
+                message = "Thiếu lý do hủy sự kiện.", 
+                detail = "Thiếu lý do hủy sự kiện.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = "INVALID_REQUEST", message = "Thiếu lý do hủy sự kiện." } 
+            });
         var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        Guid.TryParse(adminUserIdStr, out var adminUserId);
+        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId))
+            return UnauthorizedEnvelope("Không xác định được danh tính quản trị viên từ token.");
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
         var result = await _adminEventOperations.CancelAsync(new CancelEventCommand(
             id, request.Reason, request.ExpectedVersion, adminUserId, adminEmail, ipAddress), cancellationToken);
         if (!result.Success)
-            return StatusCode(result.StatusCode, new { success = false, code = result.ErrorCode, message = result.Message, error = new { code = result.ErrorCode, message = result.Message } });
+            return StatusCode(result.StatusCode, new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = result.ErrorCode,
+                status = result.StatusCode,
+                success = false, 
+                code = result.ErrorCode, 
+                message = result.Message, 
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = result.ErrorCode, message = result.Message } 
+            });
 
         return Ok(new { success = true, code = "OK", message = result.Message, data = (object?)null });
     }
@@ -216,16 +323,29 @@ public class EventsController : ControllerBase
     [Idempotent]
     [Authorize(Roles = "Admin")]
     [EnableRateLimiting("AdminPolicy")]
-    public async Task<IActionResult> DeleteEvent(Guid id, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> DeleteEvent(Guid id, [FromQuery] string? expectedVersion = null, CancellationToken cancellationToken = default)
     {
         var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        Guid.TryParse(adminUserIdStr, out var adminUserId);
+        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId))
+            return UnauthorizedEnvelope("Không xác định được danh tính quản trị viên từ token.");
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
-        var result = await _adminEventOperations.DeleteAsync(new DeleteEventCommand(id, adminUserId, adminEmail, ipAddress), cancellationToken);
+        var result = await _adminEventOperations.DeleteAsync(new DeleteEventCommand(id, adminUserId, adminEmail, ipAddress, expectedVersion), cancellationToken);
         if (!result.Success)
-            return StatusCode(result.StatusCode, new { success = false, code = result.ErrorCode, message = result.Message, error = new { code = result.ErrorCode, message = result.Message } });
+            return StatusCode(result.StatusCode, new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = result.ErrorCode,
+                status = result.StatusCode,
+                success = false, 
+                code = result.ErrorCode, 
+                message = result.Message, 
+                detail = result.Message,
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = result.ErrorCode, message = result.Message } 
+            });
 
         return Ok(new { success = true, code = "OK", message = result.Message, data = (object?)null });
     }

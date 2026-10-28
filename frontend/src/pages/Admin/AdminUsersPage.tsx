@@ -178,7 +178,7 @@ export default function AdminUsersPage() {
       }
     } catch (err: unknown) {
       const apiErr = err as { response?: { status?: number; data?: { code?: string; message?: string } } };
-      if (apiErr.response?.data?.code === 'USER_CONCURRENCY_CONFLICT' || apiErr.response?.status === 409) {
+      if (apiErr.response?.data?.code === 'CONCURRENCY_CONFLICT' || apiErr.response?.data?.code === 'USER_CONCURRENCY_CONFLICT' || apiErr.response?.status === 409) {
         setMutationError('Dữ liệu người dùng đã bị thay đổi bởi phiên khác. Đang tải lại danh sách mới nhất...');
         await fetchUsers();
       } else {
