@@ -21,6 +21,7 @@ import { DashboardTopEvents } from './Dashboard/DashboardTopEvents';
 import { ScanCameraPanel } from './Scan/ScanCameraPanel';
 import { RecentScansList } from './Scan/RecentScansList';
 import { ScanResultDisplay } from './Scan/ScanResultDisplay';
+import { SeatMap } from '../EventDetail/SeatMap';
 import api from '../../services/api';
 import type { Event as EventModel } from '../../types';
 
@@ -678,6 +679,29 @@ describe('Admin Portal Remediation Verification', () => {
       expect(heading).toBeInTheDocument();
       const statusHeading = screen.getByRole('heading', { level: 3, name: /Vé hợp lệ - Cho phép vào cổng/i });
       expect(statusHeading).toBeInTheDocument();
+    });
+  });
+
+  describe('Customer Experience Accessibility (WCAG 2.1 AA Compliance)', () => {
+    it('renders SeatMap with accessible level 2 heading and region landmark', () => {
+      render(<SeatMap seats={[]} selectedSeat={null} onSeatClick={vi.fn()} />);
+      const heading = screen.getByRole('heading', { level: 2, name: /Sơ đồ chọn ghế/i });
+      expect(heading).toBeInTheDocument();
+    });
+
+    it('renders CheckoutVietQrView error state with level 3 heading under checkout modal h2', () => {
+      render(
+        <CheckoutVietQrView
+          loadingPayment={false}
+          paymentInitError="Lỗi cổng thanh toán."
+          paymentData={null}
+          onRetryPayment={vi.fn()}
+          onProceedPayOS={vi.fn()}
+          copyToClipboard={vi.fn()}
+        />
+      );
+      const errorHeading = screen.getByRole('heading', { level: 3, name: /Không thể tạo mã thanh toán/i });
+      expect(errorHeading).toBeInTheDocument();
     });
   });
 });

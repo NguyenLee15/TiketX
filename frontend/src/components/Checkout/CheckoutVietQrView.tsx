@@ -45,7 +45,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
     return (
       <div className="p-6 rounded-2xl bg-danger/10 border border-danger/30 flex flex-col items-center justify-center text-center space-y-3" role="alert">
         <AlertCircle className="w-8 h-8 text-danger" />
-        <h4 className="text-white font-bold text-sm">Không thể tạo mã thanh toán</h4>
+        <h3 className="text-white font-bold text-sm">Không thể tạo mã thanh toán</h3>
         <p className="text-text-secondary text-xs max-w-sm">{paymentInitError}</p>
         <button
           onClick={onRetryPayment}

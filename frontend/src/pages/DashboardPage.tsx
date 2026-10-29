@@ -84,7 +84,8 @@ export default function DashboardPage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div role="status" aria-busy="true" aria-label="Đang tải danh sách sự kiện" className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <span className="sr-only">Đang tải danh sách sự kiện...</span>
             {[1, 2, 3, 4, 5, 6].map((item) => (
               <SkeletonCard key={item} />
             ))}

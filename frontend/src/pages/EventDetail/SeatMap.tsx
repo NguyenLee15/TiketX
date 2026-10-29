@@ -65,6 +65,7 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
 
   return (
     <div className="surface-panel p-5 sm:p-7 md:p-8 shadow-xl relative overflow-hidden min-h-[480px] lg:min-h-[540px] flex flex-col justify-between">
+      <h2 className="sr-only">Sơ đồ chọn ghế</h2>
       {/* Curved Stage Header */}
       <div className="mb-8 text-center relative z-10">
         <div className="w-3/5 max-w-md mx-auto h-1 bg-brand-primary rounded-full mb-3" />
@@ -79,7 +80,7 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
       </div>
 
       {/* Seat Matrix Grid */}
-      <div className="flex flex-col gap-3 sm:gap-3.5 items-center flex-1 justify-center relative z-10 overflow-x-auto pb-3 hide-scrollbar">
+      <div role="region" aria-label="Sơ đồ ghế ngồi" className="flex flex-col gap-3 sm:gap-3.5 items-center flex-1 justify-center relative z-10 overflow-x-auto pb-3 hide-scrollbar">
         {sortedRowKeys.map(rowName => {
           const rowSeats = rows[rowName] || [];
           const isVipRow = rowSeats.some(s => s.tier === 1);
