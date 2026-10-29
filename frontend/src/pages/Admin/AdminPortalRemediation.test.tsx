@@ -19,6 +19,8 @@ import PaymentResultPage from '../PaymentResultPage';
 import { AdminEventActions } from './Events/AdminEventActions';
 import { DashboardTopEvents } from './Dashboard/DashboardTopEvents';
 import { ScanCameraPanel } from './Scan/ScanCameraPanel';
+import { RecentScansList } from './Scan/RecentScansList';
+import { ScanResultDisplay } from './Scan/ScanResultDisplay';
 import api from '../../services/api';
 import type { Event as EventModel } from '../../types';
 
@@ -645,6 +647,37 @@ describe('Admin Portal Remediation Verification', () => {
 
       expect(mockScannerStart).toHaveBeenCalledTimes(1);
       expect(mockScannerStop).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Admin Scanner Heading Hierarchy (WCAG 2.1 AA Compliance)', () => {
+    it('renders RecentScansList header with h2 heading level', () => {
+      render(<RecentScansList recentScans={[]} />);
+      const heading = screen.getByRole('heading', { level: 2, name: /Lịch sử soát vé gần nhất/i });
+      expect(heading).toBeInTheDocument();
+    });
+
+    it('renders ScanResultDisplay with accessible h2 section heading', () => {
+      render(
+        <ScanResultDisplay
+          scanResult={{
+            status: 'valid',
+            message: 'Vé hợp lệ - Cho phép vào cổng',
+            ticket: {
+              ticketId: 't-1',
+              eventTitle: 'Concert Âm Nhạc Trẻ',
+              attendeeName: 'Nguyễn Văn A',
+              row: 'A',
+              number: 1,
+              tier: 'VIP',
+            },
+          }}
+        />
+      );
+      const heading = screen.getByRole('heading', { level: 2, name: /Kết quả kiểm tra vé/i });
+      expect(heading).toBeInTheDocument();
+      const statusHeading = screen.getByRole('heading', { level: 3, name: /Vé hợp lệ - Cho phép vào cổng/i });
+      expect(statusHeading).toBeInTheDocument();
     });
   });
 });

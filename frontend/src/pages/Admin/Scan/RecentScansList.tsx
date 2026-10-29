@@ -9,10 +9,10 @@ interface RecentScansListProps {
 export const RecentScansList: React.FC<RecentScansListProps> = ({ recentScans }) => {
   return (
     <div className="surface-panel p-5 sm:p-6">
-      <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
         <RefreshCw className="w-4 h-4 text-brand-primary" />
         Lịch sử soát vé gần nhất
-      </h3>
+      </h2>
 
       <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
         {recentScans.map((item, idx) => (

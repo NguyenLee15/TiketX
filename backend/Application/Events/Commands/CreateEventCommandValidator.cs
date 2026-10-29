@@ -7,7 +7,7 @@ public class CreateEventCommandValidator : AbstractValidator<CreateEventCommand>
 {
     public CreateEventCommandValidator(ITimePolicy? time = null)
     {
-        var now = (time ?? new UtcTimePolicy()).UtcNow;
+        var timePolicy = time ?? new UtcTimePolicy();
         RuleFor(x => x.Title)
             .NotEmpty().WithMessage("Tiêu đề sự kiện không được để trống.")
             .MaximumLength(250).WithMessage("Tiêu đề sự kiện không được vượt quá 250 ký tự.");
@@ -21,7 +21,7 @@ public class CreateEventCommandValidator : AbstractValidator<CreateEventCommand>
 
         RuleFor(x => x.Date)
             .NotEmpty().WithMessage("Thời gian bắt đầu không được để trống.")
-            .GreaterThan(now).WithMessage("Thời gian bắt đầu sự kiện phải ở tương lai.");
+            .Must((cmd, date) => date > timePolicy.UtcNow).WithMessage("Thời gian bắt đầu sự kiện phải ở tương lai.");
 
         RuleFor(x => x.EndDate)
             .Must((cmd, end) => end >= cmd.Date).WithMessage("Thời gian kết thúc phải diễn ra sau hoặc cùng thời điểm bắt đầu.");
@@ -41,6 +41,11 @@ public class CreateEventCommandValidator : AbstractValidator<CreateEventCommand>
         RuleFor(x => x)
             .Must(x => x.RowCount * x.SeatsPerRow <= 2500)
             .WithMessage("Tổng số lượng ghế cho một sự kiện không được vượt quá 2.500 ghế.");
+
+        RuleFor(x => x.TotalSeats)
+            .Equal(x => x.RowCount * x.SeatsPerRow)
+            .WithMessage("Tổng số ghế phải khớp với kích thước ma trận ghế (Số hàng x Số ghế mỗi hàng).")
+            .When(x => x.TotalSeats > 0);
 
         RuleFor(x => x.RefundCutoffHours)
             .InclusiveBetween(0, 720).WithMessage("Thời hạn hủy vé phải từ 0 đến 720 giờ.");

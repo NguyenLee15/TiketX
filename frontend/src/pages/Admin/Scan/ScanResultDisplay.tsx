@@ -33,6 +33,7 @@ export const ScanResultDisplay: React.FC<ScanResultDisplayProps> = ({ scanResult
       aria-atomic="true"
       className="surface-panel p-5 sm:p-6 min-h-[220px] flex flex-col justify-center relative overflow-hidden"
     >
+      <h2 className="sr-only">Kết quả kiểm tra vé</h2>
       {scanResult ? (
         <div className="space-y-3.5 animate-in zoom-in-95 duration-300">
           {scanResult.status === 'valid' && (

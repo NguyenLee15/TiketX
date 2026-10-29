@@ -44,7 +44,7 @@ public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Gui
             request.EndDate,
             request.Location,
             request.VenueName,
-            request.TotalSeats,
+            request.RowCount * request.SeatsPerRow,
             request.Category,
             request.ImageUrl,
             request.BannerUrl,

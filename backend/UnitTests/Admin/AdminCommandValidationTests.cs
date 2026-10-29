@@ -1,8 +1,10 @@
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using TickeX.Application.Admin.Commands;
 using TickeX.Application.Events.Commands;
+using TickeX.Application.Interfaces;
 using TickeX.Domain.Entities;
 using TickeX.Domain.Enums;
 using TickeX.Infrastructure.Persistence;
@@ -119,6 +121,64 @@ public class AdminCommandValidationTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(CreateEventCommand.RowCount));
         result.Errors.Should().Contain(e => e.PropertyName == nameof(CreateEventCommand.SeatsPerRow));
+    }
+
+    [Fact]
+    public void CreateEventCommandValidator_MismatchedTotalSeats_FailsValidation()
+    {
+        var command = new CreateEventCommand(
+            Title: "Hà Anh Tuấn Live Concert",
+            Description: "Đêm nhạc đặc biệt",
+            Date: DateTime.UtcNow.AddDays(7),
+            EndDate: DateTime.UtcNow.AddDays(7).AddHours(3),
+            Location: "Trung tâm Hội nghị Quốc gia",
+            VenueName: "Khán phòng chính",
+            TotalSeats: 100, // 5 * 12 = 60 != 100
+            Category: "Concert",
+            ImageUrl: "https://example.com/banner.jpg",
+            RowCount: 5,
+            SeatsPerRow: 12
+        );
+
+        var result = _createEventValidator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(CreateEventCommand.TotalSeats));
+    }
+
+    [Fact]
+    public void CreateEventCommandValidator_DynamicTimeEvaluation_ReevaluatesPerCall()
+    {
+        var mockTime = new Mock<ITimePolicy>();
+        var baseTime = new DateTime(2026, 6, 1, 10, 0, 0, DateTimeKind.Utc);
+        mockTime.Setup(t => t.UtcNow).Returns(() => baseTime);
+
+        var validator = new CreateEventCommandValidator(mockTime.Object);
+
+        var command = new CreateEventCommand(
+            Title: "Live Concert",
+            Description: "Đêm nhạc đặc biệt",
+            Date: baseTime.AddHours(2), // 12:00 -> in future at start
+            EndDate: baseTime.AddHours(5),
+            Location: "Hà Nội",
+            VenueName: "Khán phòng chính",
+            TotalSeats: 60,
+            Category: "Concert",
+            ImageUrl: "https://example.com/banner.jpg",
+            RowCount: 5,
+            SeatsPerRow: 12
+        );
+
+        // First validation when baseTime is 10:00 -> valid
+        var firstResult = validator.Validate(command);
+        firstResult.IsValid.Should().BeTrue();
+
+        // Advance time to 13:00 -> command.Date (12:00) is now in the past
+        baseTime = baseTime.AddHours(3);
+
+        var secondResult = validator.Validate(command);
+        secondResult.IsValid.Should().BeFalse();
+        secondResult.Errors.Should().Contain(e => e.PropertyName == nameof(CreateEventCommand.Date));
     }
 
     [Fact]
