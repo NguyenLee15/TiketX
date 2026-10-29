@@ -200,7 +200,7 @@ export default function AdminUsersPage() {
           </p>
         </div>
         <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center border border-brand-primary/20 shadow-md shrink-0">
-          <Users className="w-5 h-5 text-brand-primary" />
+          <Users className="w-5 h-5 text-brand-primary" aria-hidden="true" />
         </div>
       </div>
 

@@ -54,7 +54,7 @@ export default function AdminRefundsPage() {
     } finally { setRetrying(null); }
   };
 
-  if (refundsQuery.isLoading) return <div role="status" className="p-8 text-text-secondary" aria-busy="true"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Đang tải yêu cầu hoàn tiền</div>;
+  if (refundsQuery.isLoading) return <div role="status" className="p-8 text-text-secondary" aria-busy="true"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" aria-hidden="true" /> Đang tải yêu cầu hoàn tiền</div>;
   if (refundsQuery.isError) return <section className="surface-panel m-6 p-6"><p role="alert" className="mb-3 text-danger">Không tải được danh sách hoàn tiền.</p><button className="rounded-lg bg-brand-primary px-4 py-2 text-white" onClick={() => void refundsQuery.refetch()}>Thử lại</button></section>;
 
   const data = refundsQuery.data;
@@ -71,10 +71,10 @@ export default function AdminRefundsPage() {
             {data.items.map(refund => <tr key={refund.id} className="border-b border-border-subtle/70 align-top">
               <td className="p-3"><div className="font-medium text-white">{refund.id.slice(0, 8)}</div><div className="text-xs text-text-secondary">Vé {refund.ticketId.slice(0, 8)}</div></td>
               <td className="whitespace-nowrap p-3 tabular-nums">{money.format(refund.amount)}</td>
-              <td className="p-3"><span className="rounded-md bg-surface-2 px-2 py-1 text-xs">{refund.status}</span>{refund.lastError && <p className="mt-2 flex max-w-sm gap-1.5 text-xs text-warning"><AlertTriangle className="h-4 w-4 shrink-0" />{refund.lastError}</p>}</td>
+              <td className="p-3"><span className="rounded-md bg-surface-2 px-2 py-1 text-xs">{refund.status}</span>{refund.lastError && <p className="mt-2 flex max-w-sm gap-1.5 text-xs text-warning"><AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />{refund.lastError}</p>}</td>
               <td className="p-3">{refund.providerStatus ?? '—'}{refund.providerReference && <p className="mt-1 max-w-40 truncate text-xs text-text-secondary">{refund.providerReference}</p>}</td>
               <td className="p-3 tabular-nums">{refund.attempts}</td>
-              <td className="p-3">{refund.status === 'NeedsReview' && <button type="button" disabled={retrying === refund.id} onClick={() => void retryRefund(refund.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-brand-primary/40 px-3 text-xs font-semibold text-brand-primary disabled:opacity-60">{retrying === refund.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Đối soát / thử lại</button>}</td>
+              <td className="p-3">{refund.status === 'NeedsReview' && <button type="button" disabled={retrying === refund.id} onClick={() => void retryRefund(refund.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-brand-primary/40 px-3 text-xs font-semibold text-brand-primary disabled:opacity-60">{retrying === refund.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />} Đối soát / thử lại</button>}</td>
             </tr>)}
             {data.items.length === 0 && <tr><td colSpan={6} className="p-10 text-center text-text-secondary">Chưa có yêu cầu hoàn tiền.</td></tr>}
           </tbody>

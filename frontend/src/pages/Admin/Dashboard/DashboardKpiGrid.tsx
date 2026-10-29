@@ -98,7 +98,7 @@ export function DashboardKpiGrid({ stats }: DashboardKpiGridProps) {
         >
           <div className="flex justify-between items-start mb-3 relative z-10 gap-2">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${stat.border} ${stat.bg} shrink-0`}>
-              <stat.icon className={`w-5 h-5 ${stat.color}`} />
+              <stat.icon className={`w-5 h-5 ${stat.color}`} aria-hidden="true" />
             </div>
             <span className="flex items-center gap-1 text-[11px] font-bold text-text-secondary bg-surface-2/80 px-2.5 py-0.5 rounded-full border border-border-subtle whitespace-nowrap shrink-0">
               {stat.badge}

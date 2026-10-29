@@ -11,7 +11,7 @@ export function DashboardTopEvents({ topEvents }: DashboardTopEventsProps) {
   return (
     <div className="lg:col-span-6 surface-panel p-5 sm:p-6">
       <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2 whitespace-nowrap">
-        <Activity className="w-4 h-4 text-brand-primary" />
+        <Activity className="w-4 h-4 text-brand-primary" aria-hidden="true" />
         Top Sự Kiện Bán Chạy Nhất
       </h2>
 

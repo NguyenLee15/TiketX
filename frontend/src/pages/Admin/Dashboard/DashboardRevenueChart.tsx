@@ -20,7 +20,7 @@ export function DashboardRevenueChart({ dailyStats }: DashboardRevenueChartProps
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-brand-primary" />
+            <BarChart3 className="w-4 h-4 text-brand-primary" aria-hidden="true" />
             Doanh Thu 7 Ngày Gần Nhất
           </h2>
           <p className="text-xs text-text-secondary mt-0.5">Biểu đồ doanh thu thực tế theo ngày thanh toán vé</p>

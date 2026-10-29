@@ -21,7 +21,7 @@ export const AdminEventsFilterBar: React.FC<AdminEventsFilterBarProps> = ({
   return (
     <div className="surface-panel p-3.5 sm:p-4 flex flex-col md:flex-row gap-3">
       <div className="flex-1 relative flex items-center bg-surface-2 rounded-xl border border-border-subtle focus-within:border-brand-primary/50">
-        <Search className="absolute left-3.5 w-4 h-4 text-text-tertiary" />
+        <Search className="absolute left-3.5 w-4 h-4 text-text-tertiary" aria-hidden="true" />
         <input 
           type="text" 
           placeholder="Tìm kiếm theo tên sự kiện, địa điểm..." 

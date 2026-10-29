@@ -103,7 +103,7 @@ export const ScanResultDisplay: React.FC<ScanResultDisplayProps> = ({ scanResult
       ) : (
         <div className="text-center py-6 space-y-2 text-text-tertiary">
           <div className="w-12 h-12 rounded-2xl bg-surface-2 border border-border-subtle flex items-center justify-center mx-auto text-text-muted">
-            <CheckCircle2 className="w-6 h-6" />
+            <CheckCircle2 className="w-6 h-6" aria-hidden="true" />
           </div>
           <p className="text-sm font-medium">Sẵn sàng soát vé</p>
           <p className="text-xs max-w-xs mx-auto">

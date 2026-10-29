@@ -28,6 +28,12 @@ import MockPayOSPage from '../MockPayOSPage';
 import { TicketFilterTabs } from '../Tickets/TicketFilterTabs';
 import { DiscoveryHero } from '../../components/Discovery/DiscoveryHero';
 import { SkeletonSeatMap } from '../../components/Skeletons/SkeletonSeatMap';
+import { AdminEventsFilterBar } from './Events/AdminEventsFilterBar';
+import { AdminUsersFilterBar } from './Users/AdminUsersFilterBar';
+import { DashboardRevenueChart } from './Dashboard/DashboardRevenueChart';
+import { DashboardRecentTransactions } from './Dashboard/DashboardRecentTransactions';
+import { DashboardKpiGrid } from './Dashboard/DashboardKpiGrid';
+import { AdminEventsHeader } from './Events/AdminEventsHeader';
 import api from '../../services/api';
 import type { Event as EventModel } from '../../types';
 
@@ -819,6 +825,82 @@ describe('Admin Portal Remediation Verification', () => {
       const statusContainer = screen.getByRole('status');
       expect(statusContainer).toBeInTheDocument();
       expect(screen.getByText(/Đang tải thông tin sự kiện và sơ đồ ghế/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Admin Portal Decorative Icon Accessibility (WCAG 2.1 AA)', () => {
+    it('Admin filter bars hide decorative search icons from screen readers', () => {
+      const { container: eventsContainer } = render(
+        <AdminEventsFilterBar
+          searchQuery=""
+          onSearchChange={vi.fn()}
+          categoryFilter="All"
+          onCategoryChange={vi.fn()}
+          statusFilter="All"
+          onStatusChange={vi.fn()}
+        />
+      );
+      const eventsSearchIcon = eventsContainer.querySelector('div.relative svg');
+      expect(eventsSearchIcon).toHaveAttribute('aria-hidden', 'true');
+
+      cleanup();
+
+      const { container: usersContainer } = render(
+        <AdminUsersFilterBar
+          searchTerm=""
+          onSearchChange={vi.fn()}
+          roleFilter=""
+          onRoleChange={vi.fn()}
+          blockFilter=""
+          onBlockChange={vi.fn()}
+        />
+      );
+      const usersSearchIcon = usersContainer.querySelector('div.relative svg');
+      expect(usersSearchIcon).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('Dashboard components render section icons and KPI card icons with aria-hidden', () => {
+      const { container: chartContainer } = render(<DashboardRevenueChart dailyStats={[]} />);
+      const chartIcon = chartContainer.querySelector('h2 svg');
+      expect(chartIcon).toHaveAttribute('aria-hidden', 'true');
+
+      cleanup();
+
+      const { container: topEventsContainer } = render(<DashboardTopEvents topEvents={[]} />);
+      const activityIcon = topEventsContainer.querySelector('h2 svg');
+      expect(activityIcon).toHaveAttribute('aria-hidden', 'true');
+
+      cleanup();
+
+      const { container: recentTxContainer } = render(<DashboardRecentTransactions recentTransactions={[]} />);
+      const dollarIcon = recentTxContainer.querySelector('h2 svg');
+      expect(dollarIcon).toHaveAttribute('aria-hidden', 'true');
+
+      cleanup();
+
+      const mockStats = {
+        totalRevenue: 1000000,
+        totalTicketsSold: 10,
+        totalCheckedIn: 5,
+        totalRefunded: 0,
+        totalEvents: 2,
+        totalUsers: 5,
+        dailyStats: [],
+        topEvents: [],
+        recentTransactions: []
+      };
+      const { container: kpiContainer } = render(<DashboardKpiGrid stats={mockStats} />);
+      const icons = kpiContainer.querySelectorAll('.surface-panel svg');
+      expect(icons.length).toBeGreaterThan(0);
+      icons.forEach(icon => {
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
+      });
+    });
+
+    it('AdminEventsHeader hides decorative plus icon from assistive technology', () => {
+      const { container } = render(<AdminEventsHeader onCreate={vi.fn()} />);
+      const plusIcon = container.querySelector('button svg');
+      expect(plusIcon).toHaveAttribute('aria-hidden', 'true');
     });
   });
 });

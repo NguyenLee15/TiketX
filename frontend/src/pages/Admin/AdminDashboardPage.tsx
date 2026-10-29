@@ -126,7 +126,7 @@ export default function AdminDashboardPage() {
       <div className="surface-panel flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-5 sm:p-6">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary/15 border border-brand-primary/30 w-fit mb-1.5 text-xs font-bold text-brand-primary">
-            <TrendingUp className="w-3.5 h-3.5" />
+            <TrendingUp className="w-3.5 h-3.5" aria-hidden="true" />
             Bảng Điều Khiển Quản Trị Hệ Thống
           </div>
           <h1 className="text-2xl sm:text-3xl font-display font-black text-white tracking-tight">
@@ -138,10 +138,10 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="flex items-center gap-2 text-xs text-text-tertiary bg-surface-2 px-3 py-1.5 rounded-xl border border-border-subtle">
-          <Clock className="w-3.5 h-3.5 text-brand-primary" />
+          <Clock className="w-3.5 h-3.5 text-brand-primary" aria-hidden="true" />
           <span aria-live="polite">Cập nhật: {lastUpdated ? dateTimeFormatter.format(lastUpdated) : '—'}</span>
           <button type="button" onClick={fetchStats} disabled={isRefreshing} aria-label="Làm mới dữ liệu bảng điều khiển" className="p-1 rounded-md hover:bg-surface-3 text-text-secondary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-50">
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin motion-reduce:animate-none' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />
           </button>
         </div>
       </div>

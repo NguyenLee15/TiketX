@@ -10,7 +10,7 @@ export const RecentScansList: React.FC<RecentScansListProps> = ({ recentScans })
   return (
     <div className="surface-panel p-5 sm:p-6">
       <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-        <RefreshCw className="w-4 h-4 text-brand-primary" />
+        <RefreshCw className="w-4 h-4 text-brand-primary" aria-hidden="true" />
         Lịch sử soát vé gần nhất
       </h2>
 
@@ -18,10 +18,10 @@ export const RecentScansList: React.FC<RecentScansListProps> = ({ recentScans })
         {recentScans.map((item, idx) => (
           <div key={idx} className="p-2.5 bg-surface-2/40 rounded-xl border border-border-subtle flex items-center justify-between text-xs">
             <div className="flex items-center gap-2.5 truncate">
-              {item.status === 'valid' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
-              {item.status === 'already_used' && <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />}
-              {item.status === 'conflict' && <AlertOctagon className="w-4 h-4 text-amber-300 shrink-0" />}
-              {item.status === 'invalid' && <XCircle className="w-4 h-4 text-red-400 shrink-0" />}
+              {item.status === 'valid' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />}
+              {item.status === 'already_used' && <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />}
+              {item.status === 'conflict' && <AlertOctagon className="w-4 h-4 text-amber-300 shrink-0" aria-hidden="true" />}
+              {item.status === 'invalid' && <XCircle className="w-4 h-4 text-red-400 shrink-0" aria-hidden="true" />}
               <div className="truncate">
                 <p className="font-bold text-white truncate">{item.ticket?.attendeeName || (item.status === 'conflict' ? 'Xung đột trạm quét' : 'Từ chối vào cổng')}</p>
                 <p className="text-[10px] text-text-secondary truncate">

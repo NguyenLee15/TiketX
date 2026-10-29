@@ -122,7 +122,7 @@ export default function AdminScanTicketPage() {
       <div className="surface-panel flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 sm:p-6">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase mb-1.5">
-            <ShieldCheck className="w-3.5 h-3.5" /> Trạm Soát Vé An Ninh Cổng
+            <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" /> Trạm Soát Vé An Ninh Cổng
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Trạm Soát Vé Điện Tử</h1>
           <p className="text-text-secondary text-xs sm:text-sm mt-0.5">
@@ -130,7 +130,7 @@ export default function AdminScanTicketPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-3 border border-border-subtle text-xs text-text-secondary shrink-0">
-          <Volume2 className="w-4 h-4 text-brand-primary" />
+          <Volume2 className="w-4 h-4 text-brand-primary" aria-hidden="true" />
           <span>Âm thanh Web Audio Singleton</span>
         </div>
       </div>

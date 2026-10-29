@@ -44,7 +44,7 @@ export default function AdminLayout() {
       <header className="md:hidden h-16 bg-surface-1 border-b border-border-subtle px-4 flex items-center justify-between shrink-0 sticky top-0 z-40">
         <Link to={currentRole === 'Staff' ? "/admin/scan-ticket" : "/admin"} className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded bg-surface-2 border border-border-subtle flex items-center justify-center shrink-0">
-            <Ticket className="w-4 h-4 text-brand-primary" />
+            <Ticket className="w-4 h-4 text-brand-primary" aria-hidden="true" />
           </div>
           <span className="text-base font-display font-bold tracking-tight text-white">
             {portalTitle}
@@ -58,7 +58,7 @@ export default function AdminLayout() {
           aria-controls="admin-mobile-navigation"
           aria-expanded={isMobileMenuOpen}
         >
-          {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          {isMobileMenuOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
         </button>
       </header>
 
@@ -79,7 +79,7 @@ export default function AdminLayout() {
         <div className="h-16 flex items-center justify-between px-5 border-b border-border-subtle shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded bg-surface-2 border border-border-subtle flex items-center justify-center shrink-0">
-              <Ticket className="w-4 h-4 text-brand-primary" />
+              <Ticket className="w-4 h-4 text-brand-primary" aria-hidden="true" />
             </div>
             <span className="text-base font-display font-bold tracking-tight text-white">
               {portalTitle}
@@ -90,7 +90,7 @@ export default function AdminLayout() {
             aria-label="Đóng menu"
             className="min-h-11 min-w-11 p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-surface-2"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 
@@ -108,7 +108,7 @@ export default function AdminLayout() {
                     : 'text-text-secondary hover:text-white hover:bg-surface-2 border border-transparent'
                 }`}
               >
-                <item.icon className="w-4 h-4" />
+                <item.icon className="w-4 h-4" aria-hidden="true" />
                 {item.name}
               </Link>
             );
@@ -121,7 +121,7 @@ export default function AdminLayout() {
             onClick={() => setIsMobileMenuOpen(false)}
             className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-text-secondary hover:text-white hover:bg-surface-2 font-medium transition-colors"
           >
-            <Home className="w-4 h-4 text-brand-primary" />
+            <Home className="w-4 h-4 text-brand-primary" aria-hidden="true" />
             Về Trang Khách Hàng
           </Link>
 
@@ -148,7 +148,7 @@ export default function AdminLayout() {
               className="text-text-tertiary hover:text-danger transition-colors p-1.5 rounded-lg hover:bg-danger/10"
               title="Đăng xuất"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -160,7 +160,7 @@ export default function AdminLayout() {
         <div className="h-20 flex items-center px-6 border-b border-border-subtle shrink-0">
           <Link to={currentRole === 'Staff' ? "/admin/scan-ticket" : "/admin"} className="flex items-center gap-3 group">
             <div className="w-8 h-8 rounded bg-surface-2 border border-border-subtle flex items-center justify-center shrink-0 group-hover:border-brand-primary transition-colors">
-              <Ticket className="w-4 h-4 text-text-primary group-hover:text-brand-primary transition-colors" />
+              <Ticket className="w-4 h-4 text-text-primary group-hover:text-brand-primary transition-colors" aria-hidden="true" />
             </div>
             <span className="text-xl font-display font-bold tracking-tight text-text-primary group-hover:text-white transition-colors">
               {portalTitle}
@@ -182,7 +182,7 @@ export default function AdminLayout() {
                     : 'text-text-secondary hover:text-white hover:bg-surface-2/50 border border-transparent'
                 }`}
               >
-                <item.icon className={`w-4 h-4 transition-transform ${isActive ? 'text-brand-primary' : 'group-hover:scale-110'}`} />
+                <item.icon className={`w-4 h-4 transition-transform ${isActive ? 'text-brand-primary' : 'group-hover:scale-110'}`} aria-hidden="true" />
                 {item.name}
               </Link>
             );
@@ -195,7 +195,7 @@ export default function AdminLayout() {
             to="/"
             className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-lg text-sm text-text-secondary hover:text-white hover:bg-surface-2/50 font-medium transition-colors"
           >
-            <Home className="w-4 h-4" />
+            <Home className="w-4 h-4" aria-hidden="true" />
             Về Trang Khách Hàng
           </Link>
 
@@ -222,7 +222,7 @@ export default function AdminLayout() {
               className="text-text-tertiary hover:text-danger transition-colors p-1.5 rounded hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
               title="Đăng xuất"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>

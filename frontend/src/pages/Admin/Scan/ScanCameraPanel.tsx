@@ -147,7 +147,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
             title="Đổi camera Trước / Sau"
             className="p-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white border border-border-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary active:scale-95 disabled:opacity-40"
           >
-            <SwitchCamera className="w-4 h-4 text-brand-primary" />
+            <SwitchCamera className="w-4 h-4 text-brand-primary" aria-hidden="true" />
           </button>
           <button
             onClick={toggleCamera}
@@ -158,16 +158,16 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
             }`}
           >
             {cameraActive ? (
-              <><CameraOff className="w-3.5 h-3.5" /> Tắt Camera</>
+              <><CameraOff className="w-3.5 h-3.5" aria-hidden="true" /> Tắt Camera</>
             ) : (
-              <><Camera className="w-3.5 h-3.5" /> Bật Camera</>
+              <><Camera className="w-3.5 h-3.5" aria-hidden="true" /> Bật Camera</>
             )}
           </button>
           <button 
             onClick={handlePasteClipboard}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-xs text-text-secondary hover:text-white border border-border-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary active:scale-95"
           >
-            <Clipboard className="w-3.5 h-3.5 text-brand-primary" />
+            <Clipboard className="w-3.5 h-3.5 text-brand-primary" aria-hidden="true" />
             Dán Clipboard
           </button>
         </div>
@@ -197,7 +197,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
           </>
         ) : (
           <div className="flex flex-col items-center justify-center p-8 text-center text-text-secondary space-y-2">
-            <CameraOff className="w-12 h-12 text-surface-3" />
+            <CameraOff className="w-12 h-12 text-surface-3" aria-hidden="true" />
             <p className="text-sm font-medium text-white">Camera đang tạm dừng</p>
             <p className="text-xs max-w-xs">Bấm "Bật Camera" để mở luồng quét hoặc sử dụng ô nhập tay phía dưới.</p>
           </div>
@@ -211,7 +211,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
         </label>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary" aria-hidden="true" />
             <input 
               id="qr-token-input"
               type="text"
@@ -227,7 +227,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
             disabled={isVerifying || !ticketInput.trim()}
             className="px-5 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-50 flex items-center gap-1.5 shrink-0 shadow-md shadow-brand-glow text-xs sm:text-sm active:scale-95"
           >
-            {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+            {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" aria-hidden="true" /> : <UserCheck className="w-4 h-4" aria-hidden="true" />}
             Soát Vé
           </button>
         </div>

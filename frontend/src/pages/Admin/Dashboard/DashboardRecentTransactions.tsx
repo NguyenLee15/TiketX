@@ -12,7 +12,7 @@ export function DashboardRecentTransactions({ recentTransactions }: DashboardRec
   return (
     <div className="lg:col-span-6 surface-panel p-5 sm:p-6">
       <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2 whitespace-nowrap">
-        <DollarSign className="w-4 h-4 text-success" />
+        <DollarSign className="w-4 h-4 text-success" aria-hidden="true" />
         Lịch Sử Giao Dịch Mới Nhất
       </h2>
 
