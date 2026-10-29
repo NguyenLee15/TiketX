@@ -27,7 +27,7 @@ export const SelectedSeatPanel: React.FC<SelectedSeatPanelProps> = ({
     <div className="surface-panel p-5 sm:p-6 relative overflow-hidden">
       <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
         <div className="w-6 h-6 rounded-lg bg-surface-3 flex items-center justify-center text-brand-primary">
-          <Check className="w-3.5 h-3.5" />
+          <Check className="w-3.5 h-3.5" aria-hidden="true" />
         </div>
         Thông Tin Ghế Đang Chọn
       </h2>
@@ -52,7 +52,7 @@ export const SelectedSeatPanel: React.FC<SelectedSeatPanelProps> = ({
             <div className="p-3 bg-surface-2 rounded-xl border border-warning/40 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-warning/20 border border-warning/30 flex items-center justify-center text-warning">
-                  <Clock className="w-4 h-4" />
+                  <Clock className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div>
                   <p className="text-[9px] font-bold text-text-secondary uppercase">Thời gian giữ chỗ</p>
@@ -71,7 +71,7 @@ export const SelectedSeatPanel: React.FC<SelectedSeatPanelProps> = ({
               className="w-full py-3.5 bg-warning hover:bg-warning/90 text-surface-base font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-warning"
             >
               <span>Ghế Đang Giữ - Tiếp Tục Thanh Toán</span>
-              <ArrowRight className="ml-1.5 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="ml-1.5 w-4 h-4 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
             </Link>
           ) : (
             <button
@@ -80,25 +80,25 @@ export const SelectedSeatPanel: React.FC<SelectedSeatPanelProps> = ({
               className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
             >
               {locking ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
               ) : (
                 <>
                   <span>Khóa Ghế & Đặt Vé</span>
-                  <ArrowRight className="ml-1.5 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="ml-1.5 w-4 h-4 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                 </>
               )}
             </button>
           )}
 
           <div className="flex items-start gap-2 bg-warning/10 p-3 rounded-lg border border-warning/20 text-warning text-[11px] font-medium leading-relaxed">
-            <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
             <p>Hệ thống tự động khóa giữ ghế độc quyền cho bạn trong 5 phút để hoàn tất thanh toán an toàn.</p>
           </div>
         </div>
       ) : (
         <div className="text-center p-6 border-2 border-dashed border-border-subtle rounded-xl bg-surface-2/30">
           <div className="w-10 h-10 bg-surface-3 rounded-xl flex items-center justify-center mx-auto mb-2 text-text-tertiary">
-            <Zap className="w-5 h-5 text-brand-primary" />
+            <Zap className="w-5 h-5 text-brand-primary" aria-hidden="true" />
           </div>
           <p className="text-white font-bold text-xs sm:text-sm mb-0.5">Chưa chọn ghế</p>
           <p className="text-[11px] text-text-secondary leading-relaxed">

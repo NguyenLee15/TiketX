@@ -24,7 +24,7 @@ export const EventInfoCard: React.FC<EventInfoCardProps> = ({ event }) => {
       
       <div className="relative z-10 space-y-3.5">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-primary/20 border border-brand-primary/30">
-          <Sparkles className="w-3 h-3 text-brand-primary" />
+          <Sparkles className="w-3 h-3 text-brand-primary" aria-hidden="true" />
           <span className="text-[11px] font-bold text-brand-primary uppercase tracking-wider">{event.category}</span>
         </div>
         <h1 className="text-xl sm:text-2xl font-display font-black text-white leading-snug tracking-tight">
@@ -37,7 +37,7 @@ export const EventInfoCard: React.FC<EventInfoCardProps> = ({ event }) => {
         <div className="space-y-2.5 pt-1">
           <div className="flex items-start gap-3 p-3 rounded-xl bg-surface-2 border border-border-subtle">
             <div className="w-8 h-8 rounded-lg bg-brand-primary/20 border border-brand-primary/30 flex items-center justify-center shrink-0">
-              <Calendar className="w-4 h-4 text-brand-primary" />
+              <Calendar className="w-4 h-4 text-brand-primary" aria-hidden="true" />
             </div>
             <div>
               <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-wider">Thời Gian</p>
@@ -52,7 +52,7 @@ export const EventInfoCard: React.FC<EventInfoCardProps> = ({ event }) => {
           
           <div className="flex items-start gap-3 p-3 rounded-xl bg-surface-2 border border-border-subtle">
             <div className="w-8 h-8 rounded-lg bg-brand-secondary/20 border border-brand-secondary/30 flex items-center justify-center shrink-0">
-              <MapPin className="w-4 h-4 text-brand-secondary" />
+              <MapPin className="w-4 h-4 text-brand-secondary" aria-hidden="true" />
             </div>
             <div>
               <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-wider">Địa Điểm</p>

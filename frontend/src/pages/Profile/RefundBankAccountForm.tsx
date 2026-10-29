@@ -81,7 +81,7 @@ export function RefundBankAccountForm({ bankBin, accountName, maskedAccount, onS
         </div>
         <div className="flex flex-wrap gap-2 sm:col-span-3">
           <button type="submit" disabled={isSubmitting} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand-primary px-4 text-sm font-bold text-white disabled:opacity-60">
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Lưu tài khoản
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />} Lưu tài khoản
           </button>
           {maskedAccount && (
             isConfirmingDelete ? (
@@ -114,7 +114,7 @@ export function RefundBankAccountForm({ bankBin, accountName, maskedAccount, onS
                 onClick={() => setIsConfirmingDelete(true)}
                 className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-danger/40 px-4 text-sm font-semibold text-danger disabled:opacity-60"
               >
-                <Trash2 className="h-4 w-4" /> Xóa tài khoản
+                <Trash2 className="h-4 w-4" aria-hidden="true" /> Xóa tài khoản
               </button>
             )
           )}

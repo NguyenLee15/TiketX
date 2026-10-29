@@ -55,25 +55,25 @@ export default function StandardLayout() {
           <header className="surface-raised h-16 px-5 sm:px-6 flex items-center justify-between pointer-events-auto transition-colors duration-200 animate-slide-up shadow-lg">
             <Link to="/" className="flex items-center gap-2.5 group">
               <div className="w-8 h-8 rounded-lg bg-brand-primary/15 border border-brand-primary/40 flex items-center justify-center group-hover:bg-brand-primary/25 transition-colors">
-                <Zap className="w-4 h-4 text-brand-primary" />
+                <Zap className="w-4 h-4 text-brand-primary" aria-hidden="true" />
               </div>
               <span className="text-xl font-display font-bold text-white tracking-tight">TickeX</span>
             </Link>
             
             <nav className="hidden md:flex items-center gap-8">
               <Link to="/" className={`text-sm font-medium transition-colors relative flex items-center gap-1.5 group ${pathname === '/' ? 'text-white font-bold' : 'text-text-secondary hover:text-white'}`}>
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-4 h-4" aria-hidden="true" />
                 Sự kiện
               </Link>
               {isAuth && (
                 <Link to="/my-tickets" className={`text-sm font-medium transition-colors relative flex items-center gap-1.5 group ${pathname === '/my-tickets' ? 'text-white font-bold' : 'text-text-secondary hover:text-white'}`}>
-                  <Ticket className="w-4 h-4" />
+                  <Ticket className="w-4 h-4" aria-hidden="true" />
                   Vé của tôi
                 </Link>
               )}
               {isAdmin() && (
                 <Link to="/admin" className="text-sm font-medium text-text-secondary hover:text-white flex items-center gap-1.5 transition-colors">
-                  <ShieldCheck className="w-4 h-4 text-brand-primary" />
+                  <ShieldCheck className="w-4 h-4 text-brand-primary" aria-hidden="true" />
                   Quản trị
                 </Link>
               )}
@@ -98,7 +98,7 @@ export default function StandardLayout() {
                     className="text-text-tertiary hover:text-danger transition-colors p-2 rounded-full hover:bg-danger/10 focus-visible:ring-2 focus-visible:ring-brand-primary"
                     title="Đăng xuất"
                   >
-                    <LogOut className="w-4 h-4" />
+                    <LogOut className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </div>
               ) : (
@@ -119,18 +119,18 @@ export default function StandardLayout() {
                 onClick={() => setMobileOpen(value => !value)}
                 className="md:hidden p-2 rounded-full text-text-secondary hover:text-white focus-visible:ring-2 focus-visible:ring-brand-primary"
               >
-                {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                {mobileOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
               </button>
             </div>
           </header>
           {mobileOpen && (
             <nav ref={mobileNavRef} aria-label="Điều hướng chính" className="md:hidden mt-2 surface-raised p-3 flex flex-col gap-1 pointer-events-auto overscroll-contain">
               <Link onClick={() => setMobileOpen(false)} to="/" className="p-3 rounded-xl hover:bg-surface-2 flex items-center gap-2">
-                <Calendar className="w-4 h-4" /> Sự kiện
+                <Calendar className="w-4 h-4" aria-hidden="true" /> Sự kiện
               </Link>
               {isAuth && (
                 <Link onClick={() => setMobileOpen(false)} to="/my-tickets" className="p-3 rounded-xl hover:bg-surface-2 flex items-center gap-2">
-                  <Ticket className="w-4 h-4" /> Vé của tôi
+                  <Ticket className="w-4 h-4" aria-hidden="true" /> Vé của tôi
                 </Link>
               )}
               {isAuth && (
@@ -140,7 +140,7 @@ export default function StandardLayout() {
               )}
               {isAdmin() && (
                 <Link onClick={() => setMobileOpen(false)} to="/admin" className="p-3 rounded-xl hover:bg-surface-2 flex items-center gap-2 text-brand-primary font-semibold">
-                  <ShieldCheck className="w-4 h-4" /> Quản trị
+                  <ShieldCheck className="w-4 h-4" aria-hidden="true" /> Quản trị
                 </Link>
               )}
               {isAuth ? (
@@ -152,7 +152,7 @@ export default function StandardLayout() {
                   }}
                   className="p-3 rounded-xl hover:bg-danger/10 text-danger flex items-center gap-2 text-left font-semibold cursor-pointer"
                 >
-                  <LogOut className="w-4 h-4" /> Đăng xuất
+                  <LogOut className="w-4 h-4" aria-hidden="true" /> Đăng xuất
                 </button>
               ) : (
                 <div className="pt-2 border-t border-border-subtle flex flex-col gap-2">
@@ -178,7 +178,7 @@ export default function StandardLayout() {
       <footer className="border-t border-border-subtle bg-surface-1 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 opacity-70">
-            <Zap className="w-4 h-4 text-brand-primary" />
+            <Zap className="w-4 h-4 text-brand-primary" aria-hidden="true" />
             <span className="font-display font-bold tracking-tight text-white">TickeX</span>
             <span className="text-xs text-text-tertiary ml-2">Nền tảng đặt vé & giữ chỗ sự kiện thời gian thực</span>
           </div>

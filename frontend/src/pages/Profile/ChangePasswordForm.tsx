@@ -21,7 +21,7 @@ export function ChangePasswordForm({
       <div className="surface-panel p-6 sm:p-7 relative overflow-hidden h-full shadow-xl">
         <div className="flex items-center gap-3.5 mb-6 relative z-10 border-b border-border-subtle pb-4">
           <div className="w-10 h-10 rounded-xl bg-brand-secondary/15 border border-brand-secondary/30 flex items-center justify-center shrink-0">
-            <Lock className="w-5 h-5 text-brand-secondary" />
+            <Lock className="w-5 h-5 text-brand-secondary" aria-hidden="true" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-white tracking-tight">Bảo Mật & Mật Khẩu</h2>
@@ -34,7 +34,7 @@ export function ChangePasswordForm({
             <label htmlFor="password-current" className="text-xs font-bold text-text-secondary uppercase">Mật khẩu hiện tại</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                <Lock className="h-4 w-4 text-text-secondary group-focus-within:text-brand-secondary transition-colors" />
+                <Lock className="h-4 w-4 text-text-secondary group-focus-within:text-brand-secondary transition-colors" aria-hidden="true" />
               </div>
               <input 
                 id="password-current"
@@ -58,7 +58,7 @@ export function ChangePasswordForm({
             <label htmlFor="password-new" className="text-xs font-bold text-text-secondary uppercase">Mật khẩu mới</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                <Shield className="h-4 w-4 text-text-secondary group-focus-within:text-brand-secondary transition-colors" />
+                <Shield className="h-4 w-4 text-text-secondary group-focus-within:text-brand-secondary transition-colors" aria-hidden="true" />
               </div>
               <input 
                 id="password-new"
@@ -82,7 +82,7 @@ export function ChangePasswordForm({
             <label htmlFor="password-confirm" className="text-xs font-bold text-text-secondary uppercase">Xác nhận mật khẩu mới</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                <Shield className="h-4 w-4 text-text-secondary group-focus-within:text-brand-secondary transition-colors" />
+                <Shield className="h-4 w-4 text-text-secondary group-focus-within:text-brand-secondary transition-colors" aria-hidden="true" />
               </div>
               <input 
                 id="password-confirm"
@@ -109,9 +109,9 @@ export function ChangePasswordForm({
               className="w-full py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-1.5 text-sm disabled:opacity-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             >
               {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
               ) : (
-                <Lock className="w-4 h-4" />
+                <Lock className="w-4 h-4" aria-hidden="true" />
               )}
               <span>Cập Nhật Mật Khẩu</span>
             </button>

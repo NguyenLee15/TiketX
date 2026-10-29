@@ -34,6 +34,10 @@ import { DashboardRevenueChart } from './Dashboard/DashboardRevenueChart';
 import { DashboardRecentTransactions } from './Dashboard/DashboardRecentTransactions';
 import { DashboardKpiGrid } from './Dashboard/DashboardKpiGrid';
 import { AdminEventsHeader } from './Events/AdminEventsHeader';
+import StandardLayout from '../../components/Layout/StandardLayout';
+import { EventInfoCard } from '../EventDetail/EventInfoCard';
+import { SelectedSeatPanel } from '../EventDetail/SelectedSeatPanel';
+import ConfirmModal from '../../components/Admin/ConfirmModal';
 import api from '../../services/api';
 import type { Event as EventModel } from '../../types';
 
@@ -901,6 +905,89 @@ describe('Admin Portal Remediation Verification', () => {
       const { container } = render(<AdminEventsHeader onCreate={vi.fn()} />);
       const plusIcon = container.querySelector('button svg');
       expect(plusIcon).toHaveAttribute('aria-hidden', 'true');
+    });
+  });
+
+  describe('Full-Project Decorative Icon Accessibility (WCAG 2.1 AA)', () => {
+    it('StandardLayout hides header brand, navigation and footer icons from screen readers', () => {
+      const queryClient = new QueryClient();
+      const { container } = render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <StandardLayout />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+      const svgs = container.querySelectorAll('header svg, footer svg');
+      expect(svgs.length).toBeGreaterThan(0);
+      svgs.forEach(svg => {
+        expect(svg).toHaveAttribute('aria-hidden', 'true');
+      });
+    });
+
+    it('EventInfoCard and SelectedSeatPanel hide decorative icons with aria-hidden', () => {
+      const mockDetail = {
+        ...mockEvent,
+        seats: [],
+      };
+      const { container: infoContainer } = render(<EventInfoCard event={mockDetail} />);
+      const infoSvgs = infoContainer.querySelectorAll('svg');
+      expect(infoSvgs.length).toBeGreaterThan(0);
+      infoSvgs.forEach(svg => {
+        expect(svg).toHaveAttribute('aria-hidden', 'true');
+      });
+
+      cleanup();
+
+      const { container: panelContainer } = render(
+        <MemoryRouter>
+          <SelectedSeatPanel
+            selectedSeat={null}
+            lockTimeLeft={null}
+            locking={false}
+            onBookTicket={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+      const panelSvgs = panelContainer.querySelectorAll('svg');
+      expect(panelSvgs.length).toBeGreaterThan(0);
+      panelSvgs.forEach(svg => {
+        expect(svg).toHaveAttribute('aria-hidden', 'true');
+      });
+    });
+
+    it('Profile sub-forms and ConfirmModal render decorative icons with aria-hidden', () => {
+      const { container: profileContainer } = render(
+        <ProfileInfoForm
+          email="user@example.com"
+          register={vi.fn().mockReturnValue({})}
+          errors={{}}
+          onSubmit={vi.fn()}
+          isSubmitting={false}
+        />
+      );
+      const profileSvgs = profileContainer.querySelectorAll('svg');
+      expect(profileSvgs.length).toBeGreaterThan(0);
+      profileSvgs.forEach(svg => {
+        expect(svg).toHaveAttribute('aria-hidden', 'true');
+      });
+
+      cleanup();
+
+      const { container: modalContainer } = render(
+        <ConfirmModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+          title="Xác nhận"
+          message="Nội dung"
+        />
+      );
+      const modalSvgs = modalContainer.querySelectorAll('svg');
+      expect(modalSvgs.length).toBeGreaterThan(0);
+      modalSvgs.forEach(svg => {
+        expect(svg).toHaveAttribute('aria-hidden', 'true');
+      });
     });
   });
 });

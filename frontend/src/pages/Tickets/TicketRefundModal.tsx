@@ -44,7 +44,7 @@ export const TicketRefundModal: React.FC<TicketRefundModalProps> = React.memo(({
           {isMissingBank && (
             <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2 text-text-primary">
               <div className="flex items-center gap-2 text-amber-400 font-bold">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+                <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
                 <span>Chưa có thông tin nhận hoàn tiền</span>
               </div>
               <p className="text-text-secondary text-[11px] leading-relaxed">
@@ -59,7 +59,7 @@ export const TicketRefundModal: React.FC<TicketRefundModalProps> = React.memo(({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary/90 transition-colors shadow-sm"
               >
                 <span>Thiết lập tài khoản nhận tiền</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             </div>
           )}

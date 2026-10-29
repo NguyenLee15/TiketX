@@ -26,7 +26,7 @@ export function ProfileInfoForm({
       <div className="surface-panel p-6 sm:p-7 relative overflow-hidden h-full shadow-xl">
         <div className="flex items-center gap-3.5 mb-6 relative z-10 border-b border-border-subtle pb-4">
           <div className="w-10 h-10 rounded-xl bg-brand-primary/15 border border-brand-primary/30 flex items-center justify-center shrink-0">
-            <User className="w-5 h-5 text-brand-primary" />
+            <User className="w-5 h-5 text-brand-primary" aria-hidden="true" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-white tracking-tight">Thông Tin Cá Nhân</h2>
@@ -48,7 +48,7 @@ export function ProfileInfoForm({
                 />
               ) : (
                 <div className="relative w-20 h-20 rounded-full bg-surface-3 flex items-center justify-center border-2 border-surface-2 shadow-xl group-hover:scale-105 transition-transform">
-                  <User className="w-8 h-8 text-text-secondary" />
+                  <User className="w-8 h-8 text-text-secondary" aria-hidden="true" />
                 </div>
               )}
             </div>
@@ -56,7 +56,7 @@ export function ProfileInfoForm({
               <label htmlFor="profile-avatar-url" className="text-xs font-bold text-text-secondary uppercase">Đường dẫn ảnh đại diện (URL)</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <ImageIcon className="h-4 w-4 text-text-secondary group-focus-within:text-brand-secondary transition-colors" />
+                  <ImageIcon className="h-4 w-4 text-text-secondary group-focus-within:text-brand-secondary transition-colors" aria-hidden="true" />
                 </div>
                 <input 
                   id="profile-avatar-url"
@@ -82,7 +82,7 @@ export function ProfileInfoForm({
               <label htmlFor="profile-name" className="text-xs font-bold text-text-secondary uppercase">Họ và tên</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 text-text-secondary group-focus-within:text-brand-primary transition-colors" />
+                  <User className="h-4 w-4 text-text-secondary group-focus-within:text-brand-primary transition-colors" aria-hidden="true" />
                 </div>
                 <input 
                   id="profile-name"
@@ -109,7 +109,7 @@ export function ProfileInfoForm({
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-text-secondary/50" />
+                  <Mail className="h-4 w-4 text-text-secondary/50" aria-hidden="true" />
                 </div>
                 <input 
                   id="profile-email"
@@ -127,7 +127,7 @@ export function ProfileInfoForm({
               <label htmlFor="profile-phone" className="text-xs font-bold text-text-secondary uppercase">Số điện thoại liên hệ</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Phone className="h-4 w-4 text-text-secondary group-focus-within:text-brand-primary transition-colors" />
+                  <Phone className="h-4 w-4 text-text-secondary group-focus-within:text-brand-primary transition-colors" aria-hidden="true" />
                 </div>
                 <input 
                   id="profile-phone"
@@ -155,9 +155,9 @@ export function ProfileInfoForm({
               className="w-full sm:w-auto px-6 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-[opacity,transform,box-shadow] shadow-md shadow-brand-glow flex items-center justify-center gap-1.5 text-xs sm:text-sm disabled:opacity-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             >
               {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
               ) : (
-                <Save className="w-4 h-4" />
+                <Save className="w-4 h-4" aria-hidden="true" />
               )}
               <span>Lưu Thay Đổi</span>
             </button>

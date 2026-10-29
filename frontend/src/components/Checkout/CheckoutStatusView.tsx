@@ -11,7 +11,7 @@ export const CheckoutStatusView: React.FC<CheckoutStatusViewProps> = ({ status, 
     return (
       <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
         <div className="w-16 h-16 bg-surface-2 rounded-2xl flex items-center justify-center border border-brand-primary/30">
-          <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+          <Loader2 className="w-8 h-8 animate-spin text-brand-primary" aria-hidden="true" />
         </div>
         <h3 className="text-xl font-bold text-white">Đang Xác Nhận Giao Dịch</h3>
         <p className="text-text-secondary text-xs max-w-xs">
@@ -25,7 +25,7 @@ export const CheckoutStatusView: React.FC<CheckoutStatusViewProps> = ({ status, 
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4 text-center">
         <div className="w-16 h-16 bg-danger/10 rounded-2xl flex items-center justify-center border border-danger/30 text-danger">
-          <XCircle className="w-8 h-8" />
+          <XCircle className="w-8 h-8" aria-hidden="true" />
         </div>
         <h3 className="text-xl font-bold text-white">Hết Thời Gian Giữ Chỗ</h3>
         <p className="text-text-secondary text-xs max-w-xs leading-relaxed">

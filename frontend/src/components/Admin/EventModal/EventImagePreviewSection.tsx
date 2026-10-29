@@ -44,7 +44,7 @@ export function EventImagePreviewSection({ register, errors, watchedImageUrl }: 
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-text-secondary">
-                <ImageIcon className="w-5 h-5" />
+                <ImageIcon className="w-5 h-5" aria-hidden="true" />
               </div>
             )}
           </div>

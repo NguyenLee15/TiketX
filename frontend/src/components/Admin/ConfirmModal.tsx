@@ -50,7 +50,7 @@ export default function ConfirmModal({
           className="absolute top-4 right-4 p-1.5 rounded-full text-text-tertiary hover:text-white hover:bg-surface-2 transition-colors disabled:opacity-40"
           aria-label="Đóng"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
 
         <div className="flex items-center gap-3">
@@ -61,7 +61,7 @@ export default function ConfirmModal({
               ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' 
               : 'bg-brand-primary/15 border-brand-primary/30 text-brand-primary'
           }`}>
-            {isDanger || isWarning ? <AlertTriangle className="w-5 h-5" /> : <Info className="w-5 h-5" />}
+            {isDanger || isWarning ? <AlertTriangle className="w-5 h-5" aria-hidden="true" /> : <Info className="w-5 h-5" aria-hidden="true" />}
           </div>
           <div>
             <h3 id="confirm-modal-title" className="text-base font-bold text-white leading-tight">
@@ -96,7 +96,7 @@ export default function ConfirmModal({
                 : 'bg-brand-primary hover:bg-brand-primary/90 text-white shadow-brand-glow'
             }`}
           >
-            {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
             {confirmText}
           </button>
         </div>

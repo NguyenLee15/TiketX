@@ -15,7 +15,7 @@ export function EventSeatMatrixSection({ event, totalMatrixSeats, register, erro
     <div className="p-3.5 bg-surface-2/40 border border-border-subtle rounded-xl space-y-2.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Grid3X3 className="w-4 h-4 text-brand-primary" />
+          <Grid3X3 className="w-4 h-4 text-brand-primary" aria-hidden="true" />
           <h4 className="text-xs font-bold text-white uppercase tracking-wider">Cấu hình Sơ Đồ Ma Trận Ghế</h4>
         </div>
         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-brand-primary/15 text-brand-primary border border-brand-primary/30">
@@ -25,7 +25,7 @@ export function EventSeatMatrixSection({ event, totalMatrixSeats, register, erro
 
       {event ? (
         <div className="flex items-center gap-2 text-xs text-text-secondary bg-surface-2/50 p-2.5 rounded-lg border border-border-subtle">
-          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span id="event-history-lock">
             Ma trận ghế đã được khởi tạo ({event.totalSeats} ghế). Sự kiện đã có lịch sử vé/đặt chỗ nên ngày, giá và ma trận được khóa để bảo đảm toàn vẹn dữ liệu.
           </span>

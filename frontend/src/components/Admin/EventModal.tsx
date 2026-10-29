@@ -126,7 +126,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
           className="absolute top-5 right-5 p-1.5 bg-surface-2 hover:bg-surface-3 rounded-full text-text-secondary hover:text-white transition-colors disabled:opacity-40"
           aria-label="Đóng"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
 
         <h2 id="event-modal-title" className="text-xl sm:text-2xl font-bold text-white mb-5">
@@ -314,7 +314,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
               disabled={isLoading || event?.status === 'Cancelled'}
               className="px-5 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary shadow-md shadow-brand-glow flex items-center gap-1.5 text-xs sm:text-sm active:scale-95 disabled:opacity-50"
             >
-              {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
               {event ? 'Lưu Thay Đổi' : 'Tạo Sự Kiện & Khởi Tạo Ghế'}
             </button>
           </div>

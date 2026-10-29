@@ -55,7 +55,7 @@ export const CheckoutInvoice: React.FC<CheckoutInvoiceProps> = React.memo(({
       {/* Countdown Timer Strip */}
       <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-surface-2/60 border border-border-subtle text-xs">
         <div className="flex items-center gap-2 text-text-secondary">
-          <Clock className="w-4 h-4 text-warning animate-pulse" />
+          <Clock className="w-4 h-4 text-warning animate-pulse" aria-hidden="true" />
           <span>Thời gian giữ chỗ còn lại:</span>
         </div>
         <span className={`font-mono font-bold text-sm ${timeLeft < 60 ? 'text-danger animate-pulse' : 'text-warning'}`}>
