@@ -2,7 +2,8 @@ import React from 'react';
 
 export const SkeletonSeatMap: React.FC = () => {
   return (
-    <div className="animate-pulse space-y-6 max-w-7xl mx-auto pb-12">
+    <div role="status" aria-busy="true" aria-live="polite" className="animate-pulse space-y-6 max-w-7xl mx-auto pb-12">
+      <span className="sr-only">Đang tải thông tin sự kiện và sơ đồ ghế...</span>
       {/* Top Back Nav Placeholder */}
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-xl bg-surface-2" />

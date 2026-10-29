@@ -22,7 +22,7 @@ export const TicketFilterTabs: React.FC<TicketFilterTabsProps> = React.memo(({
   onTabChange,
 }) => {
   return (
-    <div className="flex gap-1.5 bg-surface-1/80 p-1.5 rounded-xl border border-border-subtle self-start sm:self-center shrink-0 overflow-x-auto max-w-full">
+    <div role="group" aria-label="Bộ lọc trạng thái vé" className="flex gap-1.5 bg-surface-1/80 p-1.5 rounded-xl border border-border-subtle self-start sm:self-center shrink-0 overflow-x-auto max-w-full">
       {allowedTicketTabs.map(tab => (
         <button
           key={tab}

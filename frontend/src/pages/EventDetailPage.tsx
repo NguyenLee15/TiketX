@@ -235,10 +235,12 @@ export default function EventDetailPage() {
         </div>
         <h1 className="text-2xl font-display font-bold text-white mb-2">{loadError ? 'Không thể tải sự kiện' : 'Không tìm thấy sự kiện'}</h1>
         <p className="text-text-secondary">Kiểm tra kết nối rồi thử lại.</p>
-        <button type="button" onClick={() => void refetchEvent()} className="inline-flex mt-6 px-6 py-3 bg-brand-primary text-white rounded-xl font-medium focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">Thử lại</button>
-        <Link to="/" className="inline-block mt-6 px-6 py-3 bg-surface-3 hover:bg-surface-2 text-white rounded-xl transition-colors font-medium">
-          Quay lại danh sách sự kiện
-        </Link>
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+          <button type="button" onClick={() => void refetchEvent()} className="inline-flex px-6 py-3 bg-brand-primary text-white rounded-xl font-medium focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">Thử lại</button>
+          <Link to="/" className="inline-flex px-6 py-3 bg-surface-3 hover:bg-surface-2 text-white rounded-xl transition-colors font-medium">
+            Quay lại danh sách sự kiện
+          </Link>
+        </div>
       </div>
     );
   }

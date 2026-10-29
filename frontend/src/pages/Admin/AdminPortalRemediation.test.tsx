@@ -25,6 +25,9 @@ import { ScanResultDisplay } from './Scan/ScanResultDisplay';
 import { SeatMap } from '../EventDetail/SeatMap';
 import RegisterPage from '../Auth/RegisterPage';
 import MockPayOSPage from '../MockPayOSPage';
+import { TicketFilterTabs } from '../Tickets/TicketFilterTabs';
+import { DiscoveryHero } from '../../components/Discovery/DiscoveryHero';
+import { SkeletonSeatMap } from '../../components/Skeletons/SkeletonSeatMap';
 import api from '../../services/api';
 import type { Event as EventModel } from '../../types';
 
@@ -785,6 +788,37 @@ describe('Admin Portal Remediation Verification', () => {
       expect(qrHeading).toBeInTheDocument();
       const summaryHeading = screen.getByRole('heading', { level: 2, name: /Thông tin Đơn hàng/i });
       expect(summaryHeading).toBeInTheDocument();
+    });
+  });
+
+  describe('Customer Experience Group Landmark Accessibility (WCAG 2.1 AA)', () => {
+    it('TicketFilterTabs renders group landmark with accessible label', () => {
+      render(<TicketFilterTabs currentTab="All" onTabChange={vi.fn()} />);
+      const group = screen.getByRole('group', { name: /Bộ lọc trạng thái vé/i });
+      expect(group).toBeInTheDocument();
+    });
+
+    it('DiscoveryHero renders category group landmark with accessible label', () => {
+      render(
+        <DiscoveryHero
+          search=""
+          sortBy="date_asc"
+          selectedCategory="All"
+          onSearchChange={vi.fn()}
+          onSortChange={vi.fn()}
+          onCategoryChange={vi.fn()}
+          onSubmit={vi.fn()}
+        />
+      );
+      const catGroup = screen.getByRole('group', { name: /Lọc theo danh mục/i });
+      expect(catGroup).toBeInTheDocument();
+    });
+
+    it('SkeletonSeatMap renders with role status and hidden accessible description', () => {
+      render(<SkeletonSeatMap />);
+      const statusContainer = screen.getByRole('status');
+      expect(statusContainer).toBeInTheDocument();
+      expect(screen.getByText(/Đang tải thông tin sự kiện và sơ đồ ghế/i)).toBeInTheDocument();
     });
   });
 });

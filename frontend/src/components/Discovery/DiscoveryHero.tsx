@@ -73,7 +73,7 @@ export function DiscoveryHero({
         </div>
       </div>
 
-      <div className="mt-8 flex gap-2 overflow-x-auto pb-1" aria-label="Lọc theo danh mục">
+      <div role="group" aria-label="Lọc theo danh mục" className="mt-8 flex gap-2 overflow-x-auto pb-1">
         {CATEGORIES.map(({ id, label, icon: Icon }) => {
           const active = selectedCategory === id;
           return (
