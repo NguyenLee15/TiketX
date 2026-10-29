@@ -91,8 +91,8 @@ export default function RegisterPage() {
           {/* Subtle top highlight */}
           
           <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-surface-2 border border-border-focus mb-4 hover:bg-surface-3 transition-colors group">
-              <Zap className="w-6 h-6 text-brand-primary group-hover:text-white transition-colors" />
+          <Link to="/" aria-label="Về trang chủ TickeX" className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-surface-2 border border-border-focus mb-4 hover:bg-surface-3 transition-colors group">
+              <Zap className="w-6 h-6 text-brand-primary group-hover:text-white transition-colors" aria-hidden="true" />
             </Link>
             <h1 className="text-2xl sm:text-3xl font-display font-bold text-white mb-1 tracking-tight">Tạo Tài Khoản Mới</h1>
             <p className="text-text-secondary text-xs sm:text-sm">Trở thành thành viên TickeX để đặt vé sự kiện dễ dàng</p>

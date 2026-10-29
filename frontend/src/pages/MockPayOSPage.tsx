@@ -16,7 +16,7 @@ export default function MockPayOSPage() {
     return (
       <div className="min-h-screen bg-surface-1 flex items-center justify-center p-4">
         <div className="surface-panel p-8 text-center max-w-md w-full">
-          <h2 className="text-xl font-bold text-danger mb-2">Không khả dụng</h2>
+          <h1 className="text-xl font-bold text-danger mb-2">Không khả dụng</h1>
           <p className="text-text-secondary mb-6">Trang mô phỏng thanh toán này chỉ có sẵn trong môi trường phát triển.</p>
           <button onClick={() => navigate('/')} className="btn-primary w-full">Trở Về Trang Chủ</button>
         </div>
@@ -53,7 +53,7 @@ export default function MockPayOSPage() {
     return (
       <div className="min-h-screen bg-surface-1 flex items-center justify-center p-4">
         <div className="surface-panel p-8 text-center max-w-md w-full">
-          <h2 className="text-xl font-bold text-danger mb-2">Phiên Giao Dịch Không Hợp Lệ</h2>
+          <h1 className="text-xl font-bold text-danger mb-2">Phiên Giao Dịch Không Hợp Lệ</h1>
           <p className="text-text-secondary mb-6">Thiếu thông tin mã đơn hàng thanh toán.</p>
           <button onClick={() => navigate('/')} className="btn-primary w-full">Trở Về Trang Chủ</button>
         </div>
@@ -98,7 +98,7 @@ export default function MockPayOSPage() {
                   </div>
                 </div>
                 
-                <h3 className="font-bold text-gray-800 text-lg mb-2">Quét mã để thanh toán</h3>
+                <h2 className="font-bold text-gray-800 text-lg mb-2">Quét mã để thanh toán</h2>
                 <p className="text-gray-500 text-sm text-center mb-8 max-w-xs">Sử dụng Ứng dụng Ngân hàng hoặc Ví điện tử để quét mã này.</p>
 
                 <div className="w-full space-y-3">
@@ -153,7 +153,7 @@ export default function MockPayOSPage() {
 
           {/* Right: Order Summary */}
           <div className="p-8 md:w-[40%] bg-gray-50/50">
-            <h3 className="text-gray-500 font-semibold uppercase tracking-wider text-xs mb-6">Thông tin Đơn hàng</h3>
+            <h2 className="text-gray-500 font-semibold uppercase tracking-wider text-xs mb-6">Thông tin Đơn hàng</h2>
             
             <div className="space-y-4 mb-8">
               <div className="flex justify-between items-center pb-4 border-b border-gray-200 border-dashed">

@@ -23,6 +23,8 @@ import { ScanCameraPanel } from './Scan/ScanCameraPanel';
 import { RecentScansList } from './Scan/RecentScansList';
 import { ScanResultDisplay } from './Scan/ScanResultDisplay';
 import { SeatMap } from '../EventDetail/SeatMap';
+import RegisterPage from '../Auth/RegisterPage';
+import MockPayOSPage from '../MockPayOSPage';
 import api from '../../services/api';
 import type { Event as EventModel } from '../../types';
 
@@ -749,6 +751,40 @@ describe('Admin Portal Remediation Verification', () => {
       expect(userPaginationNav).toBeInTheDocument();
       const userCardHeading = screen.getByRole('heading', { level: 2, name: /Nguyễn Văn Admin/i });
       expect(userCardHeading).toBeInTheDocument();
+    });
+  });
+
+  describe('Full-Project Deep Audit Accessibility Remediation (WCAG 2.1 AA)', () => {
+    it('RegisterPage renders home link with accessible name', () => {
+      render(
+        <MemoryRouter>
+          <RegisterPage />
+        </MemoryRouter>
+      );
+      const homeLink = screen.getByRole('link', { name: /Về trang chủ TickeX/i });
+      expect(homeLink).toBeInTheDocument();
+    });
+
+    it('MockPayOSPage renders level 1 heading when order code is missing', () => {
+      render(
+        <MemoryRouter initialEntries={['/mock-payos']}>
+          <MockPayOSPage />
+        </MemoryRouter>
+      );
+      const invalidHeading = screen.getByRole('heading', { level: 1, name: /Phiên Giao Dịch Không Hợp Lệ/i });
+      expect(invalidHeading).toBeInTheDocument();
+    });
+
+    it('MockPayOSPage renders level 2 headings for sections under h1 in sandbox view', () => {
+      render(
+        <MemoryRouter initialEntries={['/mock-payos?orderCode=123456789012345']}>
+          <MockPayOSPage />
+        </MemoryRouter>
+      );
+      const qrHeading = screen.getByRole('heading', { level: 2, name: /Quét mã để thanh toán/i });
+      expect(qrHeading).toBeInTheDocument();
+      const summaryHeading = screen.getByRole('heading', { level: 2, name: /Thông tin Đơn hàng/i });
+      expect(summaryHeading).toBeInTheDocument();
     });
   });
 });

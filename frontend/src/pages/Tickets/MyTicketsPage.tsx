@@ -213,7 +213,8 @@ export default function MyTicketsPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-4 pb-12 animate-pulse" aria-busy="true" aria-live="polite">
+      <div className="max-w-4xl mx-auto space-y-4 pb-12 animate-pulse" role="status" aria-busy="true" aria-live="polite">
+        <span className="sr-only">Đang tải danh sách vé...</span>
         <div className="h-28 bg-surface-2 rounded-2xl border border-border-subtle" />
         <div className="h-64 bg-surface-2 rounded-2xl border border-border-subtle" />
         <div className="h-64 bg-surface-2 rounded-2xl border border-border-subtle" />
