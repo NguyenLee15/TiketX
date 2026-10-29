@@ -320,6 +320,44 @@ public sealed class CustomerCheckoutOperationsTests : IDisposable
         result.Code.Should().Be("RESERVATION_EXPIRED");
     }
 
+    [Fact]
+    public async Task CreatePaymentLink_WhenPayOSSucceeds_PopulatesVietQrAndBankMetadata()
+    {
+        var user = new User("Customer", "vietqr@test.local", "hash");
+        var @event = new Event("Future", "Description", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(2), "HCM", "Venue", 1);
+        @event.GenerateSeatsMatrix(1, 1);
+        _context.AddRange(user, @event);
+        await _context.SaveChangesAsync();
+        var seat = await _context.Seats.SingleAsync();
+        seat.Lock(user.Id);
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        var payos = new Mock<IPayOSService>();
+        payos.Setup(x => x.CreatePaymentLink(It.IsAny<long>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreatePaymentResult
+            {
+                CheckoutUrl = "https://pay.example/checkout",
+                QrCode = "vietqr://image-data-string",
+                AccountNumber = "0123456789",
+                AccountName = "TICKEX CO LTD",
+                Bin = "970415",
+                Description = $"TICKEX {ticket.OrderCode}"
+            });
+
+        var operations = CreateOperations(payos.Object);
+        var result = await operations.CreatePaymentLinkAsync(ticket.Id, user.Id, CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        result.CheckoutUrl.Should().Be("https://pay.example/checkout");
+        result.QrCode.Should().Be("vietqr://image-data-string");
+        result.AccountNumber.Should().Be("0123456789");
+        result.AccountName.Should().Be("TICKEX CO LTD");
+        result.Bin.Should().Be("970415");
+        result.Description.Should().Be($"TICKEX {ticket.OrderCode}");
+    }
+
     private CustomerCheckoutOperations CreateOperations(IPayOSService payos, IDistributedLockService? locks = null)
     {
         var settings = new Dictionary<string, string?>

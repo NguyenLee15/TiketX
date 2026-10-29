@@ -111,7 +111,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
                     var mockUrl = $"/mock-payos?orderCode={ticket.OrderCode}";
                     existing.SetCheckoutUrl(mockUrl);
                     await _context.SaveChangesAsync(cancellationToken);
-                    return Link(ticket, mockUrl);
+                    return MockDevLink(ticket, mockUrl);
                 }
 
                 PaymentLinkLookupResult? lookup;
@@ -171,6 +171,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
 
         var clientId = _configuration["PayOS:ClientId"];
         var checkoutUrl = string.Empty;
+        CreatePaymentResult? payOsResult = null;
         if (IsDevMockPayOs(clientId))
         {
             if (!_environment.IsDevelopment())
@@ -184,13 +185,13 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         {
             try
             {
-                var result = await _payOS.CreatePaymentLink(ticket.OrderCode, checked((int)ticket.Price),
+                payOsResult = await _payOS.CreatePaymentLink(ticket.OrderCode, checked((int)ticket.Price),
                     $"TickeX {ticket.OrderCode}", ReturnUrl(ticket.OrderCode), CancelUrl(ticket.OrderCode), cancellationToken);
-                if (result is null || string.IsNullOrWhiteSpace(result.CheckoutUrl))
+                if (payOsResult is null || string.IsNullOrWhiteSpace(payOsResult.CheckoutUrl))
                 {
                     return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được đối soát. Vui lòng thử lại sau.");
                 }
-                checkoutUrl = result.CheckoutUrl;
+                checkoutUrl = payOsResult.CheckoutUrl;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -217,7 +218,27 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
 
         transaction.SetCheckoutUrl(checkoutUrl);
         await _context.SaveChangesAsync(cancellationToken);
-        return Link(ticket, checkoutUrl);
+
+        if (payOsResult is not null)
+        {
+            return new CustomerCheckoutResult(
+                true,
+                "PAYMENT_LINK_CREATED",
+                "Đã tạo liên kết thanh toán.",
+                ticket.OrderCode,
+                ticket.Price,
+                checkoutUrl,
+                "Pending",
+                ticket.Id,
+                null,
+                payOsResult.QrCode,
+                payOsResult.AccountNumber,
+                payOsResult.AccountName,
+                payOsResult.Bin,
+                payOsResult.Description ?? $"TickeX {ticket.OrderCode}");
+        }
+
+        return MockDevLink(ticket, checkoutUrl);
     }
 
     public async Task<CustomerCheckoutResult> ProcessWebhookAsync(string payload, string signature, CancellationToken cancellationToken)
@@ -243,6 +264,15 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
 
     private CustomerCheckoutResult Link(Ticket ticket, string checkoutUrl) =>
         new(true, "PAYMENT_LINK_CREATED", "Đã tạo liên kết thanh toán.", ticket.OrderCode, ticket.Price, checkoutUrl, "Pending", ticket.Id);
+
+    private static CustomerCheckoutResult MockDevLink(Ticket ticket, string checkoutUrl) =>
+        new(true, "PAYMENT_LINK_CREATED", "Đã tạo liên kết thanh toán.", ticket.OrderCode, ticket.Price, checkoutUrl, "Pending", ticket.Id, null,
+            $"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=TICKEX_DEV_ORDER_{ticket.OrderCode}",
+            "000012345678",
+            "TICKEX PLATFORM DEV",
+            "970415",
+            $"TICKEX {ticket.OrderCode}");
+
     private static bool IsDevMockPayOs(string? clientId) =>
         string.IsNullOrWhiteSpace(clientId)
         || clientId.Equals("YOUR_PAYOS_CLIENT_ID", StringComparison.OrdinalIgnoreCase)

@@ -795,6 +795,79 @@ public sealed class CustomerCoreBehaviorTests : IDisposable
         detailResult!.AvailableSeatsCount.Should().Be(2);
     }
 
+    [Fact]
+    public async Task PublicCatalog_WhenSortedByPrice_OrdersByEffectiveMinPriceMatchingItemPayload()
+    {
+        // Event A: BasePrice = 500k, but has an economy seat priced at 100k
+        var eventA = new Event("Event A", "Desc", DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(2).AddHours(2), "Loc", "Venue", 1, basePrice: 500000m);
+        // Event B: BasePrice = 300k, and has a standard seat priced at 300k
+        var eventB = new Event("Event B", "Desc", DateTime.UtcNow.AddDays(3), DateTime.UtcNow.AddDays(3).AddHours(2), "Loc", "Venue", 1, basePrice: 300000m);
+        _context.Events.AddRange(eventA, eventB);
+        await _context.SaveChangesAsync();
+
+        var seatA = new Seat(eventA.Id, "A", 1, 100000m, SeatTier.Economy);
+        var seatB = new Seat(eventB.Id, "B", 1, 300000m, SeatTier.Standard);
+        _context.Seats.AddRange(seatA, seatB);
+        await _context.SaveChangesAsync();
+
+        var catalog = new CustomerEventCatalogAdapter(_context, new UtcTimePolicy());
+        var ascResult = await catalog.SearchAsync(new GetEventsQuery(SortBy: "price_asc"), CancellationToken.None);
+
+        // Effective min price of Event A is 100k, Event B is 300k. Event A must come first!
+        ascResult.Items.Select(x => x.Title).Should().Equal("Event A", "Event B");
+        ascResult.Items[0].MinPrice.Should().Be(100000m);
+        ascResult.Items[1].MinPrice.Should().Be(300000m);
+
+        var descResult = await catalog.SearchAsync(new GetEventsQuery(SortBy: "price_desc"), CancellationToken.None);
+        descResult.Items.Select(x => x.Title).Should().Equal("Event B", "Event A");
+
+        // Verify cursor pagination with effective min price
+        var page1 = await catalog.SearchAsync(new GetEventsQuery(SortBy: "price_asc", PageSize: 1), CancellationToken.None);
+        page1.Items.Should().ContainSingle(x => x.Title == "Event A");
+        page1.NextCursor.Should().NotBeNullOrWhiteSpace();
+
+        var page2 = await catalog.SearchAsync(new GetEventsQuery(SortBy: "price_asc", PageSize: 1, Cursor: page1.NextCursor), CancellationToken.None);
+        page2.Items.Should().ContainSingle(x => x.Title == "Event B");
+    }
+
+    [Fact]
+    public async Task ReservationOperations_ReleaseAsync_RecordsAuditLogWithUserEmail()
+    {
+        var user = new User("Customer John", "john.doe@example.com", "hash");
+        var @event = CreateEvent("Concert", DateTime.UtcNow.AddDays(2));
+        _context.Users.Add(user);
+        _context.Events.Add(@event);
+        await _context.SaveChangesAsync();
+
+        var seat = new Seat(@event.Id, "A", 1, 200000m, SeatTier.Standard);
+        _context.Seats.Add(seat);
+        await _context.SaveChangesAsync();
+
+        var ticket = new Ticket(@event.Id, seat.Id, user.Id, seat.Price);
+        seat.Lock(user.Id);
+        _context.Tickets.Add(ticket);
+        await _context.SaveChangesAsync();
+
+        var lockService = new Mock<IDistributedLockService>();
+        lockService.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestDistributedLockLease());
+
+        var operations = new ReservationOperations(
+            _context,
+            lockService.Object,
+            Mock.Of<ISeatNotificationService>(),
+            Mock.Of<IReservationExpiryScheduler>(),
+            Options.Create(new ReservationOptions { HoldMinutes = 10 }),
+            NullLogger<ReservationOperations>.Instance,
+            new UtcTimePolicy());
+
+        var result = await operations.ReleaseAsync(ticket.Id, user.Id, "User requested cancel", CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        var audit = await _context.AuditLogs.SingleAsync(a => a.Action == "RESERVATION_RELEASED" && a.EntityId == ticket.Id.ToString());
+        audit.UserEmail.Should().Be("john.doe@example.com");
+    }
+
     private static Event CreateEvent(string title, DateTime date) =>
         new(title, "Description", date, date.AddHours(2), "HCM", "Venue", 1);
 

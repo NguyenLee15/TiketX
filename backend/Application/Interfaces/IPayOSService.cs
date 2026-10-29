@@ -3,6 +3,11 @@ namespace TickeX.Application.Interfaces;
 public class CreatePaymentResult
 {
     public string CheckoutUrl { get; set; } = string.Empty;
+    public string? QrCode { get; set; }
+    public string? AccountNumber { get; set; }
+    public string? AccountName { get; set; }
+    public string? Bin { get; set; }
+    public string? Description { get; set; }
 }
 
 public enum PaymentLinkLookupState

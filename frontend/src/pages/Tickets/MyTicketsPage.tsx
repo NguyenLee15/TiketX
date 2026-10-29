@@ -134,6 +134,8 @@ export default function MyTicketsPage() {
     try {
       const response = await api.post(`/api/tickets/${ticket.id}/refund`, {
         reason: 'Customer requested refund via web portal',
+      }, {
+        headers: { 'Idempotency-Key': `refund-${ticket.id}` },
       });
       if (response.data.success) {
         toast.success(response.data.message || 'Yêu cầu hoàn vé đã được gửi và đang chờ xử lý.');
@@ -157,7 +159,9 @@ export default function MyTicketsPage() {
   const handleResumePayment = useCallback(async (ticket: TicketItemData) => {
     setResumingTicketId(ticket.id);
     try {
-      const response = await api.post('/api/payments/create-link', { ticketId: ticket.id });
+      const response = await api.post('/api/payments/create-link', { ticketId: ticket.id }, {
+        headers: { 'Idempotency-Key': `checkout-${ticket.id}` },
+      });
       if (response.data?.success) {
         const parsed = checkoutLinkResponseSchema.safeParse(response.data.data);
         if (parsed.success && parsed.data.checkoutUrl) {
@@ -187,6 +191,8 @@ export default function MyTicketsPage() {
     try {
       const response = await api.post(`/api/reservations/${ticket.id}/release`, {
         reason: 'CustomerCancelledFromTicketPortal',
+      }, {
+        headers: { 'Idempotency-Key': `release-${ticket.id}` },
       });
       if (response.data?.success) {
         toast.success('Đã hủy giữ chỗ và trả ghế thành công!');
@@ -254,7 +260,7 @@ export default function MyTicketsPage() {
           <div className="w-12 h-12 bg-surface-3 rounded-xl flex items-center justify-center mx-auto mb-3 text-text-tertiary">
             <Ticket className="w-6 h-6" aria-hidden="true" />
           </div>
-          <h3 className="text-lg font-bold text-white mb-0.5">Không tìm thấy vé nào</h3>
+          <h2 className="text-lg font-bold text-white mb-0.5">Không tìm thấy vé nào</h2>
           <p className="text-text-secondary text-xs">
             {currentPage > 1 
               ? `Không có vé nào trên trang ${currentPage}.` 

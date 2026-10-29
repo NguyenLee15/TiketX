@@ -5,10 +5,13 @@ export interface PaymentInfo {
   orderCode?: string | number;
   amount?: number;
   checkoutUrl?: string;
+  qrCode?: string;
   qrCodeUrl?: string;
   accountNumber?: string;
   accountName?: string;
+  bin?: string;
   bankName?: string;
+  description?: string;
 }
 
 interface CheckoutVietQrViewProps {
@@ -29,10 +32,11 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
   copyToClipboard,
 }) => {
   const orderCode = paymentData?.orderCode;
-  const transferContent = orderCode ? `TICKEX ${orderCode}` : '';
-  const qrUrl = paymentData?.qrCodeUrl;
+  const transferContent = paymentData?.description || (orderCode ? `TICKEX ${orderCode}` : '');
+  const qrUrl = paymentData?.qrCodeUrl || paymentData?.qrCode;
+  const bankDisplayName = paymentData?.bankName || (paymentData?.bin ? `Ngân hàng (BIN ${paymentData.bin})` : '');
   const hasBankDetails = Boolean(
-    paymentData?.bankName?.trim() &&
+    (bankDisplayName || paymentData?.bin?.trim()) &&
     paymentData?.accountNumber?.trim() &&
     paymentData?.accountName?.trim()
   );
@@ -80,7 +84,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
             <>
               <div className="flex justify-between items-center p-2 rounded-xl bg-surface-3/60 border border-border-subtle">
                 <span className="text-text-secondary">Ngân hàng:</span>
-                <span className="font-bold text-white">{paymentData?.bankName}</span>
+                <span className="font-bold text-white">{bankDisplayName}</span>
               </div>
 
               <div className="flex justify-between items-center p-2 rounded-xl bg-surface-3/60 border border-border-subtle">
@@ -125,7 +129,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
       </div>
 
       {/* PayOS Redirect Button */}
-      {paymentData?.checkoutUrl && paymentData.checkoutUrl.startsWith('http') && (
+      {paymentData?.checkoutUrl && (paymentData.checkoutUrl.startsWith('http') || paymentData.checkoutUrl.startsWith('/mock-payos')) && (
         <button 
           onClick={onProceedPayOS}
           className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-2 group text-sm active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer shadow-lg shadow-brand-glow"
@@ -137,4 +141,3 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
     </div>
   );
 });
-

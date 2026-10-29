@@ -128,9 +128,9 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
             )}
           </div>
           
-          <h3 className="text-xl sm:text-2xl font-display font-black text-white tracking-tight leading-snug">
+          <h2 className="text-xl sm:text-2xl font-display font-black text-white tracking-tight leading-snug">
             {ticket.eventTitle}
-          </h3>
+          </h2>
           
           <div className="flex flex-wrap items-center gap-2 text-text-secondary text-xs">
             <div className="flex items-center bg-surface-2/60 px-2.5 py-1 rounded-lg border border-border-subtle whitespace-nowrap">

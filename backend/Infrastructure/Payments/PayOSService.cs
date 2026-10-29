@@ -80,7 +80,21 @@ public class PayOSService : IPayOSService
                 var dataElement = jsonDoc.RootElement.GetProperty("data");
                 string checkoutUrl = dataElement.GetProperty("checkoutUrl").GetString() ?? "";
 
-                return new CreatePaymentResult { CheckoutUrl = checkoutUrl };
+                string? qrCode = dataElement.TryGetProperty("qrCode", out var qrEl) ? qrEl.GetString() : null;
+                string? accountNumber = dataElement.TryGetProperty("accountNumber", out var accNumEl) ? accNumEl.GetString() : null;
+                string? accountName = dataElement.TryGetProperty("accountName", out var accNameEl) ? accNameEl.GetString() : null;
+                string? bin = dataElement.TryGetProperty("bin", out var binEl) ? binEl.GetString() : null;
+                string? desc = dataElement.TryGetProperty("description", out var descEl) ? descEl.GetString() : null;
+
+                return new CreatePaymentResult
+                {
+                    CheckoutUrl = checkoutUrl,
+                    QrCode = qrCode,
+                    AccountNumber = accountNumber,
+                    AccountName = accountName,
+                    Bin = bin,
+                    Description = desc
+                };
             }
 
             _ = await response.Content.ReadAsStringAsync(cancellationToken);

@@ -13,6 +13,9 @@ import { ChangePasswordForm } from '../Profile/ChangePasswordForm';
 import { RefundBankAccountForm } from '../Profile/RefundBankAccountForm';
 import { useAuthStore } from '../../stores/useAuthStore';
 import EventModal from '../../components/Admin/EventModal';
+import { CheckoutVietQrView } from '../../components/Checkout/CheckoutVietQrView';
+import { TicketCard } from '../Tickets/TicketCard';
+import PaymentResultPage from '../PaymentResultPage';
 import api from '../../services/api';
 import type { Event as EventModel } from '../../types';
 
@@ -429,6 +432,94 @@ describe('Admin Portal Remediation Verification', () => {
       expect(screen.getByRole('heading', { level: 2, name: /Thông Tin Cá Nhân/i })).toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 2, name: /Bảo Mật & Mật Khẩu/i })).toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 2, name: /Tài khoản nhận hoàn tiền/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('Customer Portal Remediation Verification', () => {
+    it('TicketCard renders event title as level 2 heading under MyTicketsPage h1', () => {
+      const mockTicket = {
+        id: 'ticket-1',
+        eventId: 'event-1',
+        eventTitle: 'Concert Test 2026',
+        eventDate: '2026-11-20T19:00:00Z',
+        location: 'Hanoi Opera House',
+        venueName: 'Opera House',
+        row: 'A',
+        number: 1,
+        tier: 0,
+        price: 200000,
+        status: 'Paid',
+        qrCodeSignature: 'sig123',
+        refundCutoffHours: 24,
+      };
+
+      render(
+        <MemoryRouter>
+          <TicketCard ticket={mockTicket as any} refundingId={null} onInitiateRefund={vi.fn()} />
+        </MemoryRouter>
+      );
+
+      const heading = screen.getByRole('heading', { level: 2, name: 'Concert Test 2026' });
+      expect(heading).toBeInTheDocument();
+    });
+
+    it('CheckoutVietQrView normalizes qrCodeUrl and renders bank transfer metadata', () => {
+      const mockPaymentData = {
+        checkoutUrl: 'https://pay.payos.vn/web/test',
+        qrCode: 'https://api.qrserver.com/v1/create-qr-code/?data=TICKEX_ORDER',
+        orderCode: 123456789012345,
+        accountNumber: '0987654321',
+        accountName: 'TICKEX PLATFORM',
+        bin: '970415',
+        bankName: 'VietinBank',
+      };
+
+      render(
+        <MemoryRouter>
+          <CheckoutVietQrView
+            loadingPayment={false}
+            paymentInitError={null}
+            paymentData={mockPaymentData as any}
+            onRetryPayment={vi.fn()}
+            onProceedPayOS={vi.fn()}
+            copyToClipboard={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText('0987654321')).toBeInTheDocument();
+      expect(screen.getByText('TICKEX PLATFORM')).toBeInTheDocument();
+      expect(screen.getByText(/VietinBank/)).toBeInTheDocument();
+      const qrImg = screen.getByAltText(/Mã VietQR thanh toán/i);
+      expect(qrImg).toHaveAttribute('src', 'https://api.qrserver.com/v1/create-qr-code/?data=TICKEX_ORDER');
+    });
+
+    it('PaymentResultPage invalidates tickets and events queries when status is Paid', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            orderCode: 123456789012345,
+            status: 'PAID',
+            amount: 200000,
+          },
+        },
+      });
+
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/payment/result?orderCode=123456789012345']}>
+            <PaymentResultPage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      await waitFor(() => {
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['tickets'] });
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['events'] });
+      });
     });
   });
 });

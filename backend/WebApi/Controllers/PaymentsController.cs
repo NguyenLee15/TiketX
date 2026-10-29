@@ -123,8 +123,17 @@ public class PaymentsController : ControllerBase
         if (result.Success)
             return Ok(new { success = true, code = result.Code, message = result.Message, data = new
             {
-                orderCode = result.OrderCode?.ToString(), amount = result.Amount, checkoutUrl = result.CheckoutUrl,
-                status = result.Status, ticketId = result.TicketId, refundStatus = result.RefundStatus
+                orderCode = result.OrderCode?.ToString(),
+                amount = result.Amount,
+                checkoutUrl = result.CheckoutUrl,
+                status = result.Status,
+                ticketId = result.TicketId,
+                refundStatus = result.RefundStatus,
+                qrCode = result.QrCode,
+                accountNumber = result.AccountNumber,
+                accountName = result.AccountName,
+                bin = result.Bin,
+                description = result.Description
             }});
         if (notFound && result.Code == "PAYMENT_NOT_FOUND")
             return NotFound(new 

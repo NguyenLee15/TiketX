@@ -17,9 +17,11 @@ export const checkoutLinkResponseSchema = z.object({
   amount: z.number().nonnegative().optional().default(0),
   checkoutUrl: z.string().min(1),
   qrCode: z.string().optional().nullable().default(''),
+  qrCodeUrl: z.string().optional().nullable().default(''),
   accountNumber: z.string().optional().nullable().default(''),
   accountName: z.string().optional().nullable().default(''),
   bin: z.string().optional().nullable().default(''),
+  bankName: z.string().optional().nullable().default(''),
   description: z.string().optional().nullable().default(''),
 }).passthrough();
 

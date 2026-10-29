@@ -77,7 +77,10 @@ export default function CheckoutModal({
         
         const response = await api.post('/api/payments/create-link', {
           ticketId,
-        }, { signal: controller.signal });
+        }, {
+          signal: controller.signal,
+          headers: { 'Idempotency-Key': `checkout-${ticketId}` },
+        });
 
         if (isMounted && response.data.success) {
           const parsed = checkoutLinkResponseSchema.safeParse(response.data.data);
@@ -162,7 +165,11 @@ export default function CheckoutModal({
     setReleasing(true);
     setReleaseError('');
     try {
-      await api.post(`/api/reservations/${ticketId}/release`, { reason: 'CustomerClosedCheckout' });
+      await api.post(`/api/reservations/${ticketId}/release`, {
+        reason: 'CustomerClosedCheckout',
+      }, {
+        headers: { 'Idempotency-Key': `release-${ticketId}` },
+      });
       setShowCloseConfirm(false);
       onClose();
     } catch (error: unknown) {

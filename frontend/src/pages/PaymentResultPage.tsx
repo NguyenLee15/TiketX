@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import confetti from 'canvas-confetti';
 import api from '../services/api';
 import { normalizePaymentStatus, type PaymentStatus } from '../utils/customerState';
@@ -18,6 +19,7 @@ export type PaymentPhase =
 
 export default function PaymentResultPage() {
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const orderCode = searchParams.get('orderCode') ?? '';
 
   const [phase, setPhase] = useState<PaymentPhase>({ state: 'checking', status: 'Pending' });
@@ -75,6 +77,8 @@ export default function PaymentResultPage() {
 
       if (!signal?.aborted && mountedRef.current) {
         if (next === 'Paid') {
+          void queryClient.invalidateQueries({ queryKey: ['tickets'] });
+          void queryClient.invalidateQueries({ queryKey: ['events'] });
           setPhase({ state: 'success', status: 'Paid' });
           if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
@@ -85,6 +89,8 @@ export default function PaymentResultPage() {
             status: 'Used',
             message: 'Vé này đã được sử dụng (đã check-in vào sự kiện thành công).',
           });
+          void queryClient.invalidateQueries({ queryKey: ['tickets'] });
+          void queryClient.invalidateQueries({ queryKey: ['events'] });
         } else if (next === 'Failed' || next === 'Cancelled' || next === 'Expired') {
           const refundStatus = parsed.data.refundStatus;
           let refundMsg = next === 'Cancelled' ? 'Giao dịch đã bị hủy.' : next === 'Expired' ? 'Giao dịch đã hết hạn thanh toán.' : 'Thanh toán không thành công.';

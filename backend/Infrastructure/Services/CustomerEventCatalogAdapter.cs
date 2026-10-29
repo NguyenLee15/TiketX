@@ -58,8 +58,8 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
         query = sortBy switch
         {
             "date_desc" => query.OrderByDescending(e => e.Date).ThenBy(e => e.Id),
-            "price_asc" => query.OrderBy(e => e.BasePrice).ThenBy(e => e.Id),
-            "price_desc" => query.OrderByDescending(e => e.BasePrice).ThenBy(e => e.Id),
+            "price_asc" => query.OrderBy(e => (double)(e.Seats.Min(s => (double?)s.Price) ?? (double)e.BasePrice)).ThenBy(e => e.Id),
+            "price_desc" => query.OrderByDescending(e => (double)(e.Seats.Min(s => (double?)s.Price) ?? (double)e.BasePrice)).ThenBy(e => e.Id),
             _ => query.OrderBy(e => e.Date).ThenBy(e => e.Id)
         };
 
@@ -78,8 +78,8 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
             query = sortBy switch
             {
                 "date_desc" => query.Where(e => e.Date < cursor.Date || (e.Date == cursor.Date && e.Id.CompareTo(cursor.Id) > 0)),
-                "price_asc" => query.Where(e => e.BasePrice > cursor.Price || (e.BasePrice == cursor.Price && e.Id.CompareTo(cursor.Id) > 0)),
-                "price_desc" => query.Where(e => e.BasePrice < cursor.Price || (e.BasePrice == cursor.Price && e.Id.CompareTo(cursor.Id) > 0)),
+                "price_asc" => query.Where(e => (double)(e.Seats.Min(s => (double?)s.Price) ?? (double)e.BasePrice) > (double)cursor.Price || ((double)(e.Seats.Min(s => (double?)s.Price) ?? (double)e.BasePrice) == (double)cursor.Price && e.Id.CompareTo(cursor.Id) > 0)),
+                "price_desc" => query.Where(e => (double)(e.Seats.Min(s => (double?)s.Price) ?? (double)e.BasePrice) < (double)cursor.Price || ((double)(e.Seats.Min(s => (double?)s.Price) ?? (double)e.BasePrice) == (double)cursor.Price && e.Id.CompareTo(cursor.Id) > 0)),
                 _ => query.Where(e => e.Date > cursor.Date || (e.Date == cursor.Date && e.Id.CompareTo(cursor.Id) > 0))
             };
             rows = await query.Take(pageSize + 1).ToListAsync(cancellationToken);
@@ -125,7 +125,9 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
             .ToList();
 
         var last = rows.LastOrDefault();
-        var nextCursor = hasMore && last is not null ? EncodeCursor(sortBy, last) : null;
+        var nextCursor = hasMore && last is not null
+            ? EncodeCursor(sortBy, last, seatPrices.TryGetValue(last.Id, out var lastPrices) ? lastPrices.MinPrice : last.BasePrice)
+            : null;
         var result = string.IsNullOrWhiteSpace(request.Cursor)
             ? new PagedResult<EventDto>(items, totalCount, page, pageSize, nextCursor, hasMore, "offset")
             : new PagedResult<EventDto>(items, null, null, pageSize, nextCursor, hasMore, "cursor");
@@ -133,9 +135,9 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
         return result;
     }
 
-    private static string EncodeCursor(string sortBy, TickeX.Domain.Entities.Event eventItem)
+    private static string EncodeCursor(string sortBy, TickeX.Domain.Entities.Event eventItem, decimal effectivePrice)
     {
-        var value = new EventCursor(sortBy, eventItem.Date, eventItem.BasePrice, eventItem.Id);
+        var value = new EventCursor(sortBy, eventItem.Date, effectivePrice, eventItem.Id);
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(value)))
             .TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }

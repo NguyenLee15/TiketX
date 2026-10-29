@@ -50,35 +50,41 @@ public class Seat : BaseEntity
         Version = Guid.NewGuid().ToByteArray();
     }
 
-    public void Lock(Guid userId)
+    public void Lock(Guid userId, DateTime utcNow)
     {
         if (Status != SeatStatus.Available)
             throw new InvalidOperationException("Seat is not available for reservation.");
 
         Status = SeatStatus.Locked;
         LockedByUserId = userId;
-        LockedAt = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
+        LockedAt = utcNow;
+        UpdatedAt = utcNow;
         Version = Guid.NewGuid().ToByteArray();
     }
 
-    public bool IsLockExpired(TimeSpan duration)
+    public void Lock(Guid userId) => Lock(userId, DateTime.UtcNow);
+
+    public bool IsLockExpired(TimeSpan duration, DateTime utcNow)
     {
         return Status == SeatStatus.Locked 
             && LockedAt.HasValue 
-            && LockedAt.Value.Add(duration) <= DateTime.UtcNow;
+            && LockedAt.Value.Add(duration) <= utcNow;
     }
 
-    public void ReclaimLock(Guid userId)
+    public bool IsLockExpired(TimeSpan duration) => IsLockExpired(duration, DateTime.UtcNow);
+
+    public void ReclaimLock(Guid userId, DateTime utcNow)
     {
         if (Status != SeatStatus.Locked)
             throw new InvalidOperationException("Seat lock can only be reclaimed when currently locked.");
 
         LockedByUserId = userId;
-        LockedAt = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
+        LockedAt = utcNow;
+        UpdatedAt = utcNow;
         Version = Guid.NewGuid().ToByteArray();
     }
+
+    public void ReclaimLock(Guid userId) => ReclaimLock(userId, DateTime.UtcNow);
 
     public void MarkAsSold()
     {

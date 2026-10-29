@@ -9,7 +9,12 @@ public sealed record CustomerCheckoutResult(
     string? CheckoutUrl = null,
     string? Status = null,
     Guid? TicketId = null,
-    string? RefundStatus = null);
+    string? RefundStatus = null,
+    string? QrCode = null,
+    string? AccountNumber = null,
+    string? AccountName = null,
+    string? Bin = null,
+    string? Description = null);
 
 /// <summary>Customer checkout boundary. HTTP controllers only map request and response data.</summary>
 public interface ICustomerCheckoutOperations

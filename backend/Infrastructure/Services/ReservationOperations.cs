@@ -73,7 +73,7 @@ public sealed class ReservationOperations : IReservationOperations
                     return Fail("SEAT_VERSION_CONFLICT", "Trạng thái ghế đã thay đổi. Vui lòng chọn lại.");
 
                 var holdDuration = TimeSpan.FromMinutes(_options.HoldMinutes);
-                var expired = seat.IsLockExpired(holdDuration);
+                var expired = seat.IsLockExpired(holdDuration, _time.UtcNow);
                 if (seat.Status != SeatStatus.Available && !expired)
                     return Fail("SEAT_UNAVAILABLE", "Ghế đã được giữ hoặc bán.");
 
@@ -83,11 +83,11 @@ public sealed class ReservationOperations : IReservationOperations
                         .Where(t => t.SeatId == seat.Id && t.Status == TicketStatus.Pending)
                         .ToListAsync(cancellationToken);
                     foreach (var oldTicket in oldTickets) oldTicket.Cancel();
-                    seat.ReclaimLock(userId);
+                    seat.ReclaimLock(userId, _time.UtcNow);
                 }
                 else
                 {
-                    seat.Lock(userId);
+                    seat.Lock(userId, _time.UtcNow);
                 }
 
                 var ticket = new Ticket(eventId, seatId, userId, seat.Price);
@@ -167,9 +167,19 @@ public sealed class ReservationOperations : IReservationOperations
                 return Fail("RESERVATION_NOT_PENDING", "Lượt giữ ghế đã thay đổi.");
             if (current.Seat?.Status == SeatStatus.Locked && (!requireOwner || current.Seat.LockedByUserId == userId))
                 current.Seat.Release();
+
+            var userEmail = string.Empty;
+            if (requireOwner && userId != Guid.Empty)
+            {
+                userEmail = await _context.Users.AsNoTracking()
+                    .Where(u => u.Id == userId)
+                    .Select(u => u.Email)
+                    .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+            }
+
             _context.AuditLogs.Add(new AuditLog(
                 userId: requireOwner ? userId : null,
-                userEmail: string.Empty,
+                userEmail: userEmail,
                 action: "RESERVATION_RELEASED",
                 entityName: "Ticket",
                 entityId: current.Id.ToString(),
