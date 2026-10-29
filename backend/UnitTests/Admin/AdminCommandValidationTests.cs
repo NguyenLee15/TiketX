@@ -1,8 +1,11 @@
 using FluentAssertions;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using TickeX.Application.Admin.Commands;
 using TickeX.Application.Events.Commands;
 using TickeX.Domain.Entities;
 using TickeX.Domain.Enums;
+using TickeX.Infrastructure.Persistence;
 using Xunit;
 
 namespace TickeX.UnitTests.Admin;
@@ -163,5 +166,83 @@ public class AdminCommandValidationTests
         var result = _changeRoleValidator.Validate(command);
 
         result.IsValid.Should().Be(expectedValid);
+    }
+
+    [Fact]
+    public async Task UpdateEventCommandValidator_WhenEventDateIsPast_AllowsPreservingExistingDate()
+    {
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        using var context = new ApplicationDbContext(options);
+        context.Database.EnsureCreated();
+
+        var pastDate = DateTime.UtcNow.AddDays(-2);
+        var pastEndDate = pastDate.AddHours(3);
+        var ev = new Event("Past Festival", "Desc", pastDate, pastEndDate, "Hà Nội", "Sân Mỹ Đình", 100, basePrice: 200000m);
+        context.Events.Add(ev);
+        await context.SaveChangesAsync();
+
+        var validator = new UpdateEventCommandValidator(context);
+        var command = new UpdateEventCommand(
+            Id: ev.Id,
+            Title: "Past Festival - Updated Title",
+            Description: "Updated desc",
+            Date: pastDate,
+            EndDate: pastEndDate,
+            Location: "Hà Nội",
+            VenueName: "Sân Mỹ Đình",
+            TotalSeats: 100,
+            Category: "Concert",
+            ImageUrl: "https://example.com/banner.jpg",
+            BasePrice: 200000m,
+            Status: EventStatus.Completed,
+            ExpectedVersion: Convert.ToBase64String(ev.Version)
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateEventCommandValidator_WhenChangingDateToPast_FailsValidation()
+    {
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        using var context = new ApplicationDbContext(options);
+        context.Database.EnsureCreated();
+
+        var existingDate = DateTime.UtcNow.AddDays(5);
+        var ev = new Event("Future Event", "Desc", existingDate, existingDate.AddHours(2), "Hà Nội", "Venue", 50, basePrice: 150000m);
+        context.Events.Add(ev);
+        await context.SaveChangesAsync();
+
+        var validator = new UpdateEventCommandValidator(context);
+        var command = new UpdateEventCommand(
+            Id: ev.Id,
+            Title: "Future Event",
+            Description: "Desc",
+            Date: DateTime.UtcNow.AddDays(-1), // Changed to past!
+            EndDate: DateTime.UtcNow.AddDays(-1).AddHours(2),
+            Location: "Hà Nội",
+            VenueName: "Venue",
+            TotalSeats: 50,
+            Category: "Concert",
+            ImageUrl: "https://example.com/banner.jpg",
+            BasePrice: 150000m,
+            Status: EventStatus.Published,
+            ExpectedVersion: Convert.ToBase64String(ev.Version)
+        );
+
+        var result = await validator.ValidateAsync(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpdateEventCommand.Date));
     }
 }

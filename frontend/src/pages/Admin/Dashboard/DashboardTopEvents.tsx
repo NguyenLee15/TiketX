@@ -23,7 +23,7 @@ export function DashboardTopEvents({ topEvents }: DashboardTopEventsProps) {
               <div key={evt.id} className="space-y-2 p-3.5 rounded-xl bg-surface-2/40 border border-border-subtle">
                 <div className="flex justify-between items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <h4 className="font-bold text-white text-xs sm:text-sm line-clamp-1">{evt.title}</h4>
+                    <h3 className="font-bold text-white text-xs sm:text-sm line-clamp-1">{evt.title}</h3>
                     <span className="text-[10px] uppercase font-bold text-text-tertiary px-2 py-0.5 rounded bg-surface-3 mt-1 inline-block whitespace-nowrap">
                       {evt.category}
                     </span>

@@ -18,6 +18,10 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const lastScannedTokenRef = useRef('');
   const lastScannedTimeRef = useRef(0);
+  const isVerifyingRef = useRef(isVerifying);
+  isVerifyingRef.current = isVerifying;
+  const onScanTokenRef = useRef(onScanToken);
+  onScanTokenRef.current = onScanToken;
 
   useEffect(() => {
     let mounted = true;
@@ -58,13 +62,13 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
           },
           (decodedText) => {
             const now = Date.now();
-            if (isVerifying) return;
+            if (isVerifyingRef.current) return;
             if (lastScannedTokenRef.current === decodedText && now - lastScannedTimeRef.current < 2500) {
               return; // Cooldown 2.5s for same token
             }
             lastScannedTokenRef.current = decodedText;
             lastScannedTimeRef.current = now;
-            onScanToken(decodedText);
+            onScanTokenRef.current(decodedText);
           },
           () => {
             // Per-frame error when QR not detected in frame; ignore
@@ -100,7 +104,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
         }
       }
     };
-  }, [cameraActive, facingMode, isVerifying, onScanToken, retryNonce]);
+  }, [cameraActive, facingMode, retryNonce]);
 
   const handlePasteClipboard = async () => {
     try {

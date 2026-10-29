@@ -261,6 +261,27 @@ public class EventLifecycleAndDeletionTests : IDisposable
     }
 
     [Fact]
+    public async Task CancelEvent_WhenEventIsDeleted_ReturnsBadRequestEventAlreadyDeleted()
+    {
+        // Arrange
+        var ev = new Event("Deleted Fest", "Desc", DateTime.UtcNow.AddDays(3), DateTime.UtcNow.AddDays(3).AddHours(3), "Loc", "Venue", 100, basePrice: 200000m);
+        ev.SoftDelete();
+        _context.Events.Add(ev);
+        await _context.SaveChangesAsync();
+
+        var handler = new CancelEventCommandHandler(_context, new RefundRequestPort(_context));
+        var command = new CancelEventCommand(ev.Id, "Cancelling deleted event", Convert.ToBase64String(ev.Version), AdminEmail: "admin@tickex.com");
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.ErrorCode.Should().Be("EVENT_ALREADY_DELETED");
+    }
+
+    [Fact]
     public async Task UpdateEvent_WhenTicketsSold_ShouldForbidChangingSeatsOrPrice()
     {
         // Arrange

@@ -67,6 +67,9 @@ public class CancelEventCommandHandler : IRequestHandler<CancelEventCommand, Adm
         if (ev == null)
             return AdminOperationResult.NotFound("Không tìm thấy sự kiện.");
 
+        if (ev.IsDeleted)
+            return AdminOperationResult.BadRequest("Không thể hủy sự kiện đã bị xóa.", "EVENT_ALREADY_DELETED");
+
         if (string.IsNullOrWhiteSpace(request.ExpectedVersion))
             return AdminOperationResult.BadRequest("Phiên bản dữ liệu sự kiện (ExpectedVersion) là bắt buộc.", "VERSION_REQUIRED");
 

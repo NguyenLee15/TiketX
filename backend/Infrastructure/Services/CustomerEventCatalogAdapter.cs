@@ -85,8 +85,10 @@ public sealed class CustomerEventCatalogAdapter : ICustomerEventCatalog
             rows = await query.Take(pageSize + 1).ToListAsync(cancellationToken);
         }
 
-        var hasMore = rows.Count > pageSize;
-        if (hasMore) rows.RemoveAt(pageSize);
+        var hasMore = string.IsNullOrWhiteSpace(request.Cursor)
+            ? ((page * pageSize) < totalCount.GetValueOrDefault())
+            : (rows.Count > pageSize);
+        if (!string.IsNullOrWhiteSpace(request.Cursor) && rows.Count > pageSize) rows.RemoveAt(pageSize);
 
         var eventIds = rows.Select(e => e.Id).ToArray();
         var lockExpiry = now.Subtract(_holdDuration);

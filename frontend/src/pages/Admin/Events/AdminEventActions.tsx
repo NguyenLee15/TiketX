@@ -37,7 +37,13 @@ export function AdminEventActions({ event, onEdit, onCancel, onDelete, compact =
         <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />
       </button>
       {!isCancelled && !isCompleted && (
-        <button onClick={() => onCancel(event)} aria-label={`Hủy sự kiện & Hoàn tiền vé ${event.title}`} className="p-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl transition-colors border border-amber-500/20" title="Hủy sự kiện & Hoàn tiền vé">
+        <button
+          onClick={() => onCancel(event)}
+          disabled={event.isDeleted}
+          aria-label={`Hủy sự kiện & Hoàn tiền vé ${event.title}`}
+          className="p-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl transition-colors border border-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+          title={event.isDeleted ? 'Không thể hủy sự kiện đã xóa' : 'Hủy sự kiện & Hoàn tiền vé'}
+        >
           <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       )}

@@ -16,8 +16,26 @@ import EventModal from '../../components/Admin/EventModal';
 import { CheckoutVietQrView } from '../../components/Checkout/CheckoutVietQrView';
 import { TicketCard } from '../Tickets/TicketCard';
 import PaymentResultPage from '../PaymentResultPage';
+import { AdminEventActions } from './Events/AdminEventActions';
+import { DashboardTopEvents } from './Dashboard/DashboardTopEvents';
+import { ScanCameraPanel } from './Scan/ScanCameraPanel';
 import api from '../../services/api';
 import type { Event as EventModel } from '../../types';
+
+const mockScannerStart = vi.fn().mockResolvedValue(undefined);
+const mockScannerStop = vi.fn().mockResolvedValue(undefined);
+const mockScannerClear = vi.fn();
+
+vi.mock('html5-qrcode', () => {
+  return {
+    Html5Qrcode: class {
+      start = mockScannerStart;
+      stop = mockScannerStop;
+      clear = mockScannerClear;
+      isScanning = true;
+    },
+  };
+});
 
 vi.mock('../../services/api', () => ({
   default: {
@@ -520,6 +538,113 @@ describe('Admin Portal Remediation Verification', () => {
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['tickets'] });
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['events'] });
       });
+    });
+  });
+
+  describe('AdminEventActions (Soft-Delete Disabled State)', () => {
+    it('disables cancel button in desktop view when event is soft-deleted', () => {
+      const deletedEvent: EventModel = {
+        ...mockEvent,
+        id: 'deleted-event',
+        isDeleted: true,
+      };
+
+      render(
+        <AdminEventActions
+          event={deletedEvent}
+          compact={false}
+          onEdit={vi.fn()}
+          onCancel={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      );
+
+      const cancelBtn = screen.getByRole('button', { name: /Hủy sự kiện & Hoàn tiền vé/i });
+      expect(cancelBtn).toBeDisabled();
+    });
+  });
+
+  describe('EventModal (Completed Status Transition)', () => {
+    it('allows selecting Completed status when editing a published event', () => {
+      render(
+        <EventModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSubmit={vi.fn()}
+          event={mockEvent} // status is 1 (Published)
+        />
+      );
+
+      expect(screen.getByLabelText(/Trạng thái sự kiện/i)).toBeInTheDocument();
+      const completedOption = screen.getByRole('option', { name: /Đã kết thúc \(Completed\)/i }) as HTMLOptionElement;
+      expect(completedOption).toBeInTheDocument();
+      expect(completedOption.disabled).toBe(false);
+    });
+
+    it('disables Completed option when editing a draft event', () => {
+      const draftEvent: EventModel = {
+        ...mockEvent,
+        status: 0, // Draft
+      };
+
+      render(
+        <EventModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSubmit={vi.fn()}
+          event={draftEvent}
+        />
+      );
+
+      const completedOption = screen.getByRole('option', { name: /Đã kết thúc \(Completed\)/i }) as HTMLOptionElement;
+      expect(completedOption).toBeInTheDocument();
+      expect(completedOption.disabled).toBe(true);
+    });
+  });
+
+  describe('DashboardTopEvents (Heading Hierarchy WCAG 2.1 AA)', () => {
+    it('renders event titles as h3 headings following the h2 section heading', () => {
+      const topEvents = [
+        {
+          id: 'top-1',
+          title: 'Concert Âm Nhạc Trẻ',
+          category: 'Music',
+          revenue: 150000000,
+          ticketsSold: 300,
+          totalSeats: 500,
+        },
+      ];
+
+      render(<DashboardTopEvents topEvents={topEvents} />);
+
+      const sectionHeading = screen.getByRole('heading', { level: 2, name: /Top Sự Kiện Bán Chạy Nhất/i });
+      expect(sectionHeading).toBeInTheDocument();
+
+      const eventTitleHeading = screen.getByRole('heading', { level: 3, name: /Concert Âm Nhạc Trẻ/i });
+      expect(eventTitleHeading).toBeInTheDocument();
+    });
+  });
+
+  describe('ScanCameraPanel (Camera Stream Lifecycle Stability)', () => {
+    it('does not re-initialize or stop camera scanner when isVerifying toggles', async () => {
+      const onScanToken = vi.fn();
+      const { rerender } = render(
+        <ScanCameraPanel onScanToken={onScanToken} isVerifying={false} />
+      );
+
+      // Wait for initial scanner start (150ms debounce)
+      await waitFor(() => {
+        expect(mockScannerStart).toHaveBeenCalledTimes(1);
+      });
+
+      // Toggle isVerifying to true
+      rerender(<ScanCameraPanel onScanToken={onScanToken} isVerifying={true} />);
+
+      // Wait a moment to ensure no restart or stop is triggered
+      await new Promise((r) => setTimeout(r, 200));
+
+      expect(mockScannerStart).toHaveBeenCalledTimes(1);
+      expect(mockScannerStop).not.toHaveBeenCalled();
     });
   });
 });

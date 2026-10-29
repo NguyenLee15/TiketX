@@ -1,13 +1,15 @@
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using TickeX.Application.Interfaces;
 
 namespace TickeX.Application.Events.Commands;
 
 public class UpdateEventCommandValidator : AbstractValidator<UpdateEventCommand>
 {
-    public UpdateEventCommandValidator(ITimePolicy? time = null)
+    public UpdateEventCommandValidator(IApplicationDbContext? dbContext = null, ITimePolicy? time = null)
     {
-        var now = (time ?? new UtcTimePolicy()).UtcNow;
+        var timePolicy = time ?? new UtcTimePolicy();
+
         RuleFor(x => x.Id)
             .NotEmpty().WithMessage("ID sự kiện không được để trống.");
 
@@ -22,11 +24,31 @@ public class UpdateEventCommandValidator : AbstractValidator<UpdateEventCommand>
             .NotEmpty().WithMessage("Địa điểm tổ chức không được để trống.")
             .MaximumLength(250).WithMessage("Địa điểm không được vượt quá 250 ký tự.");
 
-        RuleFor(x => x.Date)
-            .GreaterThan(now).WithMessage("Thời gian bắt đầu phải ở tương lai.");
+        if (dbContext != null)
+        {
+            RuleFor(x => x.Date)
+                .NotEmpty().WithMessage("Thời gian bắt đầu không được để trống.")
+                .MustAsync(async (cmd, date, ct) =>
+                {
+                    if (date == default) return true;
+                    var existing = await dbContext.Events
+                        .IgnoreQueryFilters()
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(e => e.Id == cmd.Id, ct);
+                    if (existing == null) return true; // Handled by handler (404)
+                    if (existing.Date == date) return true; // Preserving existing event date is valid on ongoing/past events
+                    return date > timePolicy.UtcNow;
+                })
+                .WithMessage("Thời gian bắt đầu mới phải ở tương lai.");
+        }
+        else
+        {
+            RuleFor(x => x.Date)
+                .NotEmpty().WithMessage("Thời gian bắt đầu không được để trống.");
+        }
 
         RuleFor(x => x.EndDate)
-            .GreaterThan(x => x.Date).WithMessage("Thời gian kết thúc phải sau thời gian bắt đầu.");
+            .Must((cmd, end) => end >= cmd.Date).WithMessage("Thời gian kết thúc phải diễn ra sau hoặc cùng thời điểm bắt đầu.");
 
         RuleFor(x => x.BasePrice)
             .GreaterThan(0).WithMessage("Giá vé cơ sở phải lớn hơn 0.");

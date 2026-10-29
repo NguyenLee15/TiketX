@@ -199,7 +199,11 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                 >
                   <option value="Published" className="bg-surface-1 text-white">Đang mở bán (Published)</option>
                   <option value="Draft" disabled={hasTicketHistory && (event?.status === 1 || event?.status === ('Published' as unknown as number))} className="bg-surface-1 text-white">Bản nháp (Draft)</option>
-                  {watchedStatus === 'Completed' && <option value="Completed" className="bg-surface-1 text-white">Đã kết thúc (Completed)</option>}
+                  {Boolean(event) && (
+                    <option value="Completed" disabled={event?.status === 0 || event?.status === 'Draft' || (event?.status as unknown as string) === 'Draft'} className="bg-surface-1 text-white">
+                      Đã kết thúc (Completed)
+                    </option>
+                  )}
                   {watchedStatus === 'Cancelled' && <option value="Cancelled" className="bg-surface-1 text-white">Đã hủy (Cancelled)</option>}
                 </select>
                 {errors.status && <p className="text-danger text-xs mt-1">{errors.status.message}</p>}
