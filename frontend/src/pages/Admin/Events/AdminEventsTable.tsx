@@ -167,7 +167,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
       </div>
 
       {/* Server-side Pagination Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 pt-2 text-xs text-text-secondary">
+      <nav aria-label="Phân trang sự kiện" className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 pt-2 text-xs text-text-secondary">
         <p>
           Hiển thị <span className="font-bold text-white">{events.length}</span> / <span className="font-bold text-white">{totalCount}</span> sự kiện (Trang {page}/{totalPages})
         </p>
@@ -197,7 +197,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
             <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
-      </div>
+      </nav>
     </>
   );
 };

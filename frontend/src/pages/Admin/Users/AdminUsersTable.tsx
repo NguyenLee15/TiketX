@@ -178,10 +178,10 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="font-bold text-white text-sm truncate flex items-center gap-1">
+                    <h2 className="font-bold text-white text-sm truncate flex items-center gap-1">
                       {user.name}
                       {isSelf && <span className="text-[10px] text-brand-primary">(Bạn)</span>}
-                    </p>
+                    </h2>
                     <p className="text-xs text-text-secondary truncate">{user.email}</p>
                   </div>
                 </div>
@@ -228,7 +228,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
       </div>
 
       {/* Server-side Pagination Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 pt-2 text-xs text-text-secondary">
+      <nav aria-label="Phân trang người dùng" className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 pt-2 text-xs text-text-secondary">
         <p>
           Hiển thị <span className="font-bold text-white">{users.length}</span> / <span className="font-bold text-white">{totalCount}</span> người dùng (Trang {page}/{totalPages})
         </p>
@@ -258,7 +258,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
             <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
-      </div>
+      </nav>
     </>
   );
 };

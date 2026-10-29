@@ -54,7 +54,7 @@ export default function AdminRefundsPage() {
     } finally { setRetrying(null); }
   };
 
-  if (refundsQuery.isLoading) return <div className="p-8 text-text-secondary" aria-busy="true"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Đang tải yêu cầu hoàn tiền</div>;
+  if (refundsQuery.isLoading) return <div role="status" className="p-8 text-text-secondary" aria-busy="true"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Đang tải yêu cầu hoàn tiền</div>;
   if (refundsQuery.isError) return <section className="surface-panel m-6 p-6"><p role="alert" className="mb-3 text-danger">Không tải được danh sách hoàn tiền.</p><button className="rounded-lg bg-brand-primary px-4 py-2 text-white" onClick={() => void refundsQuery.refetch()}>Thử lại</button></section>;
 
   const data = refundsQuery.data;

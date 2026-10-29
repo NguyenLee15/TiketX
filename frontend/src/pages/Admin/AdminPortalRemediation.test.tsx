@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdminEventsTable } from './Events/AdminEventsTable';
+import { AdminUsersTable } from './Users/AdminUsersTable';
 import AdminRefundsPage from './AdminRefundsPage';
 import AdminDashboardPage from './AdminDashboardPage';
 import AdminUsersPage from './AdminUsersPage';
@@ -702,6 +703,52 @@ describe('Admin Portal Remediation Verification', () => {
       );
       const errorHeading = screen.getByRole('heading', { level: 3, name: /Không thể tạo mã thanh toán/i });
       expect(errorHeading).toBeInTheDocument();
+    });
+  });
+
+  describe('Admin Tables Pagination Navigation Landmarks (WCAG 2.1 AA)', () => {
+    it('AdminEventsTable pagination uses semantic nav landmark', () => {
+      render(
+        <AdminEventsTable
+          events={[]}
+          totalCount={20}
+          page={1}
+          totalPages={2}
+          onPageChange={vi.fn()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      );
+      const paginationNav = screen.getByRole('navigation', { name: /Phân trang sự kiện/i });
+      expect(paginationNav).toBeInTheDocument();
+    });
+
+    it('AdminUsersTable pagination uses semantic nav landmark and mobile cards use level 2 heading', () => {
+      render(
+        <AdminUsersTable
+          users={[
+            {
+              id: 'u-1',
+              name: 'Nguyễn Văn Admin',
+              email: 'admin@tickex.com',
+              role: 'Admin',
+              isBlocked: false,
+            },
+          ]}
+          totalCount={20}
+          page={1}
+          totalPages={2}
+          isSubmitting={false}
+          onPageChange={vi.fn()}
+          onRequestChangeRole={vi.fn()}
+          onRequestToggleBlock={vi.fn()}
+        />
+      );
+      const userPaginationNav = screen.getByRole('navigation', { name: /Phân trang người dùng/i });
+      expect(userPaginationNav).toBeInTheDocument();
+      const userCardHeading = screen.getByRole('heading', { level: 2, name: /Nguyễn Văn Admin/i });
+      expect(userCardHeading).toBeInTheDocument();
     });
   });
 });
