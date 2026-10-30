@@ -36,7 +36,14 @@ export function DashboardTopEvents({ topEvents }: DashboardTopEventsProps) {
                   </div>
                 </div>
 
-                <div className="w-full bg-surface-3 h-1.5 rounded-full overflow-hidden">
+                <div 
+                  role="progressbar"
+                  aria-valuenow={fillPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`Tỷ lệ lấp đầy vé sự kiện ${evt.title}: ${fillPercent}%`}
+                  className="w-full bg-surface-3 h-1.5 rounded-full overflow-hidden"
+                >
                   <div 
                     className="h-full bg-brand-primary transition-[width] duration-300 motion-reduce:transition-none rounded-full"
                     style={{ width: `${Math.min(fillPercent, 100)}%` }}

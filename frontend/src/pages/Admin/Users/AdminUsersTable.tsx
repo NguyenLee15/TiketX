@@ -137,6 +137,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                           type="button"
                           onClick={() => onRequestToggleBlock(user, !user.isBlocked)}
                           disabled={isSelf || isSubmitting}
+                          aria-label={user.isBlocked ? `Mở khóa tài khoản ${user.name}` : `Khóa tài khoản ${user.name}`}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary border whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed ${
                             user.isBlocked 
                               ? 'bg-success/15 hover:bg-success text-success hover:text-white border-success/30' 
@@ -211,6 +212,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                   type="button"
                   onClick={() => onRequestToggleBlock(user, !user.isBlocked)}
                   disabled={isSelf || isSubmitting}
+                  aria-label={user.isBlocked ? `Mở khóa tài khoản ${user.name}` : `Khóa tài khoản ${user.name}`}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold border shrink-0 disabled:opacity-40 ${
                     user.isBlocked 
                       ? 'bg-success/15 text-success border-success/30' 

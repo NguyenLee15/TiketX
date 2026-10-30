@@ -218,7 +218,7 @@ export default function AdminUsersPage() {
       {loadError && !loading && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-xs text-danger">
           <span>Không thể tải danh sách người dùng.</span>
-          <button type="button" onClick={fetchUsers} className="rounded-lg border border-danger/30 px-3 py-1.5 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger">Thử lại</button>
+          <button type="button" onClick={fetchUsers} aria-label="Thử lại tải danh sách người dùng" className="rounded-lg border border-danger/30 px-3 py-1.5 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger">Thử lại</button>
         </div>
       )}
 

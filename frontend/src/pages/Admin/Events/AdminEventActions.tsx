@@ -16,15 +16,15 @@ export function AdminEventActions({ event, onEdit, onCancel, onDelete, compact =
   if (compact) {
     return (
       <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-subtle">
-        <button type="button" onClick={() => onEdit(event)} disabled={event.isDeleted || isCompleted || isCancelled} className="px-3 py-1.5 bg-surface-2 hover:bg-surface-3 text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary border border-border-subtle flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+        <button type="button" onClick={() => onEdit(event)} disabled={event.isDeleted || isCompleted || isCancelled} aria-label={`Chỉnh sửa sự kiện ${event.title}`} className="px-3 py-1.5 bg-surface-2 hover:bg-surface-3 text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary border border-border-subtle flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
           <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />Sửa
         </button>
         {!isCancelled && !isCompleted && (
-          <button type="button" onClick={() => onCancel(event)} disabled={event.isDeleted} className="px-3 py-1.5 bg-amber-500/15 text-amber-400 hover:bg-amber-500 hover:text-black rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 border border-amber-500/30 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+          <button type="button" onClick={() => onCancel(event)} disabled={event.isDeleted} aria-label={`Hủy sự kiện ${event.title}`} className="px-3 py-1.5 bg-amber-500/15 text-amber-400 hover:bg-amber-500 hover:text-black rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 border border-amber-500/30 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
             <XCircle className="w-3.5 h-3.5" aria-hidden="true" />Hủy
           </button>
         )}
-        <button type="button" onClick={() => onDelete(event)} disabled={event.isDeleted} className="px-3 py-1.5 bg-danger/15 text-danger hover:bg-danger hover:text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger border border-danger/30 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+        <button type="button" onClick={() => onDelete(event)} disabled={event.isDeleted} aria-label={`Xóa sự kiện ${event.title}`} className="px-3 py-1.5 bg-danger/15 text-danger hover:bg-danger hover:text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger border border-danger/30 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
           <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />Xóa
         </button>
       </div>

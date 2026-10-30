@@ -1216,7 +1216,7 @@ describe('Admin Portal Remediation Verification', () => {
         />
       );
 
-      const blockBtns = screen.getAllByRole('button', { name: 'Khóa' });
+      const blockBtns = screen.getAllByRole('button', { name: /Khóa/i });
       expect(blockBtns.length).toBe(2);
       blockBtns.forEach(btn => expect(btn).toHaveAttribute('type', 'button'));
 
@@ -1423,6 +1423,158 @@ describe('Admin Portal Remediation Verification', () => {
       expect(timer).toBeInTheDocument();
       expect(timer).toHaveAttribute('aria-atomic', 'true');
       expect(timer).toHaveAttribute('aria-live', 'polite');
+    });
+  });
+
+
+  describe('Admin Portal Deep Remediation Verification (Round 19)', () => {
+    it('DashboardTopEvents renders seat fill progressbar with accessible attributes', () => {
+      const topEvents = [
+        { id: 'evt-1', title: 'Đêm Nhạc Trẻ', category: 'Music', revenue: 12000000, ticketsSold: 80, totalSeats: 100 }
+      ];
+
+      render(<DashboardTopEvents topEvents={topEvents} />);
+
+      const progressbar = screen.getByRole('progressbar');
+      expect(progressbar).toBeInTheDocument();
+      expect(progressbar).toHaveAttribute('aria-valuenow', '80');
+      expect(progressbar).toHaveAttribute('aria-valuemin', '0');
+      expect(progressbar).toHaveAttribute('aria-valuemax', '100');
+      expect(progressbar).toHaveAttribute('aria-label', expect.stringContaining('80%'));
+    });
+
+    it('DashboardRecentTransactions renders feed with aria-label and empty status', () => {
+      const { rerender } = render(<DashboardRecentTransactions recentTransactions={[]} />);
+      const feedEmpty = screen.getByRole('feed', { name: /Lịch sử giao dịch gần đây/i });
+      expect(feedEmpty).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(/Chưa có giao dịch nào/i);
+
+      const mockTxs = [
+        {
+          ticketId: 'tx-1',
+          orderCode: 123456,
+          userName: 'Nguyen Van A',
+          eventTitle: 'Rock Fest',
+          amount: 500000,
+          status: 'Paid',
+          createdAt: new Date().toISOString()
+        }
+      ];
+
+      rerender(<DashboardRecentTransactions recentTransactions={mockTxs} />);
+      expect(screen.getByText('#123456')).toBeInTheDocument();
+    });
+
+    it('RecentScansList renders feed with aria-label and empty status', () => {
+      const { rerender } = render(<RecentScansList recentScans={[]} />);
+      const feed = screen.getByRole('feed', { name: /Danh sách lượt quét vé gần nhất/i });
+      expect(feed).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(/Chưa có lượt quét nào/i);
+
+      const mockScans = [
+        {
+          status: 'valid' as const,
+          message: 'VÉ HỢP LỆ',
+          ticket: {
+            ticketId: 't-1',
+            eventTitle: 'Concert A',
+            attendeeName: 'Tran B',
+            row: 'B',
+            number: 5,
+            tier: 1
+          }
+        }
+      ];
+
+      rerender(<RecentScansList recentScans={mockScans} />);
+      expect(screen.getByText('Tran B')).toBeInTheDocument();
+    });
+
+    it('AdminEventActions compact mode provides contextual aria-labels', () => {
+      render(
+        <AdminEventActions
+          event={mockEvent}
+          onEdit={vi.fn()}
+          onCancel={vi.fn()}
+          onDelete={vi.fn()}
+          compact={true}
+        />
+      );
+
+      const editBtn = screen.getByRole('button', { name: new RegExp(`Chỉnh sửa sự kiện ${mockEvent.title}`, 'i') });
+      const cancelBtn = screen.getByRole('button', { name: new RegExp(`Hủy sự kiện ${mockEvent.title}`, 'i') });
+      const deleteBtn = screen.getByRole('button', { name: new RegExp(`Xóa sự kiện ${mockEvent.title}`, 'i') });
+
+      expect(editBtn).toBeInTheDocument();
+      expect(cancelBtn).toBeInTheDocument();
+      expect(deleteBtn).toBeInTheDocument();
+    });
+
+    it('AdminUsersTable provides contextual aria-labels for block and unblock buttons', () => {
+      const mockUsers = [
+        { id: 'u-1', name: 'Le Van C', email: 'c@example.com', role: 'Customer', isBlocked: false },
+        { id: 'u-2', name: 'Pham Thi D', email: 'd@example.com', role: 'Staff', isBlocked: true }
+      ];
+
+      render(
+        <AdminUsersTable
+          users={mockUsers}
+          totalCount={2}
+          page={1}
+          totalPages={1}
+          isSubmitting={false}
+          onPageChange={vi.fn()}
+          onRequestChangeRole={vi.fn()}
+          onRequestToggleBlock={vi.fn()}
+        />
+      );
+
+      const blockBtns = screen.getAllByRole('button', { name: /Khóa tài khoản Le Van C/i });
+      expect(blockBtns.length).toBeGreaterThanOrEqual(1);
+
+      const unblockBtns = screen.getAllByRole('button', { name: /Mở khóa tài khoản Pham Thi D/i });
+      expect(unblockBtns.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('AdminEventsFilterBar and AdminUsersFilterBar contain role="search"', () => {
+      const { rerender } = render(
+        <AdminEventsFilterBar
+          searchQuery=""
+          onSearchChange={vi.fn()}
+          categoryFilter="All"
+          onCategoryChange={vi.fn()}
+          statusFilter="All"
+          onStatusChange={vi.fn()}
+        />
+      );
+
+      expect(screen.getByRole('search')).toBeInTheDocument();
+
+      rerender(
+        <AdminUsersFilterBar
+          searchTerm=""
+          onSearchChange={vi.fn()}
+          roleFilter=""
+          onRoleChange={vi.fn()}
+          blockFilter=""
+          onBlockChange={vi.fn()}
+        />
+      );
+
+      expect(screen.getByRole('search')).toBeInTheDocument();
+    });
+
+    it('ScanCameraPanel renders camera controls with accessible labels', () => {
+      render(
+        <ScanCameraPanel
+          onScanToken={vi.fn()}
+          isVerifying={false}
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /Tắt Camera|Bật Camera/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Dán mã vé từ bộ nhớ tạm|Dán Clipboard/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Đổi camera trước sau/i })).toBeInTheDocument();
     });
   });
 

@@ -153,6 +153,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
           <button
             type="button"
             onClick={toggleCamera}
+            aria-label={cameraActive ? 'Tắt camera quét mã' : 'Bật camera quét mã'}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary active:scale-95 ${
               cameraActive 
                 ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20' 
@@ -168,6 +169,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
           <button 
             type="button"
             onClick={handlePasteClipboard}
+            aria-label="Dán mã vé từ bộ nhớ tạm"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-xs text-text-secondary hover:text-white border border-border-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary active:scale-95"
           >
             <Clipboard className="w-3.5 h-3.5 text-brand-primary" aria-hidden="true" />
@@ -192,6 +194,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
                 <button
                   type="button"
                   onClick={() => { setCameraError(null); setCameraActive(true); setRetryNonce(n => n + 1); }}
+                  aria-label="Thử lại kết nối camera"
                   className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
                 >
                   Thử lại kết nối

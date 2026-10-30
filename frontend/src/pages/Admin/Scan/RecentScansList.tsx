@@ -14,7 +14,7 @@ export const RecentScansList: React.FC<RecentScansListProps> = ({ recentScans })
         Lịch sử soát vé gần nhất
       </h2>
 
-      <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+      <div role="feed" aria-label="Danh sách lượt quét vé gần nhất" className="space-y-2 max-h-52 overflow-y-auto pr-1">
         {recentScans.map((item, idx) => (
           <div key={idx} className="p-2.5 bg-surface-2/40 rounded-xl border border-border-subtle flex items-center justify-between text-xs">
             <div className="flex items-center gap-2.5 truncate">
@@ -40,7 +40,7 @@ export const RecentScansList: React.FC<RecentScansListProps> = ({ recentScans })
         ))}
 
         {recentScans.length === 0 && (
-          <p className="text-xs text-text-secondary text-center py-4">Chưa có lượt quét nào trong phiên này.</p>
+          <p role="status" className="text-xs text-text-secondary text-center py-4">Chưa có lượt quét nào trong phiên này.</p>
         )}
       </div>
     </div>

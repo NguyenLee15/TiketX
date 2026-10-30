@@ -16,7 +16,7 @@ export function DashboardRecentTransactions({ recentTransactions }: DashboardRec
         Lịch Sử Giao Dịch Mới Nhất
       </h2>
 
-      <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+      <div role="feed" aria-label="Lịch sử giao dịch gần đây" className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
         {recentTransactions && recentTransactions.length > 0 ? (
           recentTransactions.map((tx) => (
             <div key={tx.ticketId} className="p-3 rounded-xl bg-surface-2/40 border border-border-subtle flex items-center justify-between text-xs gap-3">
@@ -47,7 +47,7 @@ export function DashboardRecentTransactions({ recentTransactions }: DashboardRec
             </div>
           ))
         ) : (
-          <p className="text-text-secondary text-xs text-center py-6">Chưa có giao dịch nào.</p>
+          <p role="status" className="text-text-secondary text-xs text-center py-6">Chưa có giao dịch nào.</p>
         )}
       </div>
     </div>
