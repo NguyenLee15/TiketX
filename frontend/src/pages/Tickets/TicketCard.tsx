@@ -200,6 +200,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
                   type="button"
                   onClick={() => onReleaseReservation(ticket)}
                   disabled={isResuming || isReleasing}
+                  aria-busy={isReleasing}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-3 hover:bg-danger/20 text-text-secondary hover:text-danger border border-border-subtle hover:border-danger/40 font-bold transition-colors text-xs whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isReleasing ? (
@@ -224,8 +225,10 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
 
             {ticket.canRefund ? (
               <button
+                type="button"
                 onClick={() => onInitiateRefund(ticket)}
                 disabled={refundingId === ticket.id}
+                aria-busy={refundingId === ticket.id}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-danger/10 hover:bg-danger/20 text-danger border border-danger/30 font-bold transition-colors text-xs whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed"
               >
                 {refundingId === ticket.id ? (
@@ -268,8 +271,10 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
         </div>
 
         <button
+          type="button"
           onClick={handleDownloadPdf}
           disabled={!canShowQr || isDownloadingPdf}
+          aria-busy={isDownloadingPdf}
           className="flex items-center justify-center w-full py-2.5 bg-surface-3 hover:bg-surface-2 border border-border-subtle hover:border-brand-primary text-white text-xs font-bold rounded-xl transition-[background-color,border-color,opacity,transform] shadow-md group/btn active:scale-95 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-subtle cursor-pointer"
         >
           {isDownloadingPdf ? (

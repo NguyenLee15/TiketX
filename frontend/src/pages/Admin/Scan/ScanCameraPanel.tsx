@@ -141,6 +141,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
         </h2>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={switchCameraFacing}
             disabled={!cameraActive}
             aria-label="Đổi camera trước sau"
@@ -150,6 +151,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
             <SwitchCamera className="w-4 h-4 text-brand-primary" aria-hidden="true" />
           </button>
           <button
+            type="button"
             onClick={toggleCamera}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary active:scale-95 ${
               cameraActive 
@@ -164,6 +166,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
             )}
           </button>
           <button 
+            type="button"
             onClick={handlePasteClipboard}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-xs text-text-secondary hover:text-white border border-border-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary active:scale-95"
           >
@@ -187,6 +190,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
                 <AlertTriangle className="w-10 h-10 text-amber-400" aria-hidden="true" />
                 <p className="text-sm font-semibold text-white">{cameraError}</p>
                 <button
+                  type="button"
                   onClick={() => { setCameraError(null); setCameraActive(true); setRetryNonce(n => n + 1); }}
                   className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
                 >
@@ -223,8 +227,10 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
             />
           </div>
           <button
+            type="button"
             onClick={handleManualSubmit}
             disabled={isVerifying || !ticketInput.trim()}
+            aria-busy={isVerifying}
             className="px-5 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-50 flex items-center gap-1.5 shrink-0 shadow-md shadow-brand-glow text-xs sm:text-sm active:scale-95"
           >
             {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" aria-hidden="true" /> : <UserCheck className="w-4 h-4" aria-hidden="true" />}

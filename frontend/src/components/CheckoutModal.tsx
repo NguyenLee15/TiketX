@@ -238,6 +238,7 @@ export default function CheckoutModal({
             <div className="space-y-2 pt-1">
               {import.meta.env.DEV && paymentData?.checkoutUrl && (
                 <button 
+                  type="button"
                   onClick={handleSimulatePayment}
                   disabled={isSimulating}
                   aria-busy={isSimulating}
@@ -248,8 +249,10 @@ export default function CheckoutModal({
               )}
 
               <button 
+                type="button"
                 onClick={() => setShowCloseConfirm(true)}
                 disabled={releasing}
+                aria-busy={releasing}
                 className="w-full py-2.5 bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white text-xs font-semibold rounded-xl transition-colors border border-border-subtle cursor-pointer"
               >
                 {releasing ? 'Đang trả ghế…' : 'Trả Ghế & Quay Lại'}

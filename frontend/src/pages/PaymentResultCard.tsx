@@ -110,6 +110,7 @@ export default function PaymentResultCard({
               type="button"
               onClick={onRetry}
               disabled={isChecking}
+              aria-busy={isChecking}
               className="w-full py-3 bg-brand-primary hover:opacity-90 disabled:opacity-50 text-white font-bold rounded-xl transition-opacity focus-visible:ring-2 focus-visible:ring-white flex justify-center items-center gap-2 cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 ${isChecking ? 'animate-spin' : ''}`} aria-hidden="true" />

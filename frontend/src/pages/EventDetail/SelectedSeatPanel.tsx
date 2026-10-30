@@ -75,8 +75,10 @@ export const SelectedSeatPanel: React.FC<SelectedSeatPanelProps> = ({
             </Link>
           ) : (
             <button
+              type="button"
               onClick={onBookTicket}
               disabled={locking}
+              aria-busy={locking}
               className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
             >
               {locking ? (

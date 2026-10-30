@@ -18,7 +18,7 @@ export default function MockPayOSPage() {
         <div className="surface-panel p-8 text-center max-w-md w-full">
           <h1 className="text-xl font-bold text-danger mb-2">Không khả dụng</h1>
           <p className="text-text-secondary mb-6">Trang mô phỏng thanh toán này chỉ có sẵn trong môi trường phát triển.</p>
-          <button onClick={() => navigate('/')} className="btn-primary w-full">Trở Về Trang Chủ</button>
+          <button type="button" onClick={() => navigate('/')} className="btn-primary w-full">Trở Về Trang Chủ</button>
         </div>
       </div>
     );
@@ -55,7 +55,7 @@ export default function MockPayOSPage() {
         <div className="surface-panel p-8 text-center max-w-md w-full">
           <h1 className="text-xl font-bold text-danger mb-2">Phiên Giao Dịch Không Hợp Lệ</h1>
           <p className="text-text-secondary mb-6">Thiếu thông tin mã đơn hàng thanh toán.</p>
-          <button onClick={() => navigate('/')} className="btn-primary w-full">Trở Về Trang Chủ</button>
+          <button type="button" onClick={() => navigate('/')} className="btn-primary w-full">Trở Về Trang Chủ</button>
         </div>
       </div>
     );

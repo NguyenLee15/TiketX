@@ -121,6 +121,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
         className="surface-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto overscroll-contain p-6 sm:p-7 shadow-2xl relative animate-in zoom-in-95 duration-300 z-10"
       >
         <button 
+          type="button"
           onClick={onClose}
           disabled={isLoading}
           className="absolute top-5 right-5 p-1.5 bg-surface-2 hover:bg-surface-3 rounded-full text-text-secondary hover:text-white transition-colors disabled:opacity-40"

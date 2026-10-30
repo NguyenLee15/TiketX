@@ -93,6 +93,7 @@ export default function StandardLayout() {
                     <span className="text-sm font-medium text-text-secondary group-hover:text-white transition-colors max-w-[120px] truncate">{user?.name}</span>
                   </Link>
                   <button 
+                    type="button"
                     onClick={handleLogout}
                     aria-label="Đăng xuất"
                     className="text-text-tertiary hover:text-danger transition-colors p-2 rounded-full hover:bg-danger/10 focus-visible:ring-2 focus-visible:ring-brand-primary"

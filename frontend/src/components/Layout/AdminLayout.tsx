@@ -52,6 +52,7 @@ export default function AdminLayout() {
         </Link>
 
         <button
+          type="button"
           onClick={() => setIsMobileMenuOpen(prev => !prev)}
           className="min-h-11 min-w-11 p-2 rounded-xl bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white transition-colors border border-border-subtle"
           aria-label={isMobileMenuOpen ? "Đóng menu" : "Mở menu"}
@@ -143,6 +144,7 @@ export default function AdminLayout() {
               <p className="text-[10px] text-text-tertiary truncate">{user?.email}</p>
             </div>
             <button 
+              type="button"
               onClick={() => { setIsMobileMenuOpen(false); void handleLogout(); }}
               aria-label="Đăng xuất"
               className="text-text-tertiary hover:text-danger transition-colors p-1.5 rounded-lg hover:bg-danger/10"
@@ -217,6 +219,7 @@ export default function AdminLayout() {
               <p className="text-[10px] text-text-tertiary truncate">{user?.email}</p>
             </div>
             <button 
+              type="button"
               onClick={() => void handleLogout()}
               aria-label="Đăng xuất"
               className="text-text-tertiary hover:text-danger transition-colors p-1.5 rounded hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"

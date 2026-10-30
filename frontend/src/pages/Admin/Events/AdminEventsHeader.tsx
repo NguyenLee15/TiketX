@@ -14,6 +14,7 @@ export function AdminEventsHeader({ onCreate }: AdminEventsHeaderProps) {
         </p>
       </div>
       <button
+        type="button"
         onClick={onCreate}
         className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary shadow-md shadow-brand-glow text-xs sm:text-sm shrink-0 active:scale-95 whitespace-nowrap"
       >

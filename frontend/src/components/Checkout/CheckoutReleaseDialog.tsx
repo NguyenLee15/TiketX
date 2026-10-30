@@ -51,6 +51,7 @@ export const CheckoutReleaseDialog: React.FC<CheckoutReleaseDialogProps> = React
             type="button" 
             onClick={onConfirm} 
             disabled={releasing} 
+            aria-busy={releasing} 
             className="rounded-xl bg-danger px-4 py-2 text-xs font-bold text-white hover:bg-danger/90 transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             {releasing ? 'Đang trả ghế…' : 'Trả ghế & đóng'}

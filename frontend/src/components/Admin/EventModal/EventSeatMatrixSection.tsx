@@ -16,7 +16,7 @@ export function EventSeatMatrixSection({ event, totalMatrixSeats, register, erro
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Grid3X3 className="w-4 h-4 text-brand-primary" aria-hidden="true" />
-          <h4 className="text-xs font-bold text-white uppercase tracking-wider">Cấu hình Sơ Đồ Ma Trận Ghế</h4>
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider">Cấu hình Sơ Đồ Ma Trận Ghế</h3>
         </div>
         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-brand-primary/15 text-brand-primary border border-brand-primary/30">
           {event ? `${event.totalSeats} Ghế đã tạo` : `${totalMatrixSeats} Ghế dự kiến`}

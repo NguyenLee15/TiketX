@@ -46,6 +46,8 @@ import CancelEventModal from '../../components/Admin/CancelEventModal';
 import { AdminEventsSkeleton } from './Events/AdminEventsSkeleton';
 import { AdminUsersSkeleton } from './Users/AdminUsersSkeleton';
 import { AdminDashboardEmptyState } from './Dashboard/AdminDashboardEmptyState';
+import { EventSeatMatrixSection } from '../../components/Admin/EventModal/EventSeatMatrixSection';
+import PaymentResultCard from '../PaymentResultCard';
 
 const mockScannerStart = vi.fn().mockResolvedValue(undefined);
 const mockScannerStop = vi.fn().mockResolvedValue(undefined);
@@ -1252,6 +1254,96 @@ describe('Admin Portal Remediation Verification', () => {
 
       const refreshBtn = screen.getByRole('button', { name: /Làm mới/i });
       expect(refreshBtn).toHaveAttribute('aria-busy', 'true');
+    });
+  });
+
+  describe('Project-Wide Deep Audit Verification (Round 17)', () => {
+    it('EventSeatMatrixSection renders matrix heading as h3 for heading hierarchy compliance', () => {
+      render(
+        <EventSeatMatrixSection
+          totalMatrixSeats={100}
+          register={vi.fn() as any}
+          errors={{} as any}
+        />
+      );
+
+      const heading = screen.getByRole('heading', { name: /Cấu hình Sơ Đồ Ma Trận Ghế/i });
+      expect(heading.tagName.toLowerCase()).toBe('h3');
+    });
+
+    it('ConfirmModal renders close button with type="button" and submit button with aria-busy', () => {
+      render(
+        <ConfirmModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+          title="Xác nhận xóa"
+          message="Bạn có chắc chắn muốn xóa không?"
+          isLoading={true}
+        />
+      );
+
+      const closeBtn = screen.getByRole('button', { name: 'Đóng' });
+      expect(closeBtn).toHaveAttribute('type', 'button');
+
+      const submitBtn = screen.getByRole('button', { name: 'Xác Nhận' });
+      expect(submitBtn).toHaveAttribute('type', 'button');
+      expect(submitBtn).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('SelectedSeatPanel renders book button with type="button" and aria-busy', () => {
+      const mockSeat = {
+        id: 'seat-10',
+        eventId: 'event-1',
+        row: 'B',
+        number: 5,
+        tier: 1,
+        price: 500000,
+        status: 0,
+        version: 1,
+      };
+
+      render(
+        <MemoryRouter>
+          <SelectedSeatPanel
+            selectedSeat={mockSeat as any}
+            locking={true}
+            lockTimeLeft={300}
+            onBookTicket={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const bookBtn = screen.getByRole('button');
+      expect(bookBtn).toHaveAttribute('type', 'button');
+      expect(bookBtn).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('PaymentResultCard renders retry button with aria-busy when checking', () => {
+      render(
+        <MemoryRouter>
+          <PaymentResultCard
+            orderCode="ORD-12345"
+            phase={{ state: 'checking', status: 'Pending' }}
+            isChecking={true}
+            isPending={true}
+            isSuccess={false}
+            isUnknown={false}
+            pollAttempt={1}
+            pollLimit={5}
+            onRetry={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const retryBtn = screen.getByRole('button', { name: /Kiểm Tra Lại|Đang kiểm tra/i });
+      expect(retryBtn).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('AdminEventsHeader renders create button with type="button"', () => {
+      render(<AdminEventsHeader onCreate={vi.fn()} />);
+      const createBtn = screen.getByRole('button', { name: /Tạo Sự Kiện Mới/i });
+      expect(createBtn).toHaveAttribute('type', 'button');
     });
   });
 

@@ -51,6 +51,7 @@ export default function CancelEventModal({
     >
       <div ref={modalRef} className="bg-surface-1 border border-border-subtle p-6 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto overscroll-contain space-y-4 shadow-2xl relative animate-in zoom-in-95 duration-200">
         <button
+          type="button"
           onClick={onClose}
           disabled={isLoading}
           className="absolute top-4 right-4 p-1.5 rounded-full text-text-tertiary hover:text-white hover:bg-surface-2 transition-colors disabled:opacity-40"

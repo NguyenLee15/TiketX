@@ -32,6 +32,7 @@ export const CheckoutStatusView: React.FC<CheckoutStatusViewProps> = ({ status, 
           Thời gian giữ chỗ trên hệ thống đã kết thúc. Ghế đã được giải phóng tự động để đảm bảo công bằng cho khán giả khác.
         </p>
         <button
+          type="button"
           onClick={onClose}
           className="px-6 py-3 bg-surface-2 hover:bg-surface-3 text-white text-xs font-bold rounded-xl transition-colors border border-border-subtle cursor-pointer"
         >

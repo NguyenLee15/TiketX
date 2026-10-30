@@ -22,6 +22,7 @@ export const CheckoutModalHeader: React.FC<CheckoutModalHeaderProps> = ({ onRequ
         </div>
       </div>
       <button
+        type="button"
         onClick={onRequestClose}
         className="p-1.5 rounded-xl hover:bg-surface-2 text-text-secondary hover:text-white transition-colors cursor-pointer"
         aria-label="Đóng thanh toán"

@@ -228,7 +228,7 @@ export default function MyTicketsPage() {
         <XCircle className="w-10 h-10 text-danger" aria-hidden="true" />
         <h1 className="text-xl font-bold text-white">Không thể tải danh sách vé</h1>
         <p className="text-sm text-text-secondary">Kiểm tra kết nối và thử lại.</p>
-        <button onClick={() => void refetchTickets()} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">
+        <button type="button" onClick={() => void refetchTickets()} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">
           Thử lại
         </button>
       </div>

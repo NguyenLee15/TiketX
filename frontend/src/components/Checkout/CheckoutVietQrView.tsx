@@ -48,6 +48,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
         <h3 className="text-white font-bold text-sm">Không thể tạo mã thanh toán</h3>
         <p className="text-text-secondary text-xs max-w-sm">{paymentInitError}</p>
         <button
+          type="button"
           onClick={onRetryPayment}
           className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
         >
@@ -92,6 +93,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
                 <div className="flex items-center gap-1.5">
                   <span className="font-mono font-bold text-white">{paymentData?.accountNumber}</span>
                   <button
+                    type="button"
                     onClick={() => paymentData?.accountNumber && copyToClipboard(paymentData.accountNumber, 'Số tài khoản')}
                     className="p-1 hover:text-brand-primary text-text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary rounded cursor-pointer"
                     title="Sao chép số tài khoản"
@@ -115,6 +117,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
               <div className="flex items-center gap-1.5">
                 <span className="font-mono font-black text-brand-primary">{transferContent}</span>
                 <button
+                  type="button"
                   onClick={() => copyToClipboard(transferContent, 'Nội dung chuyển khoản')}
                   className="p-1 hover:text-white text-brand-primary transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary rounded cursor-pointer"
                   title="Sao chép nội dung chuyển khoản"
@@ -131,6 +134,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
       {/* PayOS Redirect Button */}
       {paymentData?.checkoutUrl && (paymentData.checkoutUrl.startsWith('http') || paymentData.checkoutUrl.startsWith('/mock-payos')) && (
         <button 
+          type="button"
           onClick={onProceedPayOS}
           className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-2 group text-sm active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer shadow-lg shadow-brand-glow"
         >
