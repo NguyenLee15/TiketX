@@ -16,6 +16,7 @@ export interface ScanTicketData {
 }
 
 export interface ScanResult {
+  id?: string;
   status: 'valid' | 'already_used' | 'conflict' | 'invalid';
   message: string;
   ticket?: ScanTicketData;
@@ -26,6 +27,7 @@ interface ScanResultDisplayProps {
 }
 
 export const ScanResultDisplay: React.FC<ScanResultDisplayProps> = ({ scanResult }) => {
+  
   return (
     <div 
       role="status"

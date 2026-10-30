@@ -15,6 +15,7 @@ export default function AdminScanTicketPage() {
   const isProcessingRef = useRef(false);
 
   const handleVerifyTicket = useCallback(async (rawToken: string) => {
+    
     const trimmed = rawToken.trim();
     if (!trimmed) return;
 
@@ -27,10 +28,12 @@ export default function AdminScanTicketPage() {
       if (!trimmed.includes('.')) {
         playAudioFeedback('failure');
         const result: ScanResult = {
+          id: `scan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           status: 'invalid',
           message: 'Mã vé không đúng định dạng chữ ký số (payload.signature).'
         };
-        setScanResult(result);
+        console.log('CALLING setScanResult:', result);
+setScanResult(result);
         setRecentScans(prev => [result, ...prev.slice(0, 9)]);
         toast.error('Mã vé không đúng định dạng chữ ký số hợp lệ.');
         return;
@@ -38,12 +41,16 @@ export default function AdminScanTicketPage() {
 
       const response = await api.post('/api/tickets/check-in', { qrToken: trimmed });
 
+
+      const createScanId = () => `scan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
       if (response.data?.success) {
         const parsed = scanTicketDataSchema.safeParse(response.data.data);
         if (parsed.success) {
           playAudioFeedback('success');
           const data = parsed.data;
           const result: ScanResult = {
+            id: createScanId(),
             status: 'valid',
             message: 'VÉ HỢP LỆ — XÁC NHẬN CHO VÀO CỬA SỰ KIỆN',
             ticket: data
@@ -54,6 +61,7 @@ export default function AdminScanTicketPage() {
         } else {
           playAudioFeedback('failure');
           const result: ScanResult = {
+            id: createScanId(),
             status: 'invalid',
             message: 'Dữ liệu vé từ máy chủ không đúng định dạng.'
           };
@@ -61,8 +69,20 @@ export default function AdminScanTicketPage() {
           setRecentScans(prev => [result, ...prev.slice(0, 9)]);
           toast.error('Dữ liệu vé từ máy chủ không hợp lệ.');
         }
+      } else {
+        playAudioFeedback('failure');
+        const failMsg = response.data?.message || 'Vé không hợp lệ hoặc đã bị hủy.';
+        const result: ScanResult = {
+          id: createScanId(),
+          status: 'invalid',
+          message: failMsg
+        };
+        setScanResult(result);
+        setRecentScans(prev => [result, ...prev.slice(0, 9)]);
+        toast.error(failMsg);
       }
     } catch (err: unknown) {
+   
       const apiErr = err as { response?: { status?: number; data?: { message?: string; code?: string } }; message?: string; code?: string };
       const isNetworkError = !apiErr.response || apiErr.message === 'Network Error' || apiErr.code === 'ERR_NETWORK' || apiErr.code === 'ECONNABORTED';
 
@@ -70,6 +90,7 @@ export default function AdminScanTicketPage() {
         playAudioFeedback('warning');
         const netMsg = 'Mất kết nối máy chủ khi soát vé. Vui lòng kiểm tra đường truyền và thử lại.';
         const result: ScanResult = {
+          id: `scan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           status: 'conflict',
           message: netMsg
         };
@@ -85,6 +106,7 @@ export default function AdminScanTicketPage() {
       if (code === 'TICKET_ALREADY_USED') {
         playAudioFeedback('warning');
         const result: ScanResult = {
+          id: `scan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           status: 'already_used',
           message: msg
         };
@@ -94,6 +116,7 @@ export default function AdminScanTicketPage() {
       } else if (code === 'CHECKIN_CONCURRENCY_CONFLICT' || apiErr.response?.status === 409) {
         playAudioFeedback('warning');
         const result: ScanResult = {
+          id: `scan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           status: 'conflict',
           message: msg
         };
@@ -103,6 +126,7 @@ export default function AdminScanTicketPage() {
       } else {
         playAudioFeedback('failure');
         const result: ScanResult = {
+          id: `scan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           status: 'invalid',
           message: msg
         };
@@ -111,6 +135,7 @@ export default function AdminScanTicketPage() {
         toast.error(msg, { duration: 4000 });
       }
     } finally {
+   
       setIsVerifying(false);
       isProcessingRef.current = false;
     }

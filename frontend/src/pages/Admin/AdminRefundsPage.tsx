@@ -16,6 +16,14 @@ const refundPageSchema = z.object({
 
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 
+const refundStatusMap: Record<string, { label: string; className: string }> = {
+  Pending: { label: 'Chờ xử lý', className: 'bg-surface-2 text-text-secondary' },
+  Processing: { label: 'Đang xử lý', className: 'bg-brand-primary/15 text-brand-primary' },
+  Succeeded: { label: 'Thành công', className: 'bg-success/15 text-success' },
+  Failed: { label: 'Thất bại', className: 'bg-danger/15 text-danger' },
+  NeedsReview: { label: 'Cần đối soát', className: 'bg-warning/15 text-warning font-semibold' },
+};
+
 export default function AdminRefundsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
@@ -71,12 +79,17 @@ export default function AdminRefundsPage() {
             {data.items.map(refund => <tr key={refund.id} className="border-b border-border-subtle/70 align-top">
               <td className="p-3"><div className="font-medium text-white">{refund.id.slice(0, 8)}</div><div className="text-xs text-text-secondary">Vé {refund.ticketId.slice(0, 8)}</div></td>
               <td className="whitespace-nowrap p-3 tabular-nums">{money.format(refund.amount)}</td>
-              <td className="p-3"><span className="rounded-md bg-surface-2 px-2 py-1 text-xs">{refund.status}</span>{refund.lastError && <p className="mt-2 flex max-w-sm gap-1.5 text-xs text-warning"><AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />{refund.lastError}</p>}</td>
+              <td className="p-3">
+                <span className={`rounded-md px-2 py-1 text-xs ${refundStatusMap[refund.status]?.className || 'bg-surface-2 text-text-secondary'}`}>
+                  {refundStatusMap[refund.status]?.label || refund.status}
+                </span>
+                {refund.lastError && <p className="mt-2 flex max-w-sm gap-1.5 text-xs text-warning"><AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />{refund.lastError}</p>}
+              </td>
               <td className="p-3">{refund.providerStatus ?? '—'}{refund.providerReference && <p className="mt-1 max-w-40 truncate text-xs text-text-secondary">{refund.providerReference}</p>}</td>
               <td className="p-3 tabular-nums">{refund.attempts}</td>
-              <td className="p-3">{refund.status === 'NeedsReview' && <button type="button" disabled={retrying === refund.id} aria-busy={retrying === refund.id} onClick={() => void retryRefund(refund.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-brand-primary/40 px-3 text-xs font-semibold text-brand-primary disabled:opacity-60">{retrying === refund.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />} Đối soát / thử lại</button>}</td>
+              <td className="p-3">{refund.status === 'NeedsReview' && <button type="button" disabled={retrying === refund.id} aria-busy={retrying === refund.id} aria-label={`Đối soát lại yêu cầu ${refund.id.slice(0, 8)}`} onClick={() => void retryRefund(refund.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-brand-primary/40 px-3 text-xs font-semibold text-brand-primary disabled:opacity-60">{retrying === refund.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />} Đối soát / thử lại</button>}</td>
             </tr>)}
-            {data.items.length === 0 && <tr><td colSpan={6} className="p-10 text-center text-text-secondary">Chưa có yêu cầu hoàn tiền.</td></tr>}
+            {data.items.length === 0 && <tr><td colSpan={6} role="status" className="p-10 text-center text-text-secondary">Chưa có yêu cầu hoàn tiền.</td></tr>}
           </tbody>
         </table>
       </div>

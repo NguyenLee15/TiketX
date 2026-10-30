@@ -8,6 +8,7 @@ import AdminRefundsPage from './AdminRefundsPage';
 import AdminDashboardPage from './AdminDashboardPage';
 import AdminUsersPage from './AdminUsersPage';
 import AdminEventsPage from './AdminEventsPage';
+import AdminScanTicketPage from './AdminScanTicketPage';
 import AdminLayout from '../../components/Layout/AdminLayout';
 import { ProfileInfoForm } from '../Profile/ProfileInfoForm';
 import { ChangePasswordForm } from '../Profile/ChangePasswordForm';
@@ -1575,6 +1576,80 @@ describe('Admin Portal Remediation Verification', () => {
       expect(screen.getByRole('button', { name: /Tắt Camera|Bật Camera/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Dán mã vé từ bộ nhớ tạm|Dán Clipboard/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Đổi camera trước sau/i })).toBeInTheDocument();
+    });
+  });
+
+
+  describe('Admin Portal Full-Project Audit Verification (Round 20)', () => {
+    it('AdminScanTicketPage surfaces rejection message when server returns success=false', async () => {
+      const mockPost = vi.mocked(api.post);
+      mockPost.mockResolvedValueOnce({
+        data: {
+          success: false,
+          message: 'Vé đã bị ban tổ chức thu hồi.',
+        },
+      });
+
+      render(
+        <MemoryRouter>
+          <AdminScanTicketPage />
+        </MemoryRouter>
+      );
+
+      const input = screen.getByPlaceholderText(/Dán chuỗi token chữ ký số/i);
+      fireEvent.change(input, { target: { value: 'payload.signature' } });
+
+      const scanBtn = screen.getByRole('button', { name: /Soát Vé/i });
+      fireEvent.click(scanBtn);
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Vé đã bị ban tổ chức thu hồi.').length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    it('AdminRefundsPage renders localized Vietnamese status label and accessible retry button', async () => {
+      const mockGet = vi.mocked(api.get);
+      mockGet.mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            items: [
+              {
+                id: 'refund-12345678',
+                eventId: 'evt-1',
+                ticketId: 'tkt-87654321',
+                amount: 350000,
+                status: 'NeedsReview',
+                attempts: 2,
+                providerStatus: 'FAILED',
+                providerReference: 'PAYOS-REF-01',
+                lastError: 'Ngân hàng từ chối lệnh chi',
+                createdAt: new Date().toISOString(),
+                nextAttemptAt: null,
+              },
+            ],
+            page: 1,
+            pageSize: 25,
+            totalCount: 1,
+          },
+        },
+      });
+
+      render(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemoryRouter>
+            <AdminRefundsPage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Cần đối soát')).toBeInTheDocument();
+      });
+
+      const retryBtn = screen.getByRole('button', { name: /Đối soát lại yêu cầu refund-1/i });
+      expect(retryBtn).toBeInTheDocument();
+      expect(retryBtn).toHaveAttribute('type', 'button');
     });
   });
 
