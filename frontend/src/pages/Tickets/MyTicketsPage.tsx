@@ -224,7 +224,7 @@ export default function MyTicketsPage() {
 
   if (loadError) {
     return (
-      <div className="max-w-4xl mx-auto flex min-h-[40vh] flex-col items-center justify-center gap-4 text-center">
+      <div className="max-w-4xl mx-auto flex min-h-[40vh] flex-col items-center justify-center gap-4 text-center" role="alert">
         <XCircle className="w-10 h-10 text-danger" aria-hidden="true" />
         <h1 className="text-xl font-bold text-white">Không thể tải danh sách vé</h1>
         <p className="text-sm text-text-secondary">Kiểm tra kết nối và thử lại.</p>

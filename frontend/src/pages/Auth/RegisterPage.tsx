@@ -106,15 +106,17 @@ export default function RegisterPage() {
             )}
 
             <div className="space-y-1">
+              <label htmlFor="register-name" className="block text-xs font-medium text-text-secondary">
+                Họ và tên
+              </label>
               <div className="group relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" />
+                  <User className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" aria-hidden="true" />
                 </div>
                 <input
                   type="text"
                   id="register-name"
                   {...register('name')}
-                  aria-label="Họ và tên"
                   autoComplete="name"
                   aria-invalid={errors.name ? 'true' : 'false'}
                   aria-describedby={errors.name ? 'register-name-error' : undefined}
@@ -130,15 +132,17 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1">
+              <label htmlFor="register-email" className="block text-xs font-medium text-text-secondary">
+                Email
+              </label>
               <div className="group relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" />
+                  <Mail className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" aria-hidden="true" />
                 </div>
                 <input
                   type="email"
                   id="register-email"
                   {...register('email')}
-                  aria-label="Email"
                   autoComplete="email"
                   aria-invalid={errors.email ? 'true' : 'false'}
                   aria-describedby={errors.email ? 'register-email-error' : undefined}
@@ -154,15 +158,17 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1">
+              <label htmlFor="register-password" className="block text-xs font-medium text-text-secondary">
+                Mật khẩu
+              </label>
               <div className="group relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" />
+                  <Lock className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" aria-hidden="true" />
                 </div>
                 <input
                   type="password"
                   id="register-password"
                   {...register('password')}
-                  aria-label="Mật khẩu"
                   autoComplete="new-password"
                   aria-invalid={errors.password ? 'true' : 'false'}
                   aria-describedby={errors.password ? 'register-password-error' : undefined}
@@ -178,15 +184,17 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1">
+              <label htmlFor="register-confirm-password" className="block text-xs font-medium text-text-secondary">
+                Xác nhận mật khẩu
+              </label>
               <div className="group relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" />
+                  <Lock className="h-4 w-4 text-text-tertiary group-focus-within:text-brand-primary transition-colors" aria-hidden="true" />
                 </div>
                 <input
                   type="password"
                   id="register-confirm-password"
                   {...register('confirmPassword')}
-                  aria-label="Xác nhận mật khẩu"
                   autoComplete="new-password"
                   aria-invalid={errors.confirmPassword ? 'true' : 'false'}
                   aria-describedby={errors.confirmPassword ? 'register-confirm-password-error' : undefined}
@@ -204,14 +212,15 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isSubmitting}
+              aria-busy={isSubmitting}
               className="group w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-black bg-white hover:bg-gray-100 transition-[colors,transform,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98] mt-4 shadow-lg"
             >
               {isSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (
                 <>
                   <span>Đăng Ký Tài Khoản</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                 </>
               )}
             </button>

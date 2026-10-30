@@ -44,14 +44,14 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
   if (paymentInitError) {
     return (
       <div className="p-6 rounded-2xl bg-danger/10 border border-danger/30 flex flex-col items-center justify-center text-center space-y-3" role="alert">
-        <AlertCircle className="w-8 h-8 text-danger" />
+        <AlertCircle className="w-8 h-8 text-danger" aria-hidden="true" />
         <h3 className="text-white font-bold text-sm">Không thể tạo mã thanh toán</h3>
         <p className="text-text-secondary text-xs max-w-sm">{paymentInitError}</p>
         <button
           onClick={onRetryPayment}
           className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
           <span>Thử lại tạo mã thanh toán</span>
         </button>
       </div>
@@ -60,8 +60,8 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
 
   if (loadingPayment) {
     return (
-      <div className="p-8 rounded-2xl bg-surface-2/40 border border-border-subtle flex flex-col items-center justify-center space-y-3">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+      <div className="p-8 rounded-2xl bg-surface-2/40 border border-border-subtle flex flex-col items-center justify-center space-y-3" role="status" aria-live="polite" aria-busy="true">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-primary" aria-hidden="true" />
         <p className="text-text-secondary text-xs">Đang khởi tạo mã QR thanh toán...</p>
       </div>
     );
@@ -97,7 +97,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
                     title="Sao chép số tài khoản"
                     aria-label="Sao chép số tài khoản"
                   >
-                    <Copy className="w-3.5 h-3.5" />
+                    <Copy className="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -120,7 +120,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
                   title="Sao chép nội dung chuyển khoản"
                   aria-label="Sao chép nội dung chuyển khoản"
                 >
-                  <Copy className="w-3.5 h-3.5" />
+                  <Copy className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -135,7 +135,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
           className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-2 group text-sm active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer shadow-lg shadow-brand-glow"
         >
           <span>Chuyển Đến Cổng Thanh Toán PayOS</span>
-          <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
         </button>
       )}
     </div>

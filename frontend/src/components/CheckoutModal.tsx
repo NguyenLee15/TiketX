@@ -208,7 +208,7 @@ export default function CheckoutModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="checkout-modal-title">
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setShowCloseConfirm(true)} />
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setShowCloseConfirm(true)} aria-hidden="true" />
 
       <div ref={modalRef} className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-surface-1 border border-border-subtle shadow-2xl p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-200 text-text-primary z-10 max-h-[90vh] overflow-y-auto">
         {/* Header */}

@@ -23,6 +23,7 @@ import { ScanCameraPanel } from './Scan/ScanCameraPanel';
 import { RecentScansList } from './Scan/RecentScansList';
 import { ScanResultDisplay } from './Scan/ScanResultDisplay';
 import { SeatMap } from '../EventDetail/SeatMap';
+import { SeatLegend } from '../EventDetail/SeatLegend';
 import RegisterPage from '../Auth/RegisterPage';
 import MockPayOSPage from '../MockPayOSPage';
 import { TicketFilterTabs } from '../Tickets/TicketFilterTabs';
@@ -38,6 +39,7 @@ import StandardLayout from '../../components/Layout/StandardLayout';
 import { EventInfoCard } from '../EventDetail/EventInfoCard';
 import { SelectedSeatPanel } from '../EventDetail/SelectedSeatPanel';
 import ConfirmModal from '../../components/Admin/ConfirmModal';
+import CheckoutModal from '../../components/CheckoutModal';
 import api from '../../services/api';
 import type { Event as EventModel } from '../../types';
 
@@ -988,6 +990,139 @@ describe('Admin Portal Remediation Verification', () => {
       modalSvgs.forEach(svg => {
         expect(svg).toHaveAttribute('aria-hidden', 'true');
       });
+    });
+  });
+
+  describe('Customer Portal Remediation Verification (Round 15)', () => {
+    it('RegisterPage provides accessible labels and marks all decorative icons with aria-hidden', () => {
+      const { container } = render(
+        <MemoryRouter>
+          <RegisterPage />
+        </MemoryRouter>
+      );
+
+      // Verify explicit form labels for inputs
+      expect(container.querySelector('label[for="register-name"]')).toBeInTheDocument();
+      expect(container.querySelector('label[for="register-email"]')).toBeInTheDocument();
+      expect(container.querySelector('label[for="register-password"]')).toBeInTheDocument();
+      expect(container.querySelector('label[for="register-confirm-password"]')).toBeInTheDocument();
+
+      // Verify submit button has aria-busy
+      const submitBtn = screen.getByRole('button', { name: /Đăng Ký Tài Khoản/i });
+      expect(submitBtn).toHaveAttribute('aria-busy', 'false');
+
+      // Verify all decorative svgs inside form have aria-hidden="true"
+      const svgs = container.querySelectorAll('form svg');
+      expect(svgs.length).toBeGreaterThan(0);
+      svgs.forEach(svg => {
+        expect(svg).toHaveAttribute('aria-hidden', 'true');
+      });
+    });
+
+    it('SeatLegend exposes role group with accessible label and hides swatches and Crown from assistive tech', () => {
+      const { container } = render(<SeatLegend />);
+      const group = container.querySelector('[role="group"]');
+      expect(group).toBeInTheDocument();
+      expect(group).toHaveAttribute('aria-label', 'Chú thích hạng ghế và trạng thái');
+
+      const crownIcon = container.querySelector('svg');
+      expect(crownIcon).toHaveAttribute('aria-hidden', 'true');
+
+      // Verify swatch color divs have aria-hidden="true"
+      const swatches = container.querySelectorAll('div.rounded-t');
+      expect(swatches.length).toBeGreaterThan(0);
+      swatches.forEach(swatch => {
+        expect(swatch).toHaveAttribute('aria-hidden', 'true');
+      });
+    });
+
+    it('CheckoutVietQrView hides action and feedback icons with aria-hidden', () => {
+      const mockPaymentData = {
+        checkoutUrl: 'https://pay.payos.vn/web/test',
+        qrCode: 'https://api.qrserver.com/v1/create-qr-code/?data=TICKEX_ORDER',
+        orderCode: 123456789012345,
+        accountNumber: '0987654321',
+        accountName: 'TICKEX PLATFORM',
+        bin: '970415',
+        bankName: 'VietinBank',
+      };
+
+      const { container } = render(
+        <MemoryRouter>
+          <CheckoutVietQrView
+            loadingPayment={false}
+            paymentInitError={null}
+            paymentData={mockPaymentData as any}
+            onRetryPayment={vi.fn()}
+            onProceedPayOS={vi.fn()}
+            copyToClipboard={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const svgs = container.querySelectorAll('svg');
+      expect(svgs.length).toBeGreaterThan(0);
+      svgs.forEach(svg => {
+        expect(svg).toHaveAttribute('aria-hidden', 'true');
+      });
+    });
+
+    it('CheckoutVietQrView loading state exposes accessible status role and polite live region', () => {
+      const { container } = render(
+        <MemoryRouter>
+          <CheckoutVietQrView
+            loadingPayment={true}
+            paymentInitError={null}
+            paymentData={null}
+            onRetryPayment={vi.fn()}
+            onProceedPayOS={vi.fn()}
+            copyToClipboard={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const statusEl = container.querySelector('[role="status"]');
+      expect(statusEl).toBeInTheDocument();
+      expect(statusEl).toHaveAttribute('aria-live', 'polite');
+      expect(statusEl).toHaveAttribute('aria-busy', 'true');
+
+      const loaderSvg = container.querySelector('svg');
+      expect(loaderSvg).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('CheckoutModal marks backdrop overlay with aria-hidden', () => {
+      const mockSeat = {
+        id: 'seat-1',
+        eventId: 'event-1',
+        row: 'A',
+        number: 1,
+        tier: 1,
+        price: 500000,
+        status: 1 as const,
+        version: 1,
+      };
+
+      const mockDetail = {
+        ...mockEvent,
+        seats: [mockSeat],
+      } as any;
+
+      const { container } = render(
+        <MemoryRouter>
+          <CheckoutModal
+            isOpen={true}
+            onClose={vi.fn()}
+            event={mockDetail}
+            seat={mockSeat as any}
+            ticketId="ticket-1"
+            expiresAt={new Date(Date.now() + 300000).toISOString()}
+          />
+        </MemoryRouter>
+      );
+
+      const backdrop = container.querySelector('.backdrop-blur-md');
+      expect(backdrop).toBeInTheDocument();
+      expect(backdrop).toHaveAttribute('aria-hidden', 'true');
     });
   });
 });
