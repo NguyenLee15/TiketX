@@ -2,7 +2,8 @@ import React from 'react';
 
 export const AdminEventsSkeleton: React.FC = () => {
   return (
-    <div className="surface-panel overflow-hidden shadow-lg animate-pulse" role="status" aria-label="Đang tải sự kiện...">
+    <div className="surface-panel overflow-hidden shadow-lg animate-pulse" role="status" aria-busy="true" aria-label="Đang tải sự kiện...">
+      <span className="sr-only">Đang tải sự kiện...</span>
       <div className="p-4 border-b border-border-subtle bg-surface-2/20 flex justify-between items-center">
         <div className="h-4 w-32 bg-surface-3 rounded-lg" />
         <div className="h-4 w-20 bg-surface-3 rounded-lg" />

@@ -87,11 +87,11 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                     <td className="p-4 sm:p-5 whitespace-nowrap">
                       <div className="space-y-1 text-xs">
                         <div className="flex items-center gap-1.5 text-text-primary">
-                          <Mail className="w-3.5 h-3.5 text-text-secondary shrink-0" />
+                          <Mail className="w-3.5 h-3.5 text-text-secondary shrink-0" aria-hidden="true" />
                           <span className="truncate">{user.email}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-text-secondary">
-                          <Phone className="w-3.5 h-3.5 opacity-50 shrink-0" />
+                          <Phone className="w-3.5 h-3.5 opacity-50 shrink-0" aria-hidden="true" />
                           <span>{user.phone || 'Chưa cập nhật SĐT'}</span>
                         </div>
                       </div>
@@ -104,8 +104,8 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                           ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                           : 'bg-surface-3 text-text-secondary border-border-subtle'
                       }`}>
-                        {user.role === 'Admin' ? <ShieldAlert className="w-3.5 h-3.5" /> : 
-                         user.role === 'Staff' ? <ShieldCheck className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+                        {user.role === 'Admin' ? <ShieldAlert className="w-3.5 h-3.5" aria-hidden="true" /> : 
+                         user.role === 'Staff' ? <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" /> : <Shield className="w-3.5 h-3.5" aria-hidden="true" />}
                         {user.role === 'Admin' ? 'Quản trị viên' : user.role === 'Staff' ? 'Soát vé (Staff)' : 'Khách hàng'}
                       </span>
                     </td>
@@ -115,7 +115,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                           ? 'bg-danger/15 text-danger border-danger/30' 
                           : 'bg-success/15 text-success border-success/30'
                       }`}>
-                        {user.isBlocked ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                        {user.isBlocked ? <Ban className="w-3.5 h-3.5" aria-hidden="true" /> : <CheckCircle className="w-3.5 h-3.5" aria-hidden="true" />}
                         {user.isBlocked ? 'Đã khóa' : 'Hoạt động'}
                       </span>
                     </td>
@@ -134,6 +134,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                         </select>
                         
                         <button 
+                          type="button"
                           onClick={() => onRequestToggleBlock(user, !user.isBlocked)}
                           disabled={isSelf || isSubmitting}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary border whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed ${
@@ -207,6 +208,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                 </select>
 
                 <button
+                  type="button"
                   onClick={() => onRequestToggleBlock(user, !user.isBlocked)}
                   disabled={isSelf || isSubmitting}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold border shrink-0 disabled:opacity-40 ${
@@ -235,6 +237,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
 
         <div className="flex items-center gap-1.5">
           <button
+            type="button"
             onClick={() => onPageChange(Math.max(1, page - 1))}
             disabled={page <= 1}
             className="p-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-white border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
@@ -249,6 +252,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
           </span>
 
           <button
+            type="button"
             onClick={() => onPageChange(Math.min(totalPages, page + 1))}
             disabled={page >= totalPages}
             className="p-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-white border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"

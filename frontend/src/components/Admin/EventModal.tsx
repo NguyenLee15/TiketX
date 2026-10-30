@@ -312,6 +312,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
             <button 
               type="submit"
               disabled={isLoading || event?.status === 'Cancelled'}
+              aria-busy={isLoading}
               className="px-5 py-2 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary shadow-md shadow-brand-glow flex items-center gap-1.5 text-xs sm:text-sm active:scale-95 disabled:opacity-50"
             >
               {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}

@@ -72,7 +72,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                               <span className="text-brand-primary font-medium whitespace-nowrap">{event.category}</span>
                               <span>•</span>
                               <span className="flex items-center gap-1 whitespace-nowrap">
-                                <Grid3X3 className="w-3 h-3 text-text-tertiary" />
+                                <Grid3X3 className="w-3 h-3 text-text-tertiary" aria-hidden="true" />
                                 {event.totalSeats} Ghế
                               </span>
                             </div>
@@ -87,20 +87,20 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
                       </td>
                       <td className="px-5 py-3.5 text-xs text-text-secondary whitespace-nowrap">
                         <div className="flex items-center gap-1.5 text-white font-medium whitespace-nowrap">
-                          <CalendarIcon className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                          <CalendarIcon className="w-3.5 h-3.5 text-brand-primary shrink-0" aria-hidden="true" />
                           <span>{formatDate(event.date, { dateStyle: 'medium' })}</span>
                           <span className="text-text-tertiary font-mono">{formatDate(event.date, { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         {event.endDate && (
                           <div className="flex items-center gap-1 text-[10px] text-text-tertiary mt-0.5">
-                            <Clock className="w-3 h-3" />
+                            <Clock className="w-3 h-3" aria-hidden="true" />
                             <span>Đến: {formatDate(event.endDate, { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
                         )}
                       </td>
                       <td className="px-5 py-3.5 text-xs text-text-secondary">
                         <div className="flex items-center gap-1.5 text-white truncate max-w-xs">
-                          <MapPin className="w-3.5 h-3.5 text-brand-secondary shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-brand-secondary shrink-0" aria-hidden="true" />
                           <span className="truncate">{event.venueName || event.location}</span>
                         </div>
                       </td>
@@ -174,6 +174,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
 
         <div className="flex items-center gap-1.5">
           <button
+            type="button"
             onClick={() => onPageChange(Math.max(1, page - 1))}
             disabled={page <= 1}
             className="p-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-white border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
@@ -188,6 +189,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
           </span>
 
           <button
+            type="button"
             onClick={() => onPageChange(Math.min(totalPages, page + 1))}
             disabled={page >= totalPages}
             className="p-1.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-white border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"

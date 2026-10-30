@@ -26,6 +26,7 @@ export function AdminDashboardEmptyState({ onRefresh, isRefreshing }: AdminDashb
           type="button"
           onClick={onRefresh}
           disabled={isRefreshing}
+          aria-busy={isRefreshing}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border-subtle text-text-secondary hover:text-white focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-50"
         >
           <RefreshCw aria-hidden="true" className={`w-4 h-4 ${isRefreshing ? 'animate-spin motion-reduce:animate-none' : ''}`} />

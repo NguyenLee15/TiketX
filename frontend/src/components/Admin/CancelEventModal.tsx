@@ -56,12 +56,12 @@ export default function CancelEventModal({
           className="absolute top-4 right-4 p-1.5 rounded-full text-text-tertiary hover:text-white hover:bg-surface-2 transition-colors disabled:opacity-40"
           aria-label="Đóng"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
 
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-danger/15 border border-danger/30 flex items-center justify-center text-danger shrink-0">
-            <AlertOctagon className="w-5 h-5" />
+            <AlertOctagon className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
             <h3 id="cancel-event-title" className="text-base font-bold text-white leading-tight">
@@ -117,9 +117,10 @@ export default function CancelEventModal({
             <button
               type="submit"
               disabled={isLoading}
+              aria-busy={isLoading}
               className="px-4 py-2 bg-danger hover:bg-danger/90 text-white rounded-xl text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger shadow-md shadow-danger/20 flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
             >
-              {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
               Xác Nhận Hủy Sự Kiện
             </button>
           </div>

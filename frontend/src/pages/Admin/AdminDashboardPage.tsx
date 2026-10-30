@@ -91,7 +91,8 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 pb-8 animate-pulse max-w-7xl mx-auto">
+      <div role="status" aria-busy="true" aria-label="Đang tải dữ liệu bảng điều khiển" className="space-y-6 pb-8 animate-pulse max-w-7xl mx-auto">
+        <span className="sr-only">Đang tải dữ liệu bảng điều khiển...</span>
         <div className="h-24 bg-surface-2/40 rounded-2xl border border-border-subtle" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {[...Array(6)].map((_, i) => (
@@ -140,7 +141,7 @@ export default function AdminDashboardPage() {
         <div className="flex items-center gap-2 text-xs text-text-tertiary bg-surface-2 px-3 py-1.5 rounded-xl border border-border-subtle">
           <Clock className="w-3.5 h-3.5 text-brand-primary" aria-hidden="true" />
           <span aria-live="polite">Cập nhật: {lastUpdated ? dateTimeFormatter.format(lastUpdated) : '—'}</span>
-          <button type="button" onClick={fetchStats} disabled={isRefreshing} aria-label="Làm mới dữ liệu bảng điều khiển" className="p-1 rounded-md hover:bg-surface-3 text-text-secondary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-50">
+          <button type="button" onClick={fetchStats} disabled={isRefreshing} aria-busy={isRefreshing} aria-label="Làm mới dữ liệu bảng điều khiển" className="p-1 rounded-md hover:bg-surface-3 text-text-secondary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-50">
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin motion-reduce:animate-none' : ''}`} aria-hidden="true" />
           </button>
         </div>

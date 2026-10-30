@@ -42,6 +42,10 @@ import ConfirmModal from '../../components/Admin/ConfirmModal';
 import CheckoutModal from '../../components/CheckoutModal';
 import api from '../../services/api';
 import type { Event as EventModel } from '../../types';
+import CancelEventModal from '../../components/Admin/CancelEventModal';
+import { AdminEventsSkeleton } from './Events/AdminEventsSkeleton';
+import { AdminUsersSkeleton } from './Users/AdminUsersSkeleton';
+import { AdminDashboardEmptyState } from './Dashboard/AdminDashboardEmptyState';
 
 const mockScannerStart = vi.fn().mockResolvedValue(undefined);
 const mockScannerStop = vi.fn().mockResolvedValue(undefined);
@@ -1125,5 +1129,130 @@ describe('Admin Portal Remediation Verification', () => {
       expect(backdrop).toHaveAttribute('aria-hidden', 'true');
     });
   });
-});
+  describe('Admin Portal Remediation Verification (Round 16)', () => {
+    it('CancelEventModal renders submit button with aria-busy and decorative icons with aria-hidden', () => {
+      const { container } = render(
+        <CancelEventModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+          eventTitle="Rock Concert 2026"
+          isLoading={true}
+        />
+      );
 
+      const submitBtn = screen.getByRole('button', { name: /Xác Nhận Hủy Sự Kiện/i });
+      expect(submitBtn).toHaveAttribute('aria-busy', 'true');
+      expect(submitBtn).toBeDisabled();
+
+      const icons = container.querySelectorAll('svg');
+      expect(icons.length).toBeGreaterThan(0);
+      icons.forEach(icon => {
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
+      });
+    });
+
+    it('EventModal renders submit button with aria-busy', () => {
+      render(
+        <EventModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSubmit={vi.fn()}
+          isLoading={true}
+        />
+      );
+
+      const submitBtn = screen.getByRole('button', { name: /Tạo Sự Kiện/i });
+      expect(submitBtn).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('AdminEventsTable renders decorative table icons with aria-hidden and pagination buttons with type="button"', () => {
+      const { container } = render(
+        <AdminEventsTable
+          events={[mockEvent]}
+          totalCount={1}
+          page={1}
+          totalPages={2}
+          onPageChange={vi.fn()}
+          onEdit={vi.fn()}
+          onCancel={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      );
+
+      const prevBtn = screen.getByRole('button', { name: 'Trang trước' });
+      const nextBtn = screen.getByRole('button', { name: 'Trang sau' });
+      expect(prevBtn).toHaveAttribute('type', 'button');
+      expect(nextBtn).toHaveAttribute('type', 'button');
+
+      const icons = container.querySelectorAll('svg');
+      icons.forEach(icon => {
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
+      });
+    });
+
+    it('AdminUsersTable renders decorative icons with aria-hidden and action buttons with type="button"', () => {
+      const mockUser = {
+        id: 'user-1',
+        name: 'Nguyen Van A',
+        email: 'vana@example.com',
+        role: 'Customer',
+        isBlocked: false,
+      };
+
+      const { container } = render(
+        <AdminUsersTable
+          users={[mockUser]}
+          totalCount={1}
+          page={1}
+          totalPages={2}
+          isSubmitting={false}
+          onPageChange={vi.fn()}
+          onRequestChangeRole={vi.fn()}
+          onRequestToggleBlock={vi.fn()}
+        />
+      );
+
+      const blockBtns = screen.getAllByRole('button', { name: 'Khóa' });
+      expect(blockBtns.length).toBe(2);
+      blockBtns.forEach(btn => expect(btn).toHaveAttribute('type', 'button'));
+
+      const prevBtn = screen.getByRole('button', { name: 'Trang trước' });
+      const nextBtn = screen.getByRole('button', { name: 'Trang sau' });
+      expect(prevBtn).toHaveAttribute('type', 'button');
+      expect(nextBtn).toHaveAttribute('type', 'button');
+
+      const icons = container.querySelectorAll('svg');
+      icons.forEach(icon => {
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
+      });
+    });
+
+    it('AdminEventsSkeleton and AdminUsersSkeleton render with role="status", aria-busy="true", and announcements', () => {
+      const { unmount } = render(<AdminEventsSkeleton />);
+      const eventsSkeleton = screen.getByRole('status');
+      expect(eventsSkeleton).toHaveAttribute('aria-busy', 'true');
+      expect(eventsSkeleton).toHaveAttribute('aria-label', 'Đang tải sự kiện...');
+      expect(screen.getByText('Đang tải sự kiện...')).toHaveClass('sr-only');
+      unmount();
+
+      render(<AdminUsersSkeleton />);
+      const usersSkeleton = screen.getByRole('status');
+      expect(usersSkeleton).toHaveAttribute('aria-busy', 'true');
+      expect(usersSkeleton).toHaveAttribute('aria-label', 'Đang tải danh sách người dùng...');
+      expect(screen.getByText('Đang tải danh sách người dùng...')).toHaveClass('sr-only');
+    });
+
+    it('AdminDashboardEmptyState renders refresh button with aria-busy', () => {
+      render(
+        <MemoryRouter>
+          <AdminDashboardEmptyState onRefresh={vi.fn()} isRefreshing={true} />
+        </MemoryRouter>
+      );
+
+      const refreshBtn = screen.getByRole('button', { name: /Làm mới/i });
+      expect(refreshBtn).toHaveAttribute('aria-busy', 'true');
+    });
+  });
+
+});

@@ -2,7 +2,8 @@ import React from 'react';
 
 export const AdminUsersSkeleton: React.FC = () => {
   return (
-    <div className="surface-panel overflow-hidden shadow-lg animate-pulse" role="status" aria-label="Đang tải danh sách người dùng...">
+    <div className="surface-panel overflow-hidden shadow-lg animate-pulse" role="status" aria-busy="true" aria-label="Đang tải danh sách người dùng...">
+      <span className="sr-only">Đang tải danh sách người dùng...</span>
       <div className="p-4 border-b border-border-subtle bg-surface-2/20 flex justify-between items-center">
         <div className="h-4 w-36 bg-surface-3 rounded-lg" />
         <div className="h-4 w-24 bg-surface-3 rounded-lg" />
