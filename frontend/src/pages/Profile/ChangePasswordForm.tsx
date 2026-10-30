@@ -106,6 +106,7 @@ export function ChangePasswordForm({
             <button 
               type="submit" 
               disabled={isSubmitting}
+              aria-busy={isSubmitting}
               className="w-full py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-1.5 text-sm disabled:opacity-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             >
               {isSubmitting ? (

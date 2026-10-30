@@ -259,7 +259,7 @@ export default function EventDetailPage() {
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-2 border border-border-subtle text-text-secondary text-xs font-semibold" role="status" aria-live="polite">
           <span className={`h-2 w-2 rounded-full ${seatConnectionStatus === 'connected' ? 'bg-success' : seatConnectionStatus === 'connecting' || seatConnectionStatus === 'reconnecting' ? 'bg-warning' : 'bg-danger'}`} aria-hidden="true" />
           <span>{seatConnectionStatus === 'connected' ? 'Đã đồng bộ ghế' : seatConnectionStatus === 'connecting' || seatConnectionStatus === 'reconnecting' ? 'Đang kết nối ghế' : 'Chưa đồng bộ ghế'}</span>
-          {seatConnectionStatus === 'disconnected' && <button type="button" onClick={retrySeatConnection} className="underline underline-offset-2 hover:text-white">Thử lại</button>}
+          {seatConnectionStatus === 'disconnected' && <button type="button" onClick={retrySeatConnection} aria-label="Thử lại kết nối đồng bộ ghế" className="underline underline-offset-2 hover:text-white">Thử lại</button>}
         </div>
       </div>
 

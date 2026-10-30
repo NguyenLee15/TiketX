@@ -48,6 +48,7 @@ import { AdminUsersSkeleton } from './Users/AdminUsersSkeleton';
 import { AdminDashboardEmptyState } from './Dashboard/AdminDashboardEmptyState';
 import { EventSeatMatrixSection } from '../../components/Admin/EventModal/EventSeatMatrixSection';
 import PaymentResultCard from '../PaymentResultCard';
+import { CheckoutInvoice } from '../../components/Checkout/CheckoutInvoice';
 
 const mockScannerStart = vi.fn().mockResolvedValue(undefined);
 const mockScannerStop = vi.fn().mockResolvedValue(undefined);
@@ -1344,6 +1345,84 @@ describe('Admin Portal Remediation Verification', () => {
       render(<AdminEventsHeader onCreate={vi.fn()} />);
       const createBtn = screen.getByRole('button', { name: /Tạo Sự Kiện Mới/i });
       expect(createBtn).toHaveAttribute('type', 'button');
+    });
+  });
+
+  describe('Customer Portal Deep Remediation Verification (Round 18)', () => {
+    it('ProfileInfoForm renders submit button with aria-busy when isSubmitting is true', () => {
+      render(
+        <ProfileInfoForm
+          email="test@example.com"
+          register={vi.fn() as any}
+          errors={{} as any}
+          onSubmit={vi.fn()}
+          isSubmitting={true}
+        />
+      );
+
+      const saveBtn = screen.getByRole('button', { name: /Lưu Thay Đổi/i });
+      expect(saveBtn).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('ChangePasswordForm renders submit button with aria-busy when isSubmitting is true', () => {
+      render(
+        <ChangePasswordForm
+          register={vi.fn() as any}
+          errors={{} as any}
+          onSubmit={vi.fn()}
+          isSubmitting={true}
+        />
+      );
+
+      const submitBtn = screen.getByRole('button', { name: /Cập Nhật Mật Khẩu/i });
+      expect(submitBtn).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('RefundBankAccountForm renders save and delete buttons with aria-busy when isSubmitting is true', () => {
+      render(
+        <RefundBankAccountForm
+          bankBin="970415"
+          accountName="NGUYEN VAN A"
+          maskedAccount="••••1234"
+          onSave={vi.fn()}
+          onDelete={vi.fn()}
+          isSubmitting={true}
+        />
+      );
+
+      const saveBtn = screen.getByRole('button', { name: /Lưu tài khoản/i });
+      expect(saveBtn).toHaveAttribute('aria-busy', 'true');
+
+      const deleteBtn = screen.getByRole('button', { name: /Xóa tài khoản/i });
+      expect(deleteBtn).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('CheckoutInvoice renders countdown timer with role="timer" and aria-atomic="true"', () => {
+      const mockSeat = {
+        id: 'seat-1',
+        eventId: 'event-1',
+        row: 'A',
+        number: 1,
+        tier: 1,
+        price: 500000,
+        status: 1 as const,
+        version: 1,
+      };
+
+      render(
+        <CheckoutInvoice
+          event={mockEvent as any}
+          seat={mockSeat as any}
+          timeLeft={45}
+          formatTime={(s) => `00:${s}`}
+          status="idle"
+        />
+      );
+
+      const timer = screen.getByRole('timer');
+      expect(timer).toBeInTheDocument();
+      expect(timer).toHaveAttribute('aria-atomic', 'true');
+      expect(timer).toHaveAttribute('aria-live', 'polite');
     });
   });
 

@@ -80,7 +80,7 @@ export default function DashboardPage() {
             <p className="text-sm font-semibold uppercase tracking-[0.15em] text-brand-primary">Lịch sự kiện</p>
             <h2 id="catalog-title" className="mt-1 text-2xl font-display font-bold text-text-primary sm:text-3xl">Khám phá chương trình</h2>
           </div>
-          <p className="text-sm text-text-secondary">{events.length} / {totalCount} sự kiện</p>
+          <p className="text-sm text-text-secondary" aria-live="polite">{events.length} / {totalCount} sự kiện</p>
         </div>
 
         {loading ? (

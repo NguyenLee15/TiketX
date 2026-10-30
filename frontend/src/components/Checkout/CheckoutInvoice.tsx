@@ -58,7 +58,12 @@ export const CheckoutInvoice: React.FC<CheckoutInvoiceProps> = React.memo(({
           <Clock className="w-4 h-4 text-warning animate-pulse" aria-hidden="true" />
           <span>Thời gian giữ chỗ còn lại:</span>
         </div>
-        <span className={`font-mono font-bold text-sm ${timeLeft < 60 ? 'text-danger animate-pulse' : 'text-warning'}`}>
+        <span
+          role="timer"
+          aria-live={timeLeft <= 60 ? 'polite' : undefined}
+          aria-atomic="true"
+          className={`font-mono font-bold text-sm ${timeLeft < 60 ? 'text-danger animate-pulse' : 'text-warning'}`}
+        >
           {status === 'error' ? 'Hết hạn' : formatTime(timeLeft)}
         </span>
       </div>
