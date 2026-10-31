@@ -19,7 +19,10 @@ export function AdminDashboardEmptyState({ onRefresh, isRefreshing }: AdminDashb
         <p className="mt-2 text-sm text-text-secondary">Tạo sự kiện đầu tiên để bắt đầu theo dõi doanh thu và vé.</p>
       </div>
       <div className="flex items-center gap-3">
-        <Link to="/admin/events" className="px-4 py-2 rounded-xl bg-brand-primary text-white font-bold focus-visible:ring-2 focus-visible:ring-white">
+        <Link 
+          to="/admin/events" 
+          className="px-4 py-2 rounded-xl bg-brand-primary text-white font-bold focus-visible:ring-2 focus-visible:ring-white"
+        >
           Tạo sự kiện
         </Link>
         <button

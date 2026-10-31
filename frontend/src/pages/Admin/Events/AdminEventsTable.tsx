@@ -31,8 +31,13 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
     <>
       {/* Desktop Table View */}
       <div className="hidden md:block surface-panel overflow-hidden shadow-lg">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div 
+          role="region" 
+          aria-label="Bảng quản lý sự kiện" 
+          tabIndex={0} 
+          className="overflow-x-auto focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-primary"
+        >
+          <table aria-label="Danh sách sự kiện quản trị" className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-subtle bg-surface-2/30 text-[11px] font-bold text-text-tertiary uppercase tracking-wider">
                 <th scope="col" className="px-5 py-3.5 whitespace-nowrap">Sự Kiện</th>

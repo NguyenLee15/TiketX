@@ -2437,4 +2437,149 @@ describe('Admin Portal Remediation Verification', () => {
     });
   });
 
+  describe('Admin Portal Deep Audit Remediation (Round 28)', () => {
+    it('AdminEventsTable and AdminUsersTable render scrollable containers as keyboard-focusable region landmarks', () => {
+      const mockUserItem = {
+        id: 'u-round28',
+        name: 'Nguyễn Quản Trị',
+        email: 'admin@tickex.vn',
+        phone: '0901234567',
+        role: 'Admin',
+        isBlocked: false,
+        createdAt: '2026-01-01T00:00:00Z',
+      };
+
+      const { rerender } = render(
+        <MemoryRouter>
+          <AdminEventsTable
+            events={[mockEvent]}
+            totalCount={1}
+            page={1}
+            totalPages={1}
+            onPageChange={vi.fn()}
+            onEdit={vi.fn()}
+            onCancel={vi.fn()}
+            onDelete={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const eventsRegion = screen.getByRole('region', { name: /Bảng quản lý sự kiện/i });
+      expect(eventsRegion).toHaveAttribute('tabindex', '0');
+      const eventsTable = screen.getByRole('table', { name: /Danh sách sự kiện quản trị/i });
+      expect(eventsTable).toBeInTheDocument();
+
+      rerender(
+        <MemoryRouter>
+          <AdminUsersTable
+            users={[mockUserItem]}
+            currentUserId="current-user"
+            totalCount={1}
+            page={1}
+            totalPages={1}
+            isSubmitting={false}
+            onPageChange={vi.fn()}
+            onRequestChangeRole={vi.fn()}
+            onRequestToggleBlock={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const usersRegion = screen.getByRole('region', { name: /Bảng quản lý người dùng/i });
+      expect(usersRegion).toHaveAttribute('tabindex', '0');
+      const usersTable = screen.getByRole('table', { name: /Danh sách tài khoản người dùng/i });
+      expect(usersTable).toBeInTheDocument();
+    });
+
+    it('AdminRefundsPage renders scrollable refunds table as focusable region landmark', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            items: [
+              {
+                id: 'refund-round28',
+                eventId: 'event-round28',
+                ticketId: 'ticket-round28',
+                amount: 500000,
+                status: 'Succeeded',
+                attempts: 1,
+                providerStatus: 'SUCCESS',
+                providerReference: 'REF-12345',
+                lastError: null,
+                createdAt: '2026-10-31T10:00:00Z',
+                nextAttemptAt: null,
+              }
+            ],
+            totalCount: 1,
+            page: 1,
+            pageSize: 10,
+          }
+        }
+      });
+
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } }
+      });
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/admin/refunds']}>
+            <AdminRefundsPage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/500.000/)).toBeInTheDocument();
+      });
+
+      const refundsRegion = screen.getByRole('region', { name: /Bảng yêu cầu hoàn tiền/i });
+      expect(refundsRegion).toHaveAttribute('tabindex', '0');
+      const refundsTable = screen.getByRole('table', { name: /Danh sách yêu cầu hoàn tiền/i });
+      expect(refundsTable).toBeInTheDocument();
+    });
+
+    it('Admin filter bars associate search inputs with explicit labels', () => {
+      const { rerender } = render(
+        <AdminEventsFilterBar
+          searchQuery=""
+          onSearchChange={vi.fn()}
+          categoryFilter="All"
+          onCategoryChange={vi.fn()}
+          statusFilter="All"
+          onStatusChange={vi.fn()}
+        />
+      );
+
+      const eventSearchInput = screen.getByLabelText(/Tìm kiếm sự kiện/i);
+      expect(eventSearchInput).toHaveAttribute('id', 'admin-event-search');
+
+      rerender(
+        <AdminUsersFilterBar
+          searchTerm=""
+          onSearchChange={vi.fn()}
+          roleFilter=""
+          onRoleChange={vi.fn()}
+          blockFilter=""
+          onBlockChange={vi.fn()}
+        />
+      );
+
+      const userSearchInput = screen.getByLabelText(/Tìm người dùng theo tên hoặc email/i);
+      expect(userSearchInput).toHaveAttribute('id', 'user-search');
+    });
+
+    it('AdminDashboardEmptyState renders accessible CTA link to events page', () => {
+      render(
+        <MemoryRouter>
+          <AdminDashboardEmptyState onRefresh={vi.fn()} isRefreshing={false} />
+        </MemoryRouter>
+      );
+
+      const createLink = screen.getByRole('link', { name: /Tạo sự kiện/i });
+      expect(createLink).toHaveAttribute('href', '/admin/events');
+    });
+  });
+
 });

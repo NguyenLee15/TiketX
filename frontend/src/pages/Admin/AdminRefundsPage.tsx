@@ -72,8 +72,13 @@ export default function AdminRefundsPage() {
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <header><h1 className="text-2xl font-bold text-white">Hoàn tiền</h1><p className="mt-1 text-sm text-text-secondary">Theo dõi lệnh chi và xử lý các yêu cầu cần đối soát.</p></header>
-      <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface-1">
-        <table className="w-full min-w-[850px] text-left text-sm">
+      <div 
+        role="region" 
+        aria-label="Bảng yêu cầu hoàn tiền" 
+        tabIndex={0} 
+        className="overflow-x-auto rounded-xl border border-border-subtle bg-surface-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-primary"
+      >
+        <table aria-label="Danh sách yêu cầu hoàn tiền" className="w-full min-w-[850px] text-left text-sm">
           <thead className="border-b border-border-subtle text-xs uppercase text-text-secondary"><tr><th scope="col" className="p-3">Yêu cầu / Vé</th><th scope="col" className="p-3">Số tiền</th><th scope="col" className="p-3">Trạng thái</th><th scope="col" className="p-3">PayOS</th><th scope="col" className="p-3">Lần thử</th><th scope="col" className="p-3">Thao tác</th></tr></thead>
           <tbody>
             {data.items.map(refund => <tr key={refund.id} className="border-b border-border-subtle/70 align-top">

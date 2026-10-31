@@ -44,8 +44,13 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
     <>
       {/* Desktop Table View */}
       <div className="hidden md:block surface-panel overflow-hidden relative shadow-lg">
-        <div className="overflow-x-auto relative z-10">
-          <table className="w-full text-left border-collapse">
+        <div 
+          role="region" 
+          aria-label="Bảng quản lý người dùng" 
+          tabIndex={0} 
+          className="overflow-x-auto relative z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-primary"
+        >
+          <table aria-label="Danh sách tài khoản người dùng" className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-subtle bg-surface-2/50 text-[11px] font-bold uppercase tracking-wider text-text-secondary">
                 <th scope="col" className="p-4 sm:p-5 whitespace-nowrap">Thông Tin Người Dùng</th>

@@ -22,6 +22,7 @@ export const AdminUsersFilterBar: React.FC<AdminUsersFilterBarProps> = ({
     <div className="surface-panel p-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
       <div role="search" className="relative w-full sm:w-80">
         <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary" aria-hidden="true" />
+        <label htmlFor="user-search" className="sr-only">Tìm người dùng theo tên hoặc email</label>
         <input 
           id="user-search"
           type="text"

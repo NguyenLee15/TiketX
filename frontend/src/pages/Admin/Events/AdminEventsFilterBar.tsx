@@ -22,7 +22,9 @@ export const AdminEventsFilterBar: React.FC<AdminEventsFilterBarProps> = ({
     <div className="surface-panel p-3.5 sm:p-4 flex flex-col md:flex-row gap-3">
       <div role="search" className="flex-1 relative flex items-center bg-surface-2 rounded-xl border border-border-subtle focus-within:border-brand-primary/50">
         <Search className="absolute left-3.5 w-4 h-4 text-text-tertiary" aria-hidden="true" />
+        <label htmlFor="admin-event-search" className="sr-only">Tìm kiếm sự kiện</label>
         <input 
+          id="admin-event-search"
           type="text" 
           placeholder="Tìm kiếm theo tên sự kiện, địa điểm..." 
           value={searchQuery}
