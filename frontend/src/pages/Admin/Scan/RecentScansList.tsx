@@ -16,7 +16,12 @@ export const RecentScansList: React.FC<RecentScansListProps> = ({ recentScans })
 
       <div role="feed" aria-label="Danh sách lượt quét vé gần nhất" className="space-y-2 max-h-52 overflow-y-auto pr-1">
         {recentScans.map((item, idx) => (
-          <div key={item.id ?? idx} className="p-2.5 bg-surface-2/40 rounded-xl border border-border-subtle flex items-center justify-between text-xs">
+          <div
+            key={item.id ?? idx}
+            role="article"
+            aria-label={`Lượt soát vé: ${item.ticket?.attendeeName || item.message}`}
+            className="p-2.5 bg-surface-2/40 rounded-xl border border-border-subtle flex items-center justify-between text-xs"
+          >
             <div className="flex items-center gap-2.5 truncate">
               {item.status === 'valid' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />}
               {item.status === 'already_used' && <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />}

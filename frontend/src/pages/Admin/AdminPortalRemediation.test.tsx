@@ -54,6 +54,7 @@ import { EventCard } from '../../components/Discovery/EventCard';
 import { isValidUuidV4 } from '../../utils/idempotency';
 import { CheckoutStatusView } from '../../components/Checkout/CheckoutStatusView';
 import { TicketRefundModal } from '../Tickets/TicketRefundModal';
+import { EventImagePreviewSection } from '../../components/Admin/EventModal/EventImagePreviewSection';
 
 const mockScannerStart = vi.fn().mockResolvedValue(undefined);
 const mockScannerStop = vi.fn().mockResolvedValue(undefined);
@@ -1987,6 +1988,153 @@ describe('Admin Portal Remediation Verification', () => {
 
       fireEvent.click(cancelDeleteBtn);
       expect(screen.getByRole('button', { name: /Xóa tài khoản/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('Admin Portal Remediation (Round 25)', () => {
+    it('RecentScansList renders each scan entry as role="article" with accessible label inside role="feed"', () => {
+      const recentScans: any[] = [
+        {
+          id: 'scan-1',
+          status: 'valid',
+          message: 'VÉ HỢP LỆ',
+          ticket: {
+            attendeeName: 'Trần Văn B',
+            row: 'A',
+            number: 10,
+          },
+        },
+        {
+          id: 'scan-2',
+          status: 'invalid',
+          message: 'Vé không tồn tại',
+        },
+      ];
+
+      render(<RecentScansList recentScans={recentScans} />);
+
+      const feed = screen.getByRole('feed', { name: /Danh sách lượt quét vé gần nhất/i });
+      expect(feed).toBeInTheDocument();
+
+      const articles = screen.getAllByRole('article');
+      expect(articles).toHaveLength(2);
+      expect(articles[0]).toHaveAttribute('aria-label', 'Lượt soát vé: Trần Văn B');
+      expect(articles[1]).toHaveAttribute('aria-label', 'Lượt soát vé: Vé không tồn tại');
+    });
+
+    it('ScanCameraPanel hides header decorative icon and has accessible manual checkin button label', () => {
+      const handleScan = vi.fn();
+      render(<ScanCameraPanel onScanToken={handleScan} isVerifying={false} />);
+
+      const manualBtn = screen.getByRole('button', { name: /Thực hiện soát vé thủ công/i });
+      expect(manualBtn).toBeInTheDocument();
+
+      const header = screen.getByRole('heading', { level: 2, name: /Khung Quét Camera Trực Tiếp/i });
+      const headerIcon = header.querySelector('svg');
+      expect(headerIcon).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('AdminEventActions hides desktop action icons with aria-hidden="true"', () => {
+      const mockEvent: any = {
+        id: 'evt-1',
+        title: 'Tech Concert 2026',
+        status: 1,
+        isDeleted: false,
+      };
+
+      render(
+        <AdminEventActions
+          event={mockEvent}
+          onEdit={vi.fn()}
+          onCancel={vi.fn()}
+          onDelete={vi.fn()}
+          compact={false}
+        />
+      );
+
+      const editBtn = screen.getByRole('button', { name: /Chỉnh sửa sự kiện Tech Concert 2026/i });
+      const cancelBtn = screen.getByRole('button', { name: /Hủy sự kiện & Hoàn tiền vé Tech Concert 2026/i });
+      const deleteBtn = screen.getByRole('button', { name: /Xóa sự kiện Tech Concert 2026/i });
+
+      expect(editBtn.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      expect(cancelBtn.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      expect(deleteBtn.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('EventImagePreviewSection provides descriptive alt text and associates error with input via aria-describedby', () => {
+      const mockErrors: any = {
+        imageUrl: { message: 'URL hình ảnh không hợp lệ' },
+      };
+
+      render(
+        <EventImagePreviewSection
+          register={vi.fn() as any}
+          errors={mockErrors}
+          watchedImageUrl="https://images.unsplash.com/photo-test"
+        />
+      );
+
+      const input = screen.getByLabelText(/URL hình ảnh bìa/i);
+      expect(input).toHaveAttribute('aria-describedby', 'event-image-url-error');
+
+      const errorAlert = screen.getByRole('alert');
+      expect(errorAlert).toHaveTextContent('URL hình ảnh không hợp lệ');
+      expect(errorAlert).toHaveAttribute('id', 'event-image-url-error');
+
+      const img = screen.getByAltText('Xem trước ảnh bìa sự kiện');
+      expect(img).toBeInTheDocument();
+    });
+
+    it('EventSeatMatrixSection associates errors with aria-invalid and aria-describedby for matrix inputs', () => {
+      const mockErrors: any = {
+        rowCount: { message: 'Số hàng ghế phải từ 1 đến 50' },
+        seatsPerRow: { message: 'Số ghế mỗi hàng phải từ 1 đến 50' },
+      };
+
+      render(
+        <EventSeatMatrixSection
+          totalMatrixSeats={60}
+          register={vi.fn() as any}
+          errors={mockErrors}
+        />
+      );
+
+      const rowInput = screen.getByLabelText(/Số hàng ghế/i);
+      expect(rowInput).toHaveAttribute('aria-invalid', 'true');
+      expect(rowInput).toHaveAttribute('aria-describedby', 'event-row-count-error');
+
+      const seatInput = screen.getByLabelText(/Số ghế mỗi hàng/i);
+      expect(seatInput).toHaveAttribute('aria-invalid', 'true');
+      expect(seatInput).toHaveAttribute('aria-describedby', 'event-seats-per-row-error');
+
+      expect(screen.getByText('Số hàng ghế phải từ 1 đến 50')).toHaveAttribute('id', 'event-row-count-error');
+      expect(screen.getByText('Số ghế mỗi hàng phải từ 1 đến 50')).toHaveAttribute('id', 'event-seats-per-row-error');
+    });
+
+    it('ConfirmModal and CancelEventModal have contextual close button labels', () => {
+      const { rerender } = render(
+        <ConfirmModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+          title="Xác nhận"
+          message="Nội dung xác nhận"
+          closeAriaLabel="Đóng hộp thoại xác nhận"
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /Đóng hộp thoại xác nhận/i })).toBeInTheDocument();
+
+      rerender(
+        <CancelEventModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+          eventTitle="Hội Thảo Lớn"
+        />
+      );
+
+      expect(screen.getByRole('button', { name: /Đóng hộp thoại hủy sự kiện/i })).toBeInTheDocument();
     });
   });
 

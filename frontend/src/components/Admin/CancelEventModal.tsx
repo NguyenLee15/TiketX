@@ -55,7 +55,7 @@ export default function CancelEventModal({
           onClick={onClose}
           disabled={isLoading}
           className="absolute top-4 right-4 p-1.5 rounded-full text-text-tertiary hover:text-white hover:bg-surface-2 transition-colors disabled:opacity-40"
-          aria-label="Đóng"
+          aria-label="Đóng hộp thoại hủy sự kiện"
         >
           <X className="w-4 h-4" aria-hidden="true" />
         </button>

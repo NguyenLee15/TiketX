@@ -12,6 +12,7 @@ interface ConfirmModalProps {
   cancelText?: string;
   type?: 'danger' | 'warning' | 'info';
   isLoading?: boolean;
+  closeAriaLabel?: string;
 }
 
 export default function ConfirmModal({
@@ -24,6 +25,7 @@ export default function ConfirmModal({
   cancelText = 'Hủy',
   type = 'danger',
   isLoading = false,
+  closeAriaLabel = 'Đóng',
 }: ConfirmModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   useModalAccessibility(isOpen, isLoading, onClose, modalRef);
@@ -49,7 +51,7 @@ export default function ConfirmModal({
           onClick={onClose}
           disabled={isLoading}
           className="absolute top-4 right-4 p-1.5 rounded-full text-text-tertiary hover:text-white hover:bg-surface-2 transition-colors disabled:opacity-40"
-          aria-label="Đóng"
+          aria-label={closeAriaLabel}
         >
           <X className="w-4 h-4" aria-hidden="true" />
         </button>

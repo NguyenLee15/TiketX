@@ -136,7 +136,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
     <div className="surface-panel p-5 sm:p-6 relative overflow-hidden">
       <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
         <h2 className="text-base font-bold text-white flex items-center gap-2">
-          <Camera className="w-4 h-4 text-brand-primary" />
+          <Camera className="w-4 h-4 text-brand-primary" aria-hidden="true" />
           Khung Quét Camera Trực Tiếp
         </h2>
         <div className="flex items-center gap-2">
@@ -234,6 +234,7 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
             onClick={handleManualSubmit}
             disabled={isVerifying || !ticketInput.trim()}
             aria-busy={isVerifying}
+            aria-label="Thực hiện soát vé thủ công"
             className="px-5 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-50 flex items-center gap-1.5 shrink-0 shadow-md shadow-brand-glow text-xs sm:text-sm active:scale-95"
           >
             {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" aria-hidden="true" /> : <UserCheck className="w-4 h-4" aria-hidden="true" />}

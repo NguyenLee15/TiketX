@@ -125,7 +125,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
           onClick={onClose}
           disabled={isLoading}
           className="absolute top-5 right-5 p-1.5 bg-surface-2 hover:bg-surface-3 rounded-full text-text-secondary hover:text-white transition-colors disabled:opacity-40"
-          aria-label="Đóng"
+          aria-label="Đóng cửa sổ sự kiện"
         >
           <X className="w-4 h-4" aria-hidden="true" />
         </button>
@@ -180,13 +180,15 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   id="event-category"
                   {...register('category')}
                   aria-label="Thể loại sự kiện"
+                  aria-invalid={Boolean(errors.category)}
+                  aria-describedby={errors.category ? 'event-category-error' : undefined}
                   className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors cursor-pointer"
                 >
                   {CATEGORIES.map(cat => (
                     <option key={cat} value={cat} className="bg-surface-1 text-white">{cat}</option>
                   ))}
                 </select>
-                {errors.category && <p className="text-danger text-xs mt-1">{errors.category.message}</p>}
+                {errors.category && <p id="event-category-error" role="alert" className="text-danger text-xs mt-1">{errors.category.message}</p>}
               </div>
 
               <div>
@@ -196,6 +198,8 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   {...register('status')}
                   disabled={watchedStatus === 'Completed' || watchedStatus === 'Cancelled' || isLoading}
                   aria-label="Trạng thái sự kiện"
+                  aria-invalid={Boolean(errors.status)}
+                  aria-describedby={errors.status ? 'event-status-error' : undefined}
                   className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <option value="Published" className="bg-surface-1 text-white">Đang mở bán (Published)</option>
@@ -207,7 +211,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   )}
                   {watchedStatus === 'Cancelled' && <option value="Cancelled" className="bg-surface-1 text-white">Đã hủy (Cancelled)</option>}
                 </select>
-                {errors.status && <p className="text-danger text-xs mt-1">{errors.status.message}</p>}
+                {errors.status && <p id="event-status-error" role="alert" className="text-danger text-xs mt-1">{errors.status.message}</p>}
               </div>
             </div>
 
@@ -221,10 +225,11 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   {...register('location')}
                   aria-label="Địa điểm hoặc khán đài"
                   aria-invalid={Boolean(errors.location)}
+                  aria-describedby={errors.location ? 'event-location-error' : undefined}
                   className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors"
                   placeholder="Ví dụ: Sân Vận Động Quốc Gia Mỹ Đình, Hà Nội"
                 />
-                {errors.location && <p className="text-danger text-xs mt-1">{errors.location.message}</p>}
+                {errors.location && <p id="event-location-error" role="alert" className="text-danger text-xs mt-1">{errors.location.message}</p>}
               </div>
 
               <div>
@@ -248,10 +253,11 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   type="datetime-local"
                   {...register('date')}
                   disabled={hasTicketHistory || isLoading}
-                  aria-describedby={hasTicketHistory ? 'event-history-lock' : undefined}
+                  aria-invalid={Boolean(errors.date)}
+                  aria-describedby={errors.date ? 'event-date-error' : (hasTicketHistory ? 'event-history-lock' : undefined)}
                   className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors [color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                {errors.date && <p className="text-danger text-xs mt-1">{errors.date.message}</p>}
+                {errors.date && <p id="event-date-error" role="alert" className="text-danger text-xs mt-1">{errors.date.message}</p>}
               </div>
 
               <div>
@@ -263,10 +269,11 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
                   type="datetime-local"
                   {...register('endDate')}
                   disabled={hasTicketHistory || isLoading}
-                  aria-describedby={hasTicketHistory ? 'event-history-lock' : undefined}
+                  aria-invalid={Boolean(errors.endDate)}
+                  aria-describedby={errors.endDate ? 'event-end-date-error' : (hasTicketHistory ? 'event-history-lock' : undefined)}
                   className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus:border-brand-primary/50 transition-colors [color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                {errors.endDate && <p className="text-danger text-xs mt-1">{errors.endDate.message}</p>}
+                {errors.endDate && <p id="event-end-date-error" role="alert" className="text-danger text-xs mt-1">{errors.endDate.message}</p>}
               </div>
             </div>
 
@@ -294,10 +301,11 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
               min={1} 
               {...register('basePrice', { valueAsNumber: true })} 
               disabled={hasTicketHistory || isLoading} 
-              aria-describedby={hasTicketHistory ? 'event-history-lock' : undefined}
+              aria-invalid={Boolean(errors.basePrice)}
+              aria-describedby={errors.basePrice ? 'event-base-price-error' : (hasTicketHistory ? 'event-history-lock' : undefined)}
               className="w-full bg-surface-2 border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-50 disabled:cursor-not-allowed" 
             />
-            {errors.basePrice && <p role="alert" className="text-danger text-xs">{errors.basePrice.message}</p>}
+            {errors.basePrice && <p id="event-base-price-error" role="alert" className="text-danger text-xs">{errors.basePrice.message}</p>}
             <p className="text-[11px] text-text-secondary">Giá ghế được tạo tự động theo hạng: VIP 1,75×, Standard 1×, Economy 0,75×.</p>
           </div>
 
