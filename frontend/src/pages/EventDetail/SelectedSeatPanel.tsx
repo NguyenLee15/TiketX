@@ -68,6 +68,7 @@ export const SelectedSeatPanel: React.FC<SelectedSeatPanelProps> = ({
           {Boolean(selectedSeat.isLockedByCurrentUser || selectedSeat.isLockedByMe) ? (
             <Link
               to="/my-tickets"
+              aria-label={`Tiếp tục thanh toán cho ghế hàng ${selectedSeat.row} số ${selectedSeat.number}`}
               className="w-full py-3.5 bg-warning hover:bg-warning/90 text-surface-base font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-warning"
             >
               <span>Ghế Đang Giữ - Tiếp Tục Thanh Toán</span>
@@ -79,6 +80,7 @@ export const SelectedSeatPanel: React.FC<SelectedSeatPanelProps> = ({
               onClick={onBookTicket}
               disabled={locking}
               aria-busy={locking}
+              aria-label={`Khóa ghế hàng ${selectedSeat.row} số ${selectedSeat.number} và đặt vé`}
               className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center text-sm group relative overflow-hidden active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary"
             >
               {locking ? (
@@ -98,7 +100,10 @@ export const SelectedSeatPanel: React.FC<SelectedSeatPanelProps> = ({
           </div>
         </div>
       ) : (
-        <div className="text-center p-6 border-2 border-dashed border-border-subtle rounded-xl bg-surface-2/30">
+        <div
+          role="status"
+          className="text-center p-6 border-2 border-dashed border-border-subtle rounded-xl bg-surface-2/30"
+        >
           <div className="w-10 h-10 bg-surface-3 rounded-xl flex items-center justify-center mx-auto mb-2 text-text-tertiary">
             <Zap className="w-5 h-5 text-brand-primary" aria-hidden="true" />
           </div>

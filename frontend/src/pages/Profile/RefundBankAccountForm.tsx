@@ -86,11 +86,12 @@ export function RefundBankAccountForm({ bankBin, accountName, maskedAccount, onS
           {maskedAccount && (
             isConfirmingDelete ? (
               <div className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-1">
-                <span className="text-xs font-medium text-danger">Xác nhận xóa tài khoản?</span>
+                <span id="refund-confirm-delete-text" className="text-xs font-medium text-danger">Xác nhận xóa tài khoản?</span>
                 <button
                   type="button"
                   disabled={isSubmitting}
                   aria-busy={isSubmitting}
+                  aria-describedby="refund-confirm-delete-text"
                   onClick={() => {
                     setIsConfirmingDelete(false);
                     void onDelete();
@@ -102,6 +103,7 @@ export function RefundBankAccountForm({ bankBin, accountName, maskedAccount, onS
                 <button
                   type="button"
                   disabled={isSubmitting}
+                  aria-describedby="refund-confirm-delete-text"
                   onClick={() => setIsConfirmingDelete(false)}
                   className="rounded border border-border-subtle bg-surface-2 px-2.5 py-1 text-xs font-medium text-text-secondary hover:text-white"
                 >

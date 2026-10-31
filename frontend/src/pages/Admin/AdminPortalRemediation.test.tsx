@@ -52,6 +52,8 @@ import PaymentResultCard from '../PaymentResultCard';
 import { CheckoutInvoice } from '../../components/Checkout/CheckoutInvoice';
 import { EventCard } from '../../components/Discovery/EventCard';
 import { isValidUuidV4 } from '../../utils/idempotency';
+import { CheckoutStatusView } from '../../components/Checkout/CheckoutStatusView';
+import { TicketRefundModal } from '../Tickets/TicketRefundModal';
 
 const mockScannerStart = vi.fn().mockResolvedValue(undefined);
 const mockScannerStop = vi.fn().mockResolvedValue(undefined);
@@ -1849,8 +1851,143 @@ describe('Admin Portal Remediation Verification', () => {
       });
     });
 
+  });
 
+  describe('Customer Portal Remediation (Round 24)', () => {
+    it('CheckoutStatusView renders role="status" and aria-live="polite" when verifying, role="alert" when error, and accessible close button', () => {
+      const handleClose = vi.fn();
+      const { rerender } = render(
+        <CheckoutStatusView status="verifying" onClose={handleClose} />
+      );
 
+      const verifyingContainer = screen.getByRole('status');
+      expect(verifyingContainer).toHaveAttribute('aria-live', 'polite');
+      expect(screen.getByText(/Đang Xác Nhận Giao Dịch/i)).toBeInTheDocument();
+
+      rerender(<CheckoutStatusView status="error" onClose={handleClose} />);
+      const errorContainer = screen.getByRole('alert');
+      expect(errorContainer).toBeInTheDocument();
+      expect(screen.getByText(/Hết Thời Gian Giữ Chỗ/i)).toBeInTheDocument();
+
+      const closeBtn = screen.getByRole('button', { name: /Đóng thanh toán và quay lại sơ đồ ghế/i });
+      expect(closeBtn).toBeInTheDocument();
+      fireEvent.click(closeBtn);
+      expect(handleClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('SelectedSeatPanel renders role="status" when empty, and contextual aria-label for locked link and booking button', () => {
+      const handleBook = vi.fn();
+      const { rerender } = render(
+        <MemoryRouter>
+          <SelectedSeatPanel
+            selectedSeat={null}
+            lockTimeLeft={null}
+            locking={false}
+            onBookTicket={handleBook}
+          />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByRole('status')).toHaveTextContent(/Chưa chọn ghế/i);
+
+      const availableSeat: any = {
+        id: 'seat-a1',
+        row: 'A',
+        number: 1,
+        tier: 0,
+        price: 350000,
+        status: 'available',
+      };
+
+      rerender(
+        <MemoryRouter>
+          <SelectedSeatPanel
+            selectedSeat={availableSeat}
+            lockTimeLeft={null}
+            locking={false}
+            onBookTicket={handleBook}
+          />
+        </MemoryRouter>
+      );
+
+      const bookBtn = screen.getByRole('button', { name: /Khóa ghế hàng A số 1 và đặt vé/i });
+      expect(bookBtn).toBeInTheDocument();
+      fireEvent.click(bookBtn);
+      expect(handleBook).toHaveBeenCalledTimes(1);
+
+      const lockedByMeSeat: any = {
+        ...availableSeat,
+        isLockedByCurrentUser: true,
+      };
+
+      rerender(
+        <MemoryRouter>
+          <SelectedSeatPanel
+            selectedSeat={lockedByMeSeat}
+            lockTimeLeft={280}
+            locking={false}
+            onBookTicket={handleBook}
+          />
+        </MemoryRouter>
+      );
+
+      const resumeLink = screen.getByRole('link', { name: /Tiếp tục thanh toán cho ghế hàng A số 1/i });
+      expect(resumeLink).toBeInTheDocument();
+      expect(resumeLink).toHaveAttribute('href', '/my-tickets');
+    });
+
+    it('TicketRefundModal renders action button with accessible aria-label when bank account is missing', () => {
+      const candidate: any = {
+        id: 't-1',
+        eventTitle: 'Rock Fest 2026',
+        row: 'B',
+        number: 5,
+        price: 500000,
+        status: 'Valid',
+      };
+
+      render(
+        <MemoryRouter>
+          <TicketRefundModal
+            candidate={candidate}
+            refundingId={null}
+            refundError={{ code: 'REFUND_DESTINATION_REQUIRED', message: 'Thiếu STK' }}
+            onClose={vi.fn()}
+            onConfirm={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const setupBankBtn = screen.getByRole('button', { name: /Thiết lập tài khoản ngân hàng nhận tiền hoàn vé/i });
+      expect(setupBankBtn).toBeInTheDocument();
+    });
+
+    it('RefundBankAccountForm renders accessible confirmation and cancel buttons when deleting account', async () => {
+      const handleDelete = vi.fn().mockResolvedValue(undefined);
+      const handleSave = vi.fn().mockResolvedValue(undefined);
+
+      render(
+        <RefundBankAccountForm
+          bankBin="970415"
+          accountName="NGUYEN VAN A"
+          maskedAccount="Vietcombank - ****6789"
+          isSubmitting={false}
+          onSave={handleSave}
+          onDelete={handleDelete}
+        />
+      );
+
+      const deleteBtn = screen.getByRole('button', { name: /Xóa tài khoản/i });
+      fireEvent.click(deleteBtn);
+
+      const confirmDeleteBtn = screen.getByRole('button', { name: 'Xác nhận' });
+      const cancelDeleteBtn = screen.getByRole('button', { name: 'Hủy' });
+      expect(confirmDeleteBtn).toHaveAttribute('aria-describedby', 'refund-confirm-delete-text');
+      expect(cancelDeleteBtn).toHaveAttribute('aria-describedby', 'refund-confirm-delete-text');
+
+      fireEvent.click(cancelDeleteBtn);
+      expect(screen.getByRole('button', { name: /Xóa tài khoản/i })).toBeInTheDocument();
+    });
   });
 
 });

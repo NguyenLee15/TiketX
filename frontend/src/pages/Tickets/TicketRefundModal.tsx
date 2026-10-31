@@ -52,6 +52,7 @@ export const TicketRefundModal: React.FC<TicketRefundModalProps> = React.memo(({
               </p>
               <button
                 type="button"
+                aria-label="Thiết lập tài khoản ngân hàng nhận tiền hoàn vé"
                 onClick={() => {
                   onClose();
                   navigate('/profile?refundBankAccount=1');
