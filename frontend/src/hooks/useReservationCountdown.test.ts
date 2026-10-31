@@ -30,6 +30,25 @@ describe('useReservationCountdown', () => {
     expect(result.current.formattedTime).toBe('02:05');
   });
 
+  it('compensates for client clock skew when serverTime is provided', () => {
+    // Client clock is 60s behind server
+    const clientNow = Date.now();
+    const serverNow = new Date(clientNow + 60 * 1000).toISOString();
+    // lock expires 120s after serverNow (so 180s after clientNow)
+    const lockExpiresAt = new Date(clientNow + 180 * 1000).toISOString();
+
+    const { result } = renderHook(() =>
+      useReservationCountdown({
+        lockExpiresAt,
+        serverTime: serverNow,
+      })
+    );
+
+    // Correctly computes 120s remaining instead of unadjusted 180s
+    expect(result.current.timeLeft).toBe(120);
+    expect(result.current.formattedTime).toBe('02:00');
+  });
+
   it('triggers onExpire callback and resets timeLeft when timer reaches 0', () => {
     const onExpire = vi.fn();
     const expiresAt = new Date(Date.now() + 3 * 1000).toISOString(); // 3s
@@ -47,4 +66,3 @@ describe('useReservationCountdown', () => {
     expect(onExpire).toHaveBeenCalledTimes(1);
   });
 });
-

@@ -57,7 +57,7 @@ export const TicketRefundModal: React.FC<TicketRefundModalProps> = React.memo(({
                   onClose();
                   navigate('/profile?refundBankAccount=1');
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary/90 transition-colors shadow-sm"
+                className="inline-flex min-h-11 items-center gap-1.5 px-3 py-2 rounded-lg bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary transition-colors shadow-sm"
               >
                 <span>Thiết lập tài khoản nhận tiền</span>
                 <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />

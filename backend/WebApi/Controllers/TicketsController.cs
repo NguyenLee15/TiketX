@@ -49,7 +49,7 @@ public class TicketsController : ControllerBase
             });
         }
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId) || userId == Guid.Empty)
         {
             return Unauthorized(new 
             { 
@@ -91,7 +91,7 @@ public class TicketsController : ControllerBase
         }
 
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId) || userId == Guid.Empty)
         {
             return Unauthorized(new 
             { 
@@ -138,7 +138,7 @@ public class TicketsController : ControllerBase
     public async Task<IActionResult> RefundTicket(Guid id, [FromBody] RefundRequest? request, CancellationToken cancellationToken = default)
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId) || userId == Guid.Empty)
         {
             return Unauthorized(new 
             { 
@@ -167,7 +167,7 @@ public class TicketsController : ControllerBase
         {
             var statusCode = result.Code switch
             {
-                "REFUND_LOCK_UNAVAILABLE" => StatusCodes.Status503ServiceUnavailable,
+                "REFUND_LOCK_UNAVAILABLE" or "REFUND_LOCK_LOST" => StatusCodes.Status503ServiceUnavailable,
                 "REFUND_CONCURRENCY_CONFLICT" or "REFUND_DESTINATION_REQUIRED" => StatusCodes.Status409Conflict,
                 "REFUND_TICKET_NOT_FOUND" or "REFUND_EVENT_NOT_FOUND" => StatusCodes.Status404NotFound,
                 "REFUND_FORBIDDEN" => StatusCodes.Status403Forbidden,

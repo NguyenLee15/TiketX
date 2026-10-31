@@ -7,12 +7,30 @@ namespace TickeX.UnitTests.Customer;
 public sealed class CustomerRefundPolicyTests
 {
     [Fact]
-    public void UsesTwentyFourHourDefaultWhenConfiguredCutoffIsNotPositive()
+    public void UsesTwentyFourHourDefaultWhenConfiguredCutoffIsNegative()
+    {
+        var eventStart = new DateTime(2026, 10, 10, 12, 0, 0, DateTimeKind.Utc);
+
+        CustomerRefundPolicy.GetAllowedUntil(eventStart, -1)
+            .Should().Be(new DateTime(2026, 10, 9, 12, 0, 0, DateTimeKind.Utc));
+    }
+
+    [Fact]
+    public void AllowsRefundUpToEventStartWhenCutoffIsZero()
     {
         var eventStart = new DateTime(2026, 10, 10, 12, 0, 0, DateTimeKind.Utc);
 
         CustomerRefundPolicy.GetAllowedUntil(eventStart, 0)
-            .Should().Be(new DateTime(2026, 10, 9, 12, 0, 0, DateTimeKind.Utc));
+            .Should().Be(eventStart);
+
+        CustomerRefundPolicy.CanRefund(eventStart.AddHours(-1), eventStart, 0)
+            .Should().BeTrue();
+
+        CustomerRefundPolicy.CanRefund(eventStart, eventStart, 0)
+            .Should().BeTrue();
+
+        CustomerRefundPolicy.CanRefund(eventStart.AddSeconds(1), eventStart, 0)
+            .Should().BeFalse();
     }
 
     [Fact]

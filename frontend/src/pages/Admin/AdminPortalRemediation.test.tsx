@@ -17,7 +17,7 @@ import { RefundBankAccountForm } from '../Profile/RefundBankAccountForm';
 import { useAuthStore } from '../../stores/useAuthStore';
 import EventModal from '../../components/Admin/EventModal';
 import { CheckoutVietQrView } from '../../components/Checkout/CheckoutVietQrView';
-import { TicketCard } from '../Tickets/TicketCard';
+import { TicketCard, TicketItemData } from '../Tickets/TicketCard';
 import PaymentResultPage from '../PaymentResultPage';
 import { AdminEventActions } from './Events/AdminEventActions';
 import { DashboardTopEvents } from './Dashboard/DashboardTopEvents';
@@ -2974,4 +2974,46 @@ describe('Admin Portal Remediation Verification', () => {
     });
   });
 
+  describe('Customer Portal Deep Audit Remediation (Round 33)', () => {
+    it('TicketRefundModal setup bank account button provides min-h-11 touch target and focus ring', () => {
+      const mockCandidate: TicketItemData = {
+        id: 'ticket-1',
+        eventId: 'event-1',
+        seatId: 'seat-1',
+        eventTitle: 'Sự kiện âm nhạc',
+        eventDescription: 'Mô tả',
+        eventDate: '2026-10-01T19:00:00Z',
+        endDate: '2026-10-01T22:00:00Z',
+        location: 'Hà Nội',
+        category: 'Music',
+        imageUrl: 'https://example.com/banner.jpg',
+        row: 'A',
+        number: 1,
+        tier: 1,
+        price: 100000,
+        status: 'Paid',
+        orderCode: 123456789,
+        qrCodeSignature: 'sig',
+        refundCutoffHours: 24,
+        canRefund: true,
+      };
+
+      render(
+        <MemoryRouter>
+          <TicketRefundModal
+            candidate={mockCandidate}
+            refundingId={null}
+            refundError={{ code: 'REFUND_DESTINATION_REQUIRED', message: 'Thiếu thông tin ngân hàng' }}
+            onClose={vi.fn()}
+            onConfirm={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const setupBtn = screen.getByRole('button', { name: /Thiết lập tài khoản ngân hàng nhận tiền hoàn vé/i });
+      expect(setupBtn).toBeInTheDocument();
+      expect(setupBtn).toHaveClass('min-h-11');
+      expect(setupBtn).toHaveClass('focus-visible:ring-2');
+    });
+  });
 });
