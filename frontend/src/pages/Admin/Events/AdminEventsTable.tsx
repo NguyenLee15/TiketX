@@ -46,7 +46,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
             <tbody className="divide-y divide-border-subtle text-xs sm:text-sm">
               {events.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-text-secondary text-xs sm:text-sm">
+                  <td colSpan={6} role="status" className="px-6 py-12 text-center text-text-secondary text-xs sm:text-sm">
                     Không tìm thấy sự kiện nào phù hợp với bộ lọc.
                   </td>
                 </tr>
@@ -162,7 +162,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
         })}
 
         {events.length === 0 && (
-          <p className="p-8 text-center text-text-secondary text-xs">Không tìm thấy sự kiện nào.</p>
+          <p role="status" className="p-8 text-center text-text-secondary text-xs">Không tìm thấy sự kiện nào.</p>
         )}
       </div>
 

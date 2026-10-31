@@ -32,8 +32,7 @@ export default function AdminScanTicketPage() {
           status: 'invalid',
           message: 'Mã vé không đúng định dạng chữ ký số (payload.signature).'
         };
-        console.log('CALLING setScanResult:', result);
-setScanResult(result);
+        setScanResult(result);
         setRecentScans(prev => [result, ...prev.slice(0, 9)]);
         toast.error('Mã vé không đúng định dạng chữ ký số hợp lệ.');
         return;

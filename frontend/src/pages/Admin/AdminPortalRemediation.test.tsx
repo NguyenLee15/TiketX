@@ -1748,6 +1748,61 @@ describe('Admin Portal Remediation Verification', () => {
       expect(standardLink).toBeInTheDocument();
     });
 
+    it('AdminDashboardPage renders accessible retry button with aria-label on error', async () => {
+      vi.mocked(api.get).mockRejectedValueOnce(new Error('Network failure'));
+
+      render(
+        <MemoryRouter>
+          <AdminDashboardPage />
+        </MemoryRouter>
+      );
+
+      const retryBtn = await screen.findByRole('button', { name: /Thử lại tải dữ liệu bảng điều khiển/i });
+      expect(retryBtn).toBeInTheDocument();
+      expect(retryBtn).toHaveAttribute('type', 'button');
+    });
+
+    it('AdminRefundsPage renders accessible retry button with aria-label on error', async () => {
+      vi.mocked(api.get).mockRejectedValueOnce(new Error('Network failure'));
+
+      render(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemoryRouter>
+            <AdminRefundsPage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      const retryBtn = await screen.findByRole('button', { name: /Thử lại tải danh sách hoàn tiền/i });
+      expect(retryBtn).toBeInTheDocument();
+      expect(retryBtn).toHaveAttribute('type', 'button');
+    });
+
+    it('DashboardRecentTransactions renders transactions as articles within feed landmark', () => {
+      const mockTx = [
+        {
+          ticketId: 'tkt-111',
+          orderCode: 123456789012345,
+          userName: 'Nguyễn Văn A',
+          eventTitle: 'Concert Test 2026',
+          amount: 500000,
+          status: 'Paid',
+          createdAt: new Date().toISOString(),
+        },
+      ];
+
+      render(
+        <DashboardRecentTransactions recentTransactions={mockTx as any} />
+      );
+
+      const feed = screen.getByRole('feed', { name: /Lịch sử giao dịch gần đây/i });
+      expect(feed).toBeInTheDocument();
+
+      const article = screen.getByRole('article', { name: /Giao dịch đơn hàng #123456789012345/i });
+      expect(article).toBeInTheDocument();
+    });
+
+
   });
 
 });

@@ -154,7 +154,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
               
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-text-secondary text-xs sm:text-sm">
+                  <td colSpan={5} role="status" className="p-8 text-center text-text-secondary text-xs sm:text-sm">
                     Không tìm thấy người dùng nào phù hợp với bộ lọc.
                   </td>
                 </tr>
@@ -227,7 +227,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
         })}
 
         {users.length === 0 && (
-          <p className="p-8 text-center text-text-secondary text-xs">Không tìm thấy người dùng nào.</p>
+          <p role="status" className="p-8 text-center text-text-secondary text-xs">Không tìm thấy người dùng nào.</p>
         )}
       </div>
 

@@ -96,7 +96,7 @@ export default function AdminDashboardPage() {
         <div className="h-24 bg-surface-2/40 rounded-2xl border border-border-subtle" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-32 bg-surface-2/40 rounded-2xl border border-border-subtle" />
+            <div key={`dash-skel-${i}`} className="h-32 bg-surface-2/40 rounded-2xl border border-border-subtle" />
           ))}
         </div>
         <div className="h-64 bg-surface-2/40 rounded-2xl border border-border-subtle" />
@@ -112,7 +112,7 @@ export default function AdminDashboardPage() {
     return (
       <div role="alert" className="min-h-[40vh] flex flex-col items-center justify-center gap-4 text-center">
         <p className="text-text-secondary">{error ? 'Không thể tải dữ liệu quản trị.' : 'Chưa có dữ liệu quản trị.'}</p>
-        <button type="button" onClick={fetchStats} className="px-4 py-2 rounded-xl bg-brand-primary text-white font-bold focus-visible:ring-2 focus-visible:ring-white">Thử lại</button>
+        <button type="button" aria-label="Thử lại tải dữ liệu bảng điều khiển" onClick={fetchStats} className="px-4 py-2 rounded-xl bg-brand-primary text-white font-bold focus-visible:ring-2 focus-visible:ring-white">Thử lại</button>
       </div>
     );
   }

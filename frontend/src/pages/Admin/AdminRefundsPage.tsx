@@ -63,7 +63,7 @@ export default function AdminRefundsPage() {
   };
 
   if (refundsQuery.isLoading) return <div role="status" className="p-8 text-text-secondary" aria-busy="true"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" aria-hidden="true" /> Đang tải yêu cầu hoàn tiền</div>;
-  if (refundsQuery.isError) return <section className="surface-panel m-6 p-6"><p role="alert" className="mb-3 text-danger">Không tải được danh sách hoàn tiền.</p><button type="button" className="rounded-lg bg-brand-primary px-4 py-2 text-white" onClick={() => void refundsQuery.refetch()}>Thử lại</button></section>;
+  if (refundsQuery.isError) return <section className="surface-panel m-6 p-6"><p role="alert" className="mb-3 text-danger">Không tải được danh sách hoàn tiền.</p><button type="button" aria-label="Thử lại tải danh sách hoàn tiền" className="rounded-lg bg-brand-primary px-4 py-2 text-white" onClick={() => void refundsQuery.refetch()}>Thử lại</button></section>;
 
   const data = refundsQuery.data;
   if (!data) return null;

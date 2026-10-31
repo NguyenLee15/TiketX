@@ -53,7 +53,7 @@ export function DashboardTopEvents({ topEvents }: DashboardTopEventsProps) {
             );
           })
         ) : (
-          <p className="text-text-secondary text-xs text-center py-6">Chưa có dữ liệu bán vé.</p>
+          <p role="status" className="text-text-secondary text-xs text-center py-6">Chưa có dữ liệu bán vé.</p>
         )}
       </div>
     </div>
