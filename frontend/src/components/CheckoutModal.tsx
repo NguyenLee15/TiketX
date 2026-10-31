@@ -10,6 +10,7 @@ import { CheckoutModalHeader } from './Checkout/CheckoutModalHeader';
 import { CheckoutStatusView } from './Checkout/CheckoutStatusView';
 import { useModalAccessibility } from './Admin/useModalAccessibility';
 import { checkoutLinkResponseSchema } from '../schemas/customerSchemas';
+import { createIdempotencyKey } from '../utils/idempotency';
 
 interface CheckoutModalProps {
   isOpen?: boolean;
@@ -79,7 +80,7 @@ export default function CheckoutModal({
           ticketId,
         }, {
           signal: controller.signal,
-          headers: { 'Idempotency-Key': `checkout-${ticketId}` },
+          headers: { 'Idempotency-Key': createIdempotencyKey() },
         });
 
         if (isMounted && response.data.success) {
@@ -168,7 +169,7 @@ export default function CheckoutModal({
       await api.post(`/api/reservations/${ticketId}/release`, {
         reason: 'CustomerClosedCheckout',
       }, {
-        headers: { 'Idempotency-Key': `release-${ticketId}` },
+        headers: { 'Idempotency-Key': createIdempotencyKey() },
       });
       setShowCloseConfirm(false);
       onClose();

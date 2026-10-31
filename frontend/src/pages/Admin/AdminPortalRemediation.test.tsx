@@ -51,6 +51,7 @@ import { EventSeatMatrixSection } from '../../components/Admin/EventModal/EventS
 import PaymentResultCard from '../PaymentResultCard';
 import { CheckoutInvoice } from '../../components/Checkout/CheckoutInvoice';
 import { EventCard } from '../../components/Discovery/EventCard';
+import { isValidUuidV4 } from '../../utils/idempotency';
 
 const mockScannerStart = vi.fn().mockResolvedValue(undefined);
 const mockScannerStop = vi.fn().mockResolvedValue(undefined);
@@ -1801,6 +1802,53 @@ describe('Admin Portal Remediation Verification', () => {
       const article = screen.getByRole('article', { name: /Giao dịch đơn hàng #123456789012345/i });
       expect(article).toBeInTheDocument();
     });
+
+    it('CheckoutModal sends valid RFC 4122 UUIDv4 Idempotency-Key on create payment link', async () => {
+      const mockPost = vi.mocked(api.post);
+      mockPost.mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            checkoutUrl: 'https://pay.payos.vn/web/test',
+            orderCode: 123456789012345,
+            qrCode: 'data',
+            accountNumber: '123',
+            accountName: 'ABC',
+            bin: '970415',
+            bankName: 'VietinBank',
+          },
+        },
+      });
+
+      render(
+        <MemoryRouter>
+          <CheckoutModal
+            isOpen={true}
+            onClose={vi.fn()}
+            ticketId="f47ac10b-58cc-4372-a567-0e02b2c3d479"
+            event={{ ...mockEvent, seats: [] } as any}
+            seat={{ id: 'seat-1', row: 'A', number: 1, tier: 0, price: 500000, status: 'locked' } as any}
+            expiresAt={null}
+          />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(mockPost).toHaveBeenCalledWith(
+          '/api/payments/create-link',
+          { ticketId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' },
+          expect.objectContaining({
+            headers: expect.objectContaining({
+              'Idempotency-Key': expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+            }),
+          })
+        );
+        const lastCall = mockPost.mock.calls.find(call => call[0] === '/api/payments/create-link');
+        const headerKey = (lastCall?.[2] as { headers?: { 'Idempotency-Key'?: string } })?.headers?.['Idempotency-Key'] ?? '';
+        expect(isValidUuidV4(headerKey)).toBe(true);
+      });
+    });
+
 
 
   });

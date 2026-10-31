@@ -47,14 +47,14 @@ export function DashboardRevenueChart({ dailyStats }: DashboardRevenueChartProps
           <p className="py-12 text-center text-sm text-text-secondary">Chưa có doanh thu trong 7 ngày gần nhất.</p>
         ) : (
           <div role="img" aria-label={`Biểu đồ doanh thu 7 ngày, tổng ${currencyFormatter.format(total7DayRevenue)} và ${numberFormatter.format(total7DayTickets)} vé`} className="grid grid-cols-7 gap-2 sm:gap-4 items-end h-48 sm:h-56 px-2">
-            {dailyStats.map((item, idx) => {
+            {dailyStats.map((item) => {
               const heightPercent = maxDailyRevenue > 0 ? Math.round((item.revenue / maxDailyRevenue) * 100) : 0;
               const dateObj = new Date(`${item.date}T00:00:00Z`);
               const formattedDate = chartDateFormatter.format(dateObj);
               const dayName = chartDayFormatter.format(dateObj);
 
               return (
-                <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
+                <div key={item.date} className="flex flex-col items-center h-full justify-end group relative">
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-12 z-20 pointer-events-none bg-surface-1 border border-border-subtle shadow-xl px-2.5 py-1.5 rounded-lg text-center whitespace-nowrap">
                     <p className="text-[11px] font-bold text-white">{currencyFormatter.format(item.revenue)}</p>
                     <p className="text-[10px] text-text-secondary">{numberFormatter.format(item.ticketsSold)} vé ({item.date})</p>

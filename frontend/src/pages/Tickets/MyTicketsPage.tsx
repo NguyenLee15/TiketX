@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { checkoutLinkResponseSchema } from '../../schemas/customerSchemas';
+import { createIdempotencyKey } from '../../utils/idempotency';
 import { TicketCard, TicketItemData } from './TicketCard';
 import { TicketFilterTabs, allowedTicketTabs, TicketTabType } from './TicketFilterTabs';
 import { TicketRefundModal } from './TicketRefundModal';
@@ -135,7 +136,7 @@ export default function MyTicketsPage() {
       const response = await api.post(`/api/tickets/${ticket.id}/refund`, {
         reason: 'Customer requested refund via web portal',
       }, {
-        headers: { 'Idempotency-Key': `refund-${ticket.id}` },
+        headers: { 'Idempotency-Key': createIdempotencyKey() },
       });
       if (response.data.success) {
         toast.success(response.data.message || 'Yêu cầu hoàn vé đã được gửi và đang chờ xử lý.');
@@ -160,7 +161,7 @@ export default function MyTicketsPage() {
     setResumingTicketId(ticket.id);
     try {
       const response = await api.post('/api/payments/create-link', { ticketId: ticket.id }, {
-        headers: { 'Idempotency-Key': `checkout-${ticket.id}` },
+        headers: { 'Idempotency-Key': createIdempotencyKey() },
       });
       if (response.data?.success) {
         const parsed = checkoutLinkResponseSchema.safeParse(response.data.data);
@@ -192,7 +193,7 @@ export default function MyTicketsPage() {
       const response = await api.post(`/api/reservations/${ticket.id}/release`, {
         reason: 'CustomerCancelledFromTicketPortal',
       }, {
-        headers: { 'Idempotency-Key': `release-${ticket.id}` },
+        headers: { 'Idempotency-Key': createIdempotencyKey() },
       });
       if (response.data?.success) {
         toast.success('Đã hủy giữ chỗ và trả ghế thành công!');
