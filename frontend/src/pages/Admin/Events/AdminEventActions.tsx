@@ -33,7 +33,7 @@ export function AdminEventActions({ event, onEdit, onCancel, onDelete, compact =
 
   return (
     <div className="flex items-center justify-end gap-1.5 shrink-0">
-      <button type="button" onClick={() => onEdit(event)} disabled={event.isDeleted || isCompleted || isCancelled} aria-label={`Chỉnh sửa sự kiện ${event.title}`} className="p-2 bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white rounded-xl transition-colors border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed" title={isCancelled ? 'Không thể sửa sự kiện đã hủy' : isCompleted ? 'Không thể sửa sự kiện đã kết thúc' : 'Sửa sự kiện'}>
+      <button type="button" onClick={() => onEdit(event)} disabled={event.isDeleted || isCompleted || isCancelled} aria-label={`Chỉnh sửa sự kiện ${event.title}`} className="p-2 bg-surface-2 hover:bg-surface-3 text-text-secondary hover:text-white rounded-xl transition-colors border border-border-subtle disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary" title={isCancelled ? 'Không thể sửa sự kiện đã hủy' : isCompleted ? 'Không thể sửa sự kiện đã kết thúc' : 'Sửa sự kiện'}>
         <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />
       </button>
       {!isCancelled && !isCompleted && (
@@ -42,13 +42,13 @@ export function AdminEventActions({ event, onEdit, onCancel, onDelete, compact =
           onClick={() => onCancel(event)}
           disabled={event.isDeleted}
           aria-label={`Hủy sự kiện & Hoàn tiền vé ${event.title}`}
-          className="p-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl transition-colors border border-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="p-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl transition-colors border border-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
           title={event.isDeleted ? 'Không thể hủy sự kiện đã xóa' : 'Hủy sự kiện & Hoàn tiền vé'}
         >
           <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       )}
-      <button type="button" onClick={() => onDelete(event)} disabled={event.isDeleted} aria-label={`Xóa sự kiện ${event.title}`} className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-xl transition-colors border border-danger/20" title="Xóa sự kiện">
+      <button type="button" onClick={() => onDelete(event)} disabled={event.isDeleted} aria-label={`Xóa sự kiện ${event.title}`} className="p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-xl transition-colors border border-danger/20 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger" title="Xóa sự kiện">
         <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
       </button>
     </div>

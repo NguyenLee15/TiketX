@@ -4,7 +4,7 @@ using TickeX.Application.Interfaces;
 
 namespace TickeX.Application.Admin.Commands;
 
-public sealed record RetryRefundRequestCommand(Guid RefundRequestId) : IRequest<string>;
+public sealed record RetryRefundRequestCommand(Guid RefundRequestId, string? ExpectedVersion = null) : IRequest<string>;
 
 public sealed class RetryRefundRequestCommandHandler(
     IApplicationDbContext context,
@@ -39,6 +39,14 @@ public sealed class RetryRefundRequestCommandHandler(
                 cancellationToken);
             if (refund is null) return "REFUND_NOT_FOUND";
             if (refund.Status != "NeedsReview") return "REFUND_NOT_RETRYABLE";
+
+            if (!string.IsNullOrWhiteSpace(request.ExpectedVersion))
+            {
+                if (!AdminMutationVersionPolicy.TryDecodeRequiredVersion(request.ExpectedVersion, out var expectedBytes))
+                    return "INVALID_VERSION";
+                if (!refund.Version.SequenceEqual(expectedBytes))
+                    return "REFUND_CONCURRENCY_CONFLICT";
+            }
 
             var stableReference = $"refund-{refund.Id:N}-{refund.ProviderRetryGeneration}";
             var remote = (refund.ProviderStatus is "PROCESSING" or "PENDING") && refund.ProviderReference is not null

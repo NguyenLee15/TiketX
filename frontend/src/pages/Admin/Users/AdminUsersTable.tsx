@@ -44,6 +44,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
     <>
       {/* Desktop Table View */}
       <div className="hidden md:block surface-panel overflow-hidden relative shadow-lg">
+        <h2 className="sr-only">Danh sách tài khoản người dùng</h2>
         <div 
           role="region" 
           aria-label="Bảng quản lý người dùng" 

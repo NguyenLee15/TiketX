@@ -86,7 +86,7 @@ export default function AdminRefundsPage() {
               </td>
               <td className="p-3">{refund.providerStatus ?? '—'}{refund.providerReference && <p className="mt-1 max-w-40 truncate text-xs text-text-secondary">{refund.providerReference}</p>}</td>
               <td className="p-3 tabular-nums">{refund.attempts}</td>
-              <td className="p-3">{refund.status === 'NeedsReview' && <button type="button" disabled={retrying === refund.id} aria-busy={retrying === refund.id} aria-label={`Đối soát lại yêu cầu ${refund.id.slice(0, 8)}`} onClick={() => void retryRefund(refund.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-brand-primary/40 px-3 text-xs font-semibold text-brand-primary disabled:opacity-60">{retrying === refund.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />} Đối soát / thử lại</button>}</td>
+              <td className="p-3">{refund.status === 'NeedsReview' && <button type="button" disabled={Boolean(retrying)} aria-busy={retrying === refund.id} aria-label={`Đối soát lại yêu cầu ${refund.id.slice(0, 8)}`} onClick={() => void retryRefund(refund.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-brand-primary/40 px-3 text-xs font-semibold text-brand-primary disabled:opacity-60">{retrying === refund.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />} Đối soát / thử lại</button>}</td>
             </tr>)}
             {data.items.length === 0 && <tr><td colSpan={6} role="status" className="p-10 text-center text-text-secondary">Chưa có yêu cầu hoàn tiền.</td></tr>}
           </tbody>

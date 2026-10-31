@@ -31,6 +31,7 @@ export const AdminEventsTable: React.FC<AdminEventsTableProps> = ({
     <>
       {/* Desktop Table View */}
       <div className="hidden md:block surface-panel overflow-hidden shadow-lg">
+        <h2 className="sr-only">Danh sách sự kiện</h2>
         <div 
           role="region" 
           aria-label="Bảng quản lý sự kiện" 

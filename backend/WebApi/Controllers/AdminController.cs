@@ -63,11 +63,24 @@ public class AdminController : ControllerBase
 
     [HttpPost("refunds/{id:guid}/retries")]
     [Idempotent]
-    public async Task<IActionResult> RetryRefund(Guid id, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> RetryRefund(Guid id, [FromQuery] string? expectedVersion = null, CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new RetryRefundRequestCommand(id), cancellationToken);
+        var result = await _mediator.Send(new RetryRefundRequestCommand(id, expectedVersion), cancellationToken);
         return result switch
         {
+            "INVALID_VERSION" => BadRequest(new 
+            { 
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Invalid Version",
+                status = StatusCodes.Status400BadRequest,
+                success = false, 
+                code = result, 
+                message = "Phiên bản dữ liệu yêu cầu hoàn tiền không hợp lệ.",
+                detail = "Phiên bản dữ liệu yêu cầu hoàn tiền không hợp lệ.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = result, message = "Phiên bản dữ liệu yêu cầu hoàn tiền không hợp lệ." }
+            }),
             "REFUND_NOT_FOUND" => NotFound(new 
             { 
                 type = "https://tools.ietf.org/html/rfc9457",

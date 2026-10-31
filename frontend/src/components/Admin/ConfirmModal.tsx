@@ -67,9 +67,9 @@ export default function ConfirmModal({
             {isDanger || isWarning ? <AlertTriangle className="w-5 h-5" aria-hidden="true" /> : <Info className="w-5 h-5" aria-hidden="true" />}
           </div>
           <div>
-            <h3 id="confirm-modal-title" className="text-base font-bold text-white leading-tight">
+            <h2 id="confirm-modal-title" className="text-base font-bold text-white leading-tight">
               {title}
-            </h3>
+            </h2>
             <p className="text-xs text-text-secondary mt-0.5">Vui lòng xác nhận trước khi tiếp tục.</p>
           </div>
         </div>

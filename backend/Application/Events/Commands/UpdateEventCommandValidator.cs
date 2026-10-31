@@ -20,6 +20,16 @@ public class UpdateEventCommandValidator : AbstractValidator<UpdateEventCommand>
         RuleFor(x => x.Description)
             .MaximumLength(3000).WithMessage("Mô tả không được vượt quá 3000 ký tự.");
 
+        RuleFor(x => x.Category)
+            .NotEmpty().WithMessage("Thể loại sự kiện không được để trống.")
+            .MaximumLength(100).WithMessage("Thể loại không được vượt quá 100 ký tự.");
+
+        RuleFor(x => x.VenueName)
+            .MaximumLength(250).WithMessage("Tên hội trường / khán đài không được vượt quá 250 ký tự.");
+
+        RuleFor(x => x.OrganizerName)
+            .MaximumLength(200).WithMessage("Tên đơn vị tổ chức không được vượt quá 200 ký tự.");
+
         RuleFor(x => x.Location)
             .NotEmpty().WithMessage("Địa điểm tổ chức không được để trống.")
             .MaximumLength(250).WithMessage("Địa điểm không được vượt quá 250 ký tự.");

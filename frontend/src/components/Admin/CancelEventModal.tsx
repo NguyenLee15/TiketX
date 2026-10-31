@@ -65,9 +65,9 @@ export default function CancelEventModal({
             <AlertOctagon className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h3 id="cancel-event-title" className="text-base font-bold text-white leading-tight">
+            <h2 id="cancel-event-title" className="text-base font-bold text-white leading-tight">
               Hủy Sự Kiện & Hoàn Tiền Vé
-            </h3>
+            </h2>
             <p className="text-xs text-text-secondary mt-0.5">Thao tác này sẽ chuyển sự kiện sang trạng thái Đã Hủy.</p>
           </div>
         </div>

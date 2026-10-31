@@ -175,6 +175,7 @@ export default function AdminEventsPage() {
       const apiErr = err as { response?: { status?: number; data?: { code?: string; message?: string } } };
       if (apiErr.response?.data?.code === 'EVENT_CONCURRENCY_CONFLICT' || apiErr.response?.status === 409) {
         toast.error('Sự kiện vừa được chỉnh sửa bởi quản trị viên khác. Đang tải lại dữ liệu...');
+        setModalState(current => ({ ...current, form: { ...current.form, open: false } }));
         await fetchEvents();
       } else {
         toast.error(apiErr.response?.data?.message || 'Thao tác thất bại');

@@ -2773,4 +2773,104 @@ describe('Admin Portal Remediation Verification', () => {
     });
   });
 
+  describe('Admin Portal Deep Audit & Remediation (Round 31)', () => {
+    it('ConfirmModal and CancelEventModal render level 2 headings for accessible dialog hierarchy', () => {
+      const { rerender } = render(
+        <ConfirmModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+          title="Xác nhận thay đổi quyền"
+          message="Bạn có chắc chắn?"
+        />
+      );
+
+      const confirmHeading = screen.getByRole('heading', { level: 2, name: /Xác nhận thay đổi quyền/i });
+      expect(confirmHeading).toBeInTheDocument();
+      expect(confirmHeading).toHaveAttribute('id', 'confirm-modal-title');
+
+      rerender(
+        <CancelEventModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+          eventTitle="Đại Nhạc Hội Mùa Hè"
+        />
+      );
+
+      const cancelHeading = screen.getByRole('heading', { level: 2, name: /Hủy Sự Kiện & Hoàn Tiền Vé/i });
+      expect(cancelHeading).toBeInTheDocument();
+      expect(cancelHeading).toHaveAttribute('id', 'cancel-event-title');
+    });
+
+    it('AdminEventsTable and AdminUsersTable render accessible sr-only level 2 headings', () => {
+      const { rerender } = render(
+        <MemoryRouter>
+          <AdminEventsTable
+            events={[mockEvent]}
+            totalCount={1}
+            page={1}
+            totalPages={1}
+            onPageChange={vi.fn()}
+            onEdit={vi.fn()}
+            onCancel={vi.fn()}
+            onDelete={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const eventsHeading = screen.getByRole('heading', { level: 2, name: /Danh sách sự kiện/i });
+      expect(eventsHeading).toBeInTheDocument();
+      expect(eventsHeading).toHaveClass('sr-only');
+
+      const mockUserItem = {
+        id: 'u-round31',
+        name: 'Nguyễn Quản Trị',
+        email: 'admin31@tickex.vn',
+        phone: '0901234567',
+        role: 'Admin',
+        isBlocked: false,
+        createdAt: '2026-10-31T00:00:00Z',
+      };
+
+      rerender(
+        <MemoryRouter>
+          <AdminUsersTable
+            users={[mockUserItem]}
+            totalCount={1}
+            page={1}
+            totalPages={1}
+            isSubmitting={false}
+            onPageChange={vi.fn()}
+            onRequestChangeRole={vi.fn()}
+            onRequestToggleBlock={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const usersHeading = screen.getByRole('heading', { level: 2, name: /Danh sách tài khoản người dùng/i });
+      expect(usersHeading).toBeInTheDocument();
+      expect(usersHeading).toHaveClass('sr-only');
+    });
+
+    it('AdminEventActions desktop buttons include focus-visible rings and disabled styling', () => {
+      render(
+        <AdminEventActions
+          event={{ ...mockEvent, isDeleted: true }}
+          onEdit={vi.fn()}
+          onCancel={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      );
+
+      const editBtn = screen.getByRole('button', { name: new RegExp(`Chỉnh sửa sự kiện ${mockEvent.title}`, 'i') });
+      const deleteBtn = screen.getByRole('button', { name: new RegExp(`Xóa sự kiện ${mockEvent.title}`, 'i') });
+
+      expect(editBtn).toHaveClass('focus-visible:ring-2');
+      expect(deleteBtn).toHaveClass('focus-visible:ring-2');
+      expect(deleteBtn).toHaveClass('disabled:opacity-40');
+      expect(deleteBtn).toBeDisabled();
+    });
+  });
+
 });
