@@ -5,7 +5,7 @@ using TickeX.Application.Interfaces;
 namespace TickeX.Application.Admin.Queries;
 
 public sealed record GetRefundRequestsQuery(int Page = 1, int PageSize = 25) : IRequest<RefundRequestPage>;
-public sealed record RefundRequestRow(Guid Id, Guid EventId, Guid TicketId, decimal Amount, string Status, int Attempts, string? ProviderStatus, string? ProviderReference, string? LastError, DateTime CreatedAt, DateTime? NextAttemptAt);
+public sealed record RefundRequestRow(Guid Id, Guid EventId, Guid TicketId, decimal Amount, string Status, int Attempts, string? ProviderStatus, string? ProviderReference, string? LastError, DateTime CreatedAt, DateTime? NextAttemptAt, string? Version = null);
 public sealed record RefundRequestPage(IReadOnlyList<RefundRequestRow> Items, int Page, int PageSize, int TotalCount);
 
 public sealed class GetRefundRequestsQueryHandler(IApplicationDbContext context) : IRequestHandler<GetRefundRequestsQuery, RefundRequestPage>
@@ -30,7 +30,8 @@ public sealed class GetRefundRequestsQueryHandler(IApplicationDbContext context)
                 x.ProviderReference,
                 x.LastError,
                 x.CreatedAt,
-                x.NextAttemptAt
+                x.NextAttemptAt,
+                x.Version
             })
             .ToListAsync(cancellationToken);
 
@@ -45,7 +46,8 @@ public sealed class GetRefundRequestsQueryHandler(IApplicationDbContext context)
             x.ProviderReference,
             SanitizeError(x.LastError),
             x.CreatedAt,
-            x.NextAttemptAt
+            x.NextAttemptAt,
+            x.Version != null && x.Version.Length > 0 ? Convert.ToBase64String(x.Version) : null
         )).ToList();
 
         return new RefundRequestPage(items, page, pageSize, count);

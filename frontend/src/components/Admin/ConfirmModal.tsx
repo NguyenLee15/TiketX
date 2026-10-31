@@ -50,7 +50,7 @@ export default function ConfirmModal({
           type="button"
           onClick={onClose}
           disabled={isLoading}
-          className="absolute top-4 right-4 p-1.5 rounded-full text-text-tertiary hover:text-white hover:bg-surface-2 transition-colors disabled:opacity-40"
+          className="absolute top-4 right-4 min-h-11 min-w-11 flex items-center justify-center p-1.5 rounded-full text-text-tertiary hover:text-white hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-40"
           aria-label={closeAriaLabel}
         >
           <X className="w-4 h-4" aria-hidden="true" />

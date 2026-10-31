@@ -202,7 +202,7 @@ public class TicketsController : ControllerBase
     public async Task<IActionResult> CheckIn([FromBody] CheckInRequest request, CancellationToken cancellationToken = default)
     {
         var staffUserIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(staffUserIdString) || !Guid.TryParse(staffUserIdString, out var staffUserId))
+        if (string.IsNullOrEmpty(staffUserIdString) || !Guid.TryParse(staffUserIdString, out var staffUserId) || staffUserId == Guid.Empty)
         {
             return Unauthorized(new 
             { 

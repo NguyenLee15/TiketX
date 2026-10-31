@@ -2,6 +2,8 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using TickeX.Application.Admin.Commands;
+using TickeX.Application.Admin.Queries;
 using TickeX.Application.Events.Commands;
 using TickeX.Application.Interfaces;
 using TickeX.Domain.Entities;
@@ -430,5 +432,92 @@ public class EventConcurrencyAndAdminAuditTests : IDisposable
         var log = await _context.AuditLogs.FirstOrDefaultAsync(l => l.Action == "REFUND_BANK_ACCOUNT_UPDATED");
         log.Should().NotBeNull();
         log!.UserEmail.Should().Be("bob@test.local");
+    }
+
+    [Fact]
+    public async Task GetRefundRequestsQuery_ProjectsNonEmptyBase64Version()
+    {
+        var refund = new RefundRequest(Guid.NewGuid(), Guid.NewGuid(), 150000m, "idem-test-version");
+        _context.RefundRequests.Add(refund);
+        await _context.SaveChangesAsync();
+
+        var handler = new GetRefundRequestsQueryHandler(_context);
+        var result = await handler.Handle(new GetRefundRequestsQuery(1, 10), CancellationToken.None);
+
+        result.Items.Should().ContainSingle();
+        var item = result.Items[0];
+        item.Version.Should().NotBeNullOrWhiteSpace();
+        Convert.FromBase64String(item.Version!).Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task RetryRefundRequest_WhenLockAcquisitionThrows_ReturnsReconciliationLockUnavailable()
+    {
+        var refund = new RefundRequest(Guid.NewGuid(), Guid.NewGuid(), 100000m, "idem-lock-test");
+        _context.RefundRequests.Add(refund);
+        await _context.SaveChangesAsync();
+
+        var locksMock = new Mock<IDistributedLockService>();
+        locksMock.Setup(l => l.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Redis unavailable"));
+
+        var handler = new RetryRefundRequestCommandHandler(
+            _context,
+            Mock.Of<IPayOSPayoutService>(),
+            Mock.Of<IRefundBankAccountProtector>(),
+            locksMock.Object);
+
+        var result = await handler.Handle(new RetryRefundRequestCommand(refund.Id), CancellationToken.None);
+        result.Should().Be("REFUND_RECONCILIATION_LOCK_UNAVAILABLE");
+    }
+
+    [Fact]
+    public async Task RetryRefundRequest_WhenLeaseIsInvalid_ReturnsReconciliationLockLost()
+    {
+        var refund = new RefundRequest(Guid.NewGuid(), Guid.NewGuid(), 100000m, "idem-lease-lost-test");
+        _context.RefundRequests.Add(refund);
+        await _context.SaveChangesAsync();
+
+        var leaseMock = new Mock<IDistributedLockLease>();
+        leaseMock.SetupGet(l => l.IsValid).Returns(false);
+
+        var locksMock = new Mock<IDistributedLockService>();
+        locksMock.Setup(l => l.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(leaseMock.Object);
+
+        var handler = new RetryRefundRequestCommandHandler(
+            _context,
+            Mock.Of<IPayOSPayoutService>(),
+            Mock.Of<IRefundBankAccountProtector>(),
+            locksMock.Object);
+
+        var result = await handler.Handle(new RetryRefundRequestCommand(refund.Id), CancellationToken.None);
+        result.Should().Be("REFUND_RECONCILIATION_LOCK_LOST");
+    }
+
+    [Fact]
+    public async Task RetryRefundRequest_WhenExpectedVersionMismatches_ReturnsRefundConcurrencyConflict()
+    {
+        var refund = new RefundRequest(Guid.NewGuid(), Guid.NewGuid(), 100000m, "idem-stale-version-test");
+        refund.MarkNeedsReview("Terminal error", "FAILED");
+        _context.RefundRequests.Add(refund);
+        await _context.SaveChangesAsync();
+
+        var leaseMock = new Mock<IDistributedLockLease>();
+        leaseMock.SetupGet(l => l.IsValid).Returns(true);
+
+        var locksMock = new Mock<IDistributedLockService>();
+        locksMock.Setup(l => l.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(leaseMock.Object);
+
+        var staleVersion = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        var handler = new RetryRefundRequestCommandHandler(
+            _context,
+            Mock.Of<IPayOSPayoutService>(),
+            Mock.Of<IRefundBankAccountProtector>(),
+            locksMock.Object);
+
+        var result = await handler.Handle(new RetryRefundRequestCommand(refund.Id, staleVersion), CancellationToken.None);
+        result.Should().Be("REFUND_CONCURRENCY_CONFLICT");
     }
 }

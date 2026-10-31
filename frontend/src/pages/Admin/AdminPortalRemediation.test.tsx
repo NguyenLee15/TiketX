@@ -3016,4 +3016,191 @@ describe('Admin Portal Remediation Verification', () => {
       expect(setupBtn).toHaveClass('focus-visible:ring-2');
     });
   });
+
+  describe('Admin Portal Deep Audit & Remediation (Round 34)', () => {
+    it('AdminRefundsPage passes expectedVersion in query params when retrying refund and buttons have min-h-11', async () => {
+      const mockRefunds = {
+        items: [
+          {
+            id: 'refund-12345678',
+            eventId: 'event-1',
+            ticketId: 'ticket-1',
+            amount: 250000,
+            status: 'NeedsReview',
+            attempts: 3,
+            providerStatus: 'FAILED',
+            providerReference: 'payos-ref-1',
+            lastError: 'Bank reject',
+            createdAt: '2026-10-31T10:00:00Z',
+            nextAttemptAt: null,
+            version: 'version-base64-abc',
+          },
+        ],
+        page: 1,
+        pageSize: 25,
+        totalCount: 1,
+      };
+
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: mockRefunds,
+        },
+      });
+
+      vi.mocked(api.post).mockResolvedValueOnce({
+        data: {
+          success: true,
+          code: 'REFUND_RETRY_QUEUED',
+        },
+      });
+
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <AdminRefundsPage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      const retryBtn = await screen.findByRole('button', { name: /Đối soát lại yêu cầu refund-1/i });
+      expect(retryBtn).toBeInTheDocument();
+      expect(retryBtn).toHaveClass('min-h-11');
+      expect(retryBtn).toHaveClass('focus-visible:ring-2');
+
+      fireEvent.click(retryBtn);
+
+      await waitFor(() => {
+        expect(api.post).toHaveBeenCalledWith(
+          '/api/admin/refunds/refund-12345678/retries',
+          null,
+          { params: { expectedVersion: 'version-base64-abc' } }
+        );
+      });
+    });
+
+    it('AdminEventsPage closes CancelEventModal when receiving 409 concurrency conflict', async () => {
+      const mockEvents = [
+        {
+          id: 'event-cancel-1',
+          title: 'Sự kiện cần hủy',
+          description: 'Mô tả',
+          date: '2026-12-01T19:00:00Z',
+          endDate: '2026-12-01T22:00:00Z',
+          location: 'Hà Nội',
+          venueName: 'Nhà hát lớn',
+          totalSeats: 100,
+          category: 'Music',
+          imageUrl: 'https://example.com/img.jpg',
+          bannerUrl: '',
+          organizerName: 'Organizer',
+          basePrice: 100000,
+          status: 'Published',
+          refundCutoffHours: 24,
+          version: 'version-ev-1',
+          totalTickets: 0,
+          paidTickets: 0,
+          grossRevenue: 0,
+        },
+      ];
+
+      vi.mocked(api.get).mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            items: mockEvents,
+            totalCount: 1,
+            totalPages: 1,
+            page: 1,
+            pageSize: 10,
+          },
+        },
+      });
+
+      vi.mocked(api.post).mockRejectedValueOnce({
+        response: {
+          status: 409,
+          data: { code: 'EVENT_CONCURRENCY_CONFLICT', message: 'Sự kiện vừa được chỉnh sửa' },
+        },
+      });
+
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <AdminEventsPage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      await screen.findAllByText('Sự kiện cần hủy');
+
+      const cancelButtons = screen.getAllByRole('button', { name: /Hủy sự kiện Sự kiện cần hủy/i });
+      fireEvent.click(cancelButtons[0]);
+
+      const cancelModalHeading = await screen.findByRole('heading', { name: /Hủy Sự Kiện & Hoàn Tiền Vé/i });
+      expect(cancelModalHeading).toBeInTheDocument();
+
+      const reasonInput = screen.getByLabelText(/Lý do hủy sự kiện/i);
+      fireEvent.change(reasonInput, { target: { value: 'Thời tiết xấu' } });
+
+      const confirmCancelBtn = screen.getByRole('button', { name: /Xác Nhận Hủy Sự Kiện/i });
+      fireEvent.click(confirmCancelBtn);
+
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: /Hủy Sự Kiện & Hoàn Tiền Vé/i })).not.toBeInTheDocument();
+      });
+    });
+
+    it('EventModal, CancelEventModal, and ConfirmModal close buttons have min-h-11, min-w-11 and focus-visible:ring-2', () => {
+      const { unmount: unmountEventModal } = render(
+        <EventModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSubmit={vi.fn()}
+        />
+      );
+      const eventModalClose = screen.getByRole('button', { name: /Đóng cửa sổ sự kiện/i });
+      expect(eventModalClose).toHaveClass('min-h-11');
+      expect(eventModalClose).toHaveClass('min-w-11');
+      expect(eventModalClose).toHaveClass('focus-visible:ring-2');
+      unmountEventModal();
+
+      const { unmount: unmountCancelModal } = render(
+        <CancelEventModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+          eventTitle="Test Event"
+        />
+      );
+      const cancelModalClose = screen.getByRole('button', { name: /Đóng hộp thoại hủy sự kiện/i });
+      expect(cancelModalClose).toHaveClass('min-h-11');
+      expect(cancelModalClose).toHaveClass('min-w-11');
+      expect(cancelModalClose).toHaveClass('focus-visible:ring-2');
+      unmountCancelModal();
+
+      render(
+        <ConfirmModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+          title="Xác nhận"
+          message="Bạn có chắc chắn?"
+          closeAriaLabel="Đóng hộp thoại xác nhận"
+        />
+      );
+      const confirmModalClose = screen.getByRole('button', { name: /Đóng hộp thoại xác nhận/i });
+      expect(confirmModalClose).toHaveClass('min-h-11');
+      expect(confirmModalClose).toHaveClass('min-w-11');
+      expect(confirmModalClose).toHaveClass('focus-visible:ring-2');
+    });
+  });
 });

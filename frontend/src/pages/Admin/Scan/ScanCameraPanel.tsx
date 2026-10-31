@@ -30,14 +30,14 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
 
     if (!cameraActive) {
       if (scannerRef.current) {
-        if (scannerRef.current.isScanning) {
-          scannerRef.current.stop().catch(() => {}).finally(() => {
-            scannerRef.current?.clear();
-            scannerRef.current = null;
+        const activeScanner = scannerRef.current;
+        scannerRef.current = null;
+        if (activeScanner.isScanning) {
+          activeScanner.stop().catch(() => {}).finally(() => {
+            activeScanner.clear();
           });
         } else {
-          scannerRef.current.clear();
-          scannerRef.current = null;
+          activeScanner.clear();
         }
       }
       return;
@@ -93,14 +93,14 @@ export const ScanCameraPanel: React.FC<ScanCameraPanelProps> = ({ onScanToken, i
       startCancelled = true;
       clearTimeout(timer);
       if (scannerRef.current) {
-        if (scannerRef.current.isScanning) {
-          scannerRef.current.stop().catch(() => {}).finally(() => {
-            scannerRef.current?.clear();
-            scannerRef.current = null;
+        const activeScanner = scannerRef.current;
+        scannerRef.current = null;
+        if (activeScanner.isScanning) {
+          activeScanner.stop().catch(() => {}).finally(() => {
+            activeScanner.clear();
           });
         } else {
-          scannerRef.current.clear();
-          scannerRef.current = null;
+          activeScanner.clear();
         }
       }
     };

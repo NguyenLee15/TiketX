@@ -124,7 +124,7 @@ export default function EventModal({ isOpen, onClose, onSubmit, event, isLoading
           type="button"
           onClick={onClose}
           disabled={isLoading}
-          className="absolute top-5 right-5 p-1.5 bg-surface-2 hover:bg-surface-3 rounded-full text-text-secondary hover:text-white transition-colors disabled:opacity-40"
+          className="absolute top-5 right-5 min-h-11 min-w-11 flex items-center justify-center p-1.5 bg-surface-2 hover:bg-surface-3 rounded-full text-text-secondary hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary disabled:opacity-40"
           aria-label="Đóng cửa sổ sự kiện"
         >
           <X className="w-4 h-4" aria-hidden="true" />

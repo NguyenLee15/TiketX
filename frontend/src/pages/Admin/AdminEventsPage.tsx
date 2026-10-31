@@ -238,6 +238,7 @@ export default function AdminEventsPage() {
       const apiErr = err as { response?: { status?: number; data?: { code?: string; message?: string } } };
       if (apiErr.response?.status === 409 || apiErr.response?.data?.code === 'EVENT_CONCURRENCY_CONFLICT') {
         toast.error('Sự kiện vừa được chỉnh sửa bởi quản trị viên khác. Vui lòng tải lại dữ liệu.');
+        setModalState(current => ({ ...current, cancelTarget: null }));
         await fetchEvents();
       } else {
         toast.error(apiErr.response?.data?.message || 'Không thể hủy sự kiện.');

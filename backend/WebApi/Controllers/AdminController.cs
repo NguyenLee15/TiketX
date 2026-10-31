@@ -109,6 +109,19 @@ public class AdminController : ControllerBase
                 traceId = HttpContext.TraceIdentifier,
                 error = new { code = result, message = "Yêu cầu hoàn tiền đang được xử lý đồng thời bởi tác vụ khác. Vui lòng tải lại dữ liệu mới nhất." }
             }),
+            "REFUND_RECONCILIATION_LOCK_UNAVAILABLE" or "REFUND_RECONCILIATION_LOCK_LOST" => StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                type = "https://tools.ietf.org/html/rfc9457",
+                title = "Service Unavailable",
+                status = StatusCodes.Status503ServiceUnavailable,
+                success = false,
+                code = result,
+                message = "Dịch vụ đối soát hoàn tiền đang bận hoặc gián đoạn kết nối. Vui lòng thử lại sau.",
+                detail = "Dịch vụ đối soát hoàn tiền đang bận hoặc gián đoạn kết nối. Vui lòng thử lại sau.",
+                instance = HttpContext.Request.Path.Value,
+                traceId = HttpContext.TraceIdentifier,
+                error = new { code = result, message = "Dịch vụ đối soát hoàn tiền đang bận hoặc gián đoạn kết nối. Vui lòng thử lại sau." }
+            }),
             _ => Conflict(new 
             { 
                 type = "https://tools.ietf.org/html/rfc9457",
@@ -174,7 +187,7 @@ public class AdminController : ControllerBase
                 error = new { code = "INVALID_VERSION", message = "Phiên bản dữ liệu người dùng không hợp lệ." } 
             });
         var currentAdminIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(currentAdminIdStr) || !Guid.TryParse(currentAdminIdStr, out var currentAdminId))
+        if (string.IsNullOrEmpty(currentAdminIdStr) || !Guid.TryParse(currentAdminIdStr, out var currentAdminId) || currentAdminId == Guid.Empty)
             return UnauthorizedEnvelope("Không xác định được danh tính quản trị viên từ token.");
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
@@ -182,7 +195,7 @@ public class AdminController : ControllerBase
         var result = await _adminUserOperations.ChangeRoleAsync(new ChangeUserRoleCommand(
             id, 
             request.Role, 
-            currentAdminId == Guid.Empty ? null : currentAdminId,
+            currentAdminId,
             adminEmail,
             ipAddress,
             expectedVersion
@@ -241,7 +254,7 @@ public class AdminController : ControllerBase
                 error = new { code = "INVALID_VERSION", message = "Phiên bản dữ liệu người dùng không hợp lệ." } 
             });
         var currentAdminIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(currentAdminIdStr) || !Guid.TryParse(currentAdminIdStr, out var currentAdminId))
+        if (string.IsNullOrEmpty(currentAdminIdStr) || !Guid.TryParse(currentAdminIdStr, out var currentAdminId) || currentAdminId == Guid.Empty)
             return UnauthorizedEnvelope("Không xác định được danh tính quản trị viên từ token.");
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
@@ -249,7 +262,7 @@ public class AdminController : ControllerBase
         var result = await _adminUserOperations.SetBlockedAsync(new BlockUserCommand(
             id, 
             request.IsBlocked, 
-            currentAdminId == Guid.Empty ? null : currentAdminId,
+            currentAdminId,
             adminEmail,
             ipAddress,
             expectedVersion

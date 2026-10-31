@@ -140,6 +140,7 @@ export const adminRefundItemSchema = z.object({
   lastError: z.string().nullable(),
   createdAt: z.string(),
   nextAttemptAt: z.string().nullable(),
+  version: z.string().optional().nullable(),
 }).passthrough();
 
 export const adminRefundsPagedResponseSchema = z.object({

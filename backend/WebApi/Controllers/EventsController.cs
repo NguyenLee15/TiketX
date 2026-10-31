@@ -126,7 +126,7 @@ public class EventsController : ControllerBase
             });
 
         var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId))
+        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId) || adminUserId == Guid.Empty)
             return UnauthorizedEnvelope("Không xác định được danh tính quản trị viên từ token.");
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
@@ -227,7 +227,7 @@ public class EventsController : ControllerBase
             });
 
         var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId))
+        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId) || adminUserId == Guid.Empty)
             return UnauthorizedEnvelope("Không xác định được danh tính quản trị viên từ token.");
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
@@ -294,7 +294,7 @@ public class EventsController : ControllerBase
                 error = new { code = "INVALID_REQUEST", message = "Thiếu lý do hủy sự kiện." } 
             });
         var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId))
+        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId) || adminUserId == Guid.Empty)
             return UnauthorizedEnvelope("Không xác định được danh tính quản trị viên từ token.");
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
@@ -326,7 +326,7 @@ public class EventsController : ControllerBase
     public async Task<IActionResult> DeleteEvent(Guid id, [FromQuery] string? expectedVersion = null, CancellationToken cancellationToken = default)
     {
         var adminUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId))
+        if (string.IsNullOrEmpty(adminUserIdStr) || !Guid.TryParse(adminUserIdStr, out var adminUserId) || adminUserId == Guid.Empty)
             return UnauthorizedEnvelope("Không xác định được danh tính quản trị viên từ token.");
         var adminEmail = User.FindFirstValue(ClaimTypes.Email) ?? "admin@tickex.com";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
