@@ -229,14 +229,14 @@ export default function EventDetailPage() {
 
   if (!event) {
     return (
-      <div className="text-center p-16 surface-panel mt-8">
+      <div role={loadError ? "alert" : "status"} className="text-center p-16 surface-panel mt-8">
         <div className="w-20 h-20 bg-danger/10 rounded-full flex items-center justify-center mx-auto mb-6">
           <Info className="w-10 h-10 text-danger" aria-hidden="true" />
         </div>
         <h1 className="text-2xl font-display font-bold text-white mb-2">{loadError ? 'Không thể tải sự kiện' : 'Không tìm thấy sự kiện'}</h1>
         <p className="text-text-secondary">Kiểm tra kết nối rồi thử lại.</p>
         <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
-          <button type="button" onClick={() => void refetchEvent()} className="inline-flex px-6 py-3 bg-brand-primary text-white rounded-xl font-medium focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">Thử lại</button>
+          <button type="button" aria-label="Thử lại tải sự kiện" onClick={() => void refetchEvent()} className="inline-flex px-6 py-3 bg-brand-primary text-white rounded-xl font-medium focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer">Thử lại</button>
           <Link to="/" className="inline-flex px-6 py-3 bg-surface-3 hover:bg-surface-2 text-white rounded-xl transition-colors font-medium">
             Quay lại danh sách sự kiện
           </Link>

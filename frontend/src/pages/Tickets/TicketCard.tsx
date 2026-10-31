@@ -184,6 +184,8 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
                   type="button"
                   onClick={() => onResumePayment(ticket)}
                   disabled={isResuming || isReleasing}
+                  aria-busy={isResuming}
+                  aria-label={`Tiếp tục thanh toán vé sự kiện ${ticket.eventTitle}`}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-primary hover:bg-brand-primary/90 text-white font-bold transition-colors text-xs whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isResuming ? (
@@ -201,6 +203,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
                   onClick={() => onReleaseReservation(ticket)}
                   disabled={isResuming || isReleasing}
                   aria-busy={isReleasing}
+                  aria-label={`Hủy giữ chỗ vé sự kiện ${ticket.eventTitle}`}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-3 hover:bg-danger/20 text-text-secondary hover:text-danger border border-border-subtle hover:border-danger/40 font-bold transition-colors text-xs whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isReleasing ? (
@@ -229,6 +232,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
                 onClick={() => onInitiateRefund(ticket)}
                 disabled={refundingId === ticket.id}
                 aria-busy={refundingId === ticket.id}
+                aria-label={`Yêu cầu hoàn vé sự kiện ${ticket.eventTitle}`}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-danger/10 hover:bg-danger/20 text-danger border border-danger/30 font-bold transition-colors text-xs whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed"
               >
                 {refundingId === ticket.id ? (
@@ -275,6 +279,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
           onClick={handleDownloadPdf}
           disabled={!canShowQr || isDownloadingPdf}
           aria-busy={isDownloadingPdf}
+          aria-label={`Tải file vé PDF chuẩn cho sự kiện ${ticket.eventTitle}`}
           className="flex items-center justify-center w-full py-2.5 bg-surface-3 hover:bg-surface-2 border border-border-subtle hover:border-brand-primary text-white text-xs font-bold rounded-xl transition-[background-color,border-color,opacity,transform] shadow-md group/btn active:scale-95 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-subtle cursor-pointer"
         >
           {isDownloadingPdf ? (

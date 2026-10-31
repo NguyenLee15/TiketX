@@ -50,6 +50,7 @@ import { AdminDashboardEmptyState } from './Dashboard/AdminDashboardEmptyState';
 import { EventSeatMatrixSection } from '../../components/Admin/EventModal/EventSeatMatrixSection';
 import PaymentResultCard from '../PaymentResultCard';
 import { CheckoutInvoice } from '../../components/Checkout/CheckoutInvoice';
+import { EventCard } from '../../components/Discovery/EventCard';
 
 const mockScannerStart = vi.fn().mockResolvedValue(undefined);
 const mockScannerStop = vi.fn().mockResolvedValue(undefined);
@@ -1651,6 +1652,102 @@ describe('Admin Portal Remediation Verification', () => {
       expect(retryBtn).toBeInTheDocument();
       expect(retryBtn).toHaveAttribute('type', 'button');
     });
+
+    it('TicketCard renders contextual aria-label incorporating eventTitle for payment, release, refund, and download', () => {
+      const mockTicket = {
+        id: 'ticket-999',
+        eventId: 'event-1',
+        eventTitle: 'Rock Fest 2026',
+        eventDate: '2026-11-20T19:00:00Z',
+        location: 'Sân vận động Mỹ Đình',
+        venueName: 'Mỹ Đình',
+        row: 'B',
+        number: 5,
+        tier: 1,
+        price: 350000,
+        status: 'Pending',
+        qrCodeSignature: 'sig999',
+        refundCutoffHours: 48,
+        canRefund: false,
+      };
+
+      const { rerender } = render(
+        <MemoryRouter>
+          <TicketCard
+            ticket={mockTicket as any}
+            refundingId={null}
+            onInitiateRefund={vi.fn()}
+            onResumePayment={vi.fn()}
+            onReleaseReservation={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const resumeBtn = screen.getByRole('button', { name: /Tiếp tục thanh toán vé sự kiện Rock Fest 2026/i });
+      expect(resumeBtn).toBeInTheDocument();
+
+      const releaseBtn = screen.getByRole('button', { name: /Hủy giữ chỗ vé sự kiện Rock Fest 2026/i });
+      expect(releaseBtn).toBeInTheDocument();
+
+      const paidTicket = {
+        ...mockTicket,
+        status: 'Paid',
+        canRefund: true,
+      };
+
+      rerender(
+        <MemoryRouter>
+          <TicketCard
+            ticket={paidTicket as any}
+            refundingId={null}
+            onInitiateRefund={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const refundBtn = screen.getByRole('button', { name: /Yêu cầu hoàn vé sự kiện Rock Fest 2026/i });
+      expect(refundBtn).toBeInTheDocument();
+
+      const downloadBtn = screen.getByRole('button', { name: /Tải file vé PDF chuẩn cho sự kiện Rock Fest 2026/i });
+      expect(downloadBtn).toBeInTheDocument();
+    });
+
+    it('EventCard renders accessible aria-label for featured and standard view', () => {
+      const testEvent: EventModel = {
+        id: 'event-featured-1',
+        title: 'Hòa Nhạc Giao Hưởng Mùa Đông',
+        description: 'Đêm nhạc thính phòng',
+        date: '2026-12-15T20:00:00Z',
+        location: 'Nhà hát Lớn Hà Nội',
+        venueName: 'Nhà hát Lớn',
+        category: 'Classical',
+        imageUrl: 'https://example.com/winter.jpg',
+        totalSeats: 300,
+        availableSeatsCount: 50,
+        basePrice: 600000,
+        status: 1,
+        version: '1',
+      };
+
+      const { rerender } = render(
+        <MemoryRouter>
+          <EventCard event={testEvent} featured={true} />
+        </MemoryRouter>
+      );
+
+      const featuredLink = screen.getByRole('link', { name: /Xem sự kiện Hòa Nhạc Giao Hưởng Mùa Đông/i });
+      expect(featuredLink).toBeInTheDocument();
+
+      rerender(
+        <MemoryRouter>
+          <EventCard event={testEvent} featured={false} />
+        </MemoryRouter>
+      );
+
+      const standardLink = screen.getByRole('link', { name: /Chọn chỗ sự kiện Hòa Nhạc Giao Hưởng Mùa Đông/i });
+      expect(standardLink).toBeInTheDocument();
+    });
+
   });
 
 });

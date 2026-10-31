@@ -23,7 +23,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
               <p className="line-clamp-3 text-base leading-relaxed text-text-secondary">{event.description}</p>
               <EventMeta event={event} />
             </div>
-            <Link to={`/events/${event.id}`} className="inline-flex min-h-11 w-fit items-center gap-2 rounded-lg bg-brand-primary px-5 text-sm font-bold text-white transition-colors hover:bg-brand-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">Xem sự kiện <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+            <Link to={`/events/${event.id}`} aria-label={`Xem sự kiện ${event.title}`} className="inline-flex min-h-11 w-fit items-center gap-2 rounded-lg bg-brand-primary px-5 text-sm font-bold text-white transition-colors hover:bg-brand-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">Xem sự kiện <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
           </div>
         </div>
       </article>
@@ -31,7 +31,7 @@ export function EventCard({ event, featured = false }: EventCardProps) {
   }
 
   return (
-    <Link to={`/events/${event.id}`} className="group surface-raised flex h-full flex-col overflow-hidden transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-brand-primary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">
+    <Link to={`/events/${event.id}`} aria-label={`${event.availableSeatsCount === 0 ? 'Xem chi tiết' : 'Chọn chỗ'} sự kiện ${event.title}`} className="group surface-raised flex h-full flex-col overflow-hidden transition-[border-color,transform] duration-200 hover:-translate-y-1 hover:border-brand-primary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">
       <div className="relative aspect-[16/10] overflow-hidden bg-surface-0">
         <ResilientImage src={event.imageUrl} alt={event.title} width="640" height="400" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" fallbackClassName="flex h-full w-full items-center justify-center bg-surface-3 text-text-tertiary" />
         <span className="absolute left-3 top-3 rounded-md bg-surface-0/85 px-2.5 py-1 text-xs font-semibold text-text-primary">{event.category}</span>

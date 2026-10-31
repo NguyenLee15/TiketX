@@ -92,16 +92,20 @@ export default function DashboardPage() {
           </div>
         ) : loadError ? (
           <StatePanel
+            role="alert"
             title="Không thể tải danh sách sự kiện"
             message="Kiểm tra kết nối rồi thử lại."
             actionLabel="Thử lại"
+            actionAriaLabel="Thử lại tải danh sách sự kiện"
             onAction={() => void refetch()}
           />
         ) : events.length === 0 ? (
           <StatePanel
+            role="status"
             title="Chưa có sự kiện phù hợp"
             message="Thử từ khóa hoặc danh mục khác."
             actionLabel="Đặt lại bộ lọc"
+            actionAriaLabel="Đặt lại bộ lọc tìm kiếm sự kiện"
             onAction={resetFilters}
           />
         ) : (
@@ -147,17 +151,20 @@ interface StatePanelProps {
   message: string;
   actionLabel: string;
   onAction: () => void;
+  role?: 'alert' | 'status';
+  actionAriaLabel?: string;
 }
 
-function StatePanel({ title, message, actionLabel, onAction }: StatePanelProps) {
+function StatePanel({ title, message, actionLabel, onAction, role, actionAriaLabel }: StatePanelProps) {
   return (
-    <div className="surface-panel flex flex-col items-center justify-center px-6 py-16 text-center">
+    <div role={role} className="surface-panel flex flex-col items-center justify-center px-6 py-16 text-center">
       <RotateCcw className="mb-4 h-8 w-8 text-brand-primary" aria-hidden="true" />
       <h3 className="text-xl font-display font-bold text-text-primary">{title}</h3>
       <p className="mt-2 text-base text-text-secondary">{message}</p>
       <button
         type="button"
         onClick={onAction}
+        aria-label={actionAriaLabel ?? actionLabel}
         className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-brand-primary px-5 text-sm font-bold text-white hover:bg-brand-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer"
       >
         {actionLabel}
