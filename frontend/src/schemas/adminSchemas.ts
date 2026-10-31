@@ -112,6 +112,7 @@ export const adminUsersPagedResponseSchema = z.union([
 
 export const scanTicketDataSchema = z.object({
   ticketId: z.string().min(1),
+  eventId: z.string().optional(),
   eventTitle: z.string().min(1),
   attendeeName: z.string().default(''),
   attendeeEmail: z.string().nullish().transform(v => v ?? undefined),
@@ -122,3 +123,31 @@ export const scanTicketDataSchema = z.object({
   orderCode: z.union([z.number(), z.string()]).transform(v => Number(v) || 0).optional(),
   checkedInAt: z.string().nullish().transform(v => v ?? undefined),
 }).passthrough();
+
+// ==========================================
+// 5. Admin Refunds Schemas
+// ==========================================
+
+export const adminRefundItemSchema = z.object({
+  id: z.string(),
+  eventId: z.string(),
+  ticketId: z.string(),
+  amount: z.number(),
+  status: z.string(),
+  attempts: z.number(),
+  providerStatus: z.string().nullable(),
+  providerReference: z.string().nullable(),
+  lastError: z.string().nullable(),
+  createdAt: z.string(),
+  nextAttemptAt: z.string().nullable(),
+}).passthrough();
+
+export const adminRefundsPagedResponseSchema = z.object({
+  items: z.array(adminRefundItemSchema),
+  page: z.number(),
+  pageSize: z.number(),
+  totalCount: z.number(),
+}).passthrough();
+
+export type AdminRefundItem = z.infer<typeof adminRefundItemSchema>;
+export type AdminRefundsPagedResponse = z.infer<typeof adminRefundsPagedResponseSchema>;

@@ -40,6 +40,7 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-surface-0 flex flex-col md:flex-row text-text-primary relative overflow-hidden">
+      <a href="#admin-main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:rounded-lg">Bỏ qua đến nội dung chính</a>
       {/* Mobile Top App Bar (< md) */}
       <header className="md:hidden h-16 bg-surface-1 border-b border-border-subtle px-4 flex items-center justify-between shrink-0 sticky top-0 z-40">
         <Link to={currentRole === 'Staff' ? "/admin/scan-ticket" : "/admin"} className="flex items-center gap-2.5">
@@ -74,7 +75,7 @@ export default function AdminLayout() {
       )}
 
       {/* Mobile Slide-over Drawer (< md) */}
-      <div id="admin-mobile-navigation" ref={mobileDrawerRef} role="dialog" aria-modal="true" aria-hidden={!isMobileMenuOpen} inert={!isMobileMenuOpen || undefined} aria-label="Điều hướng quản trị" className={`fixed top-0 left-0 bottom-0 w-72 bg-surface-1 border-r border-border-subtle z-50 flex flex-col md:hidden transition-transform duration-300 ease-in-out motion-reduce:transition-none shadow-2xl ${
+      <div id="admin-mobile-navigation" ref={mobileDrawerRef} role="dialog" aria-modal="true" aria-hidden={!isMobileMenuOpen} inert={!isMobileMenuOpen || undefined} aria-label="Thanh điều hướng quản trị di động" className={`fixed top-0 left-0 bottom-0 w-72 bg-surface-1 border-r border-border-subtle z-50 flex flex-col md:hidden transition-transform duration-300 ease-in-out motion-reduce:transition-none shadow-2xl ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="h-16 flex items-center justify-between px-5 border-b border-border-subtle shrink-0">
@@ -96,7 +97,7 @@ export default function AdminLayout() {
           </button>
         </div>
 
-        <nav aria-label="Điều hướng quản trị" className="flex-1 overflow-y-auto py-5 px-3 space-y-1">
+        <nav aria-label="Thanh điều hướng quản trị di động" className="flex-1 overflow-y-auto py-5 px-3 space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
             return (
@@ -233,7 +234,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative z-10 bg-surface-0">
+      <main id="admin-main-content" tabIndex={-1} className="flex-1 overflow-y-auto relative z-10 bg-surface-0 focus:outline-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 min-h-full">
           <div className="animate-slide-up">
             <Outlet />

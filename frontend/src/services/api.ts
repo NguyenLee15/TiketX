@@ -2,6 +2,7 @@ import axios from 'axios';
 
 import { useAuthStore } from '../stores/useAuthStore';
 import { readCsrfToken } from '../utils/csrf';
+import { authRefreshResponseSchema } from '../schemas/customerSchemas';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -105,17 +106,17 @@ api.interceptors.response.use(
 
       try {
         const refreshResponse = await api.post('/api/auth/refresh', {});
+        const parseResult = authRefreshResponseSchema.safeParse(refreshResponse.data?.data);
 
-        const refreshData = refreshResponse.data?.data;
-        const newToken = refreshData?.token ?? null;
-
-        if (refreshResponse.data?.success && refreshData) {
+        if (refreshResponse.data?.success && parseResult.success) {
+          const refreshData = parseResult.data;
+          const newToken = refreshData.token ?? null;
           useAuthStore.getState().setAuth(
             {
-              id: refreshData.userId || refreshData.user?.id,
-              name: refreshData.name || refreshData.user?.name || '',
-              email: refreshData.email || refreshData.user?.email || '',
-              role: refreshData.role || refreshData.user?.role || 'Customer',
+              id: refreshData.userId,
+              name: refreshData.name || '',
+              email: refreshData.email || '',
+              role: refreshData.role || 'Customer',
               avatarUrl: refreshData.avatarUrl || useAuthStore.getState().user?.avatarUrl || '',
             },
             newToken

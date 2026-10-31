@@ -81,8 +81,8 @@ export function DashboardRevenueChart({ dailyStats }: DashboardRevenueChartProps
       {dailyStats.length > 0 && (
         <details className="rounded-lg border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-secondary">
           <summary className="cursor-pointer font-semibold text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary">Xem dữ liệu chi tiết</summary>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left">
+          <div role="region" aria-label="Bảng dữ liệu chi tiết doanh thu 7 ngày" tabIndex={0} className="mt-3 overflow-x-auto focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-primary">
+            <table aria-label="Chi tiết doanh thu 7 ngày gần nhất" className="w-full text-left">
               <caption>Chi tiết doanh thu 7 ngày gần nhất</caption>
               <thead>
                 <tr><th scope="col">Ngày</th><th scope="col">Doanh thu</th><th scope="col">Vé bán</th></tr>

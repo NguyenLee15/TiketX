@@ -68,7 +68,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
                     <td className="p-4 sm:p-5">
                       <div className="flex items-center gap-3">
                         {user.avatarUrl ? (
-                          <ResilientImage src={user.avatarUrl} alt="" width="36" height="36" className="w-9 h-9 rounded-full object-cover border border-surface-2 shadow-md shrink-0" fallbackClassName="w-9 h-9 rounded-full bg-surface-3 flex items-center justify-center border border-surface-2 shadow-md shrink-0" />
+                          <ResilientImage src={user.avatarUrl} alt={`Ảnh đại diện của ${user.name}`} width="36" height="36" className="w-9 h-9 rounded-full object-cover border border-surface-2 shadow-md shrink-0" fallbackClassName="w-9 h-9 rounded-full bg-surface-3 flex items-center justify-center border border-surface-2 shadow-md shrink-0" />
                         ) : (
                           <div className="w-9 h-9 rounded-full bg-surface-3 flex items-center justify-center border border-surface-2 shadow-md shrink-0">
                             <span className="text-sm font-black text-white">{user.name?.charAt(0) || 'U'}</span>
@@ -178,7 +178,7 @@ export const AdminUsersTable: React.FC<AdminUsersTableProps> = ({
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   {user.avatarUrl ? (
-                    <ResilientImage src={user.avatarUrl} alt="" width="40" height="40" className="w-10 h-10 rounded-full object-cover shrink-0 border border-surface-2" fallbackClassName="w-10 h-10 rounded-full bg-surface-3 flex items-center justify-center shrink-0 border border-surface-2" />
+                    <ResilientImage src={user.avatarUrl} alt={`Ảnh đại diện của ${user.name}`} width="40" height="40" className="w-10 h-10 rounded-full object-cover shrink-0 border border-surface-2" fallbackClassName="w-10 h-10 rounded-full bg-surface-3 flex items-center justify-center shrink-0 border border-surface-2" />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-surface-3 flex items-center justify-center shrink-0 border border-surface-2">
                       <span className="text-sm font-bold text-white">{user.name?.charAt(0) || 'U'}</span>

@@ -270,6 +270,37 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer
                     context.Fail("Token revoked due to security state change.");
                     return;
                 }
+            },
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/problem+json";
+                var problem = new
+                {
+                    type = "https://tools.ietf.org/html/rfc9457",
+                    title = "Unauthorized",
+                    status = StatusCodes.Status401Unauthorized,
+                    detail = "Yêu cầu cần xác thực để truy cập tài nguyên này.",
+                    instance = context.Request.Path.Value,
+                    traceId = context.HttpContext.TraceIdentifier
+                };
+                await context.Response.WriteAsJsonAsync(problem);
+            },
+            OnForbidden = async context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                context.Response.ContentType = "application/problem+json";
+                var problem = new
+                {
+                    type = "https://tools.ietf.org/html/rfc9457",
+                    title = "Forbidden",
+                    status = StatusCodes.Status403Forbidden,
+                    detail = "Bạn không có quyền thực hiện thao tác này.",
+                    instance = context.Request.Path.Value,
+                    traceId = context.HttpContext.TraceIdentifier
+                };
+                await context.Response.WriteAsJsonAsync(problem);
             }
         };
     });

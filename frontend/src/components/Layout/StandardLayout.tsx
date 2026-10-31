@@ -125,7 +125,7 @@ export default function StandardLayout() {
             </div>
           </header>
           {mobileOpen && (
-            <nav ref={mobileNavRef} aria-label="Điều hướng chính" className="md:hidden mt-2 surface-raised p-3 flex flex-col gap-1 pointer-events-auto overscroll-contain">
+            <nav ref={mobileNavRef} aria-label="Menu điều hướng di động" className="md:hidden mt-2 surface-raised p-3 flex flex-col gap-1 pointer-events-auto overscroll-contain">
               <Link onClick={() => setMobileOpen(false)} to="/" className="p-3 rounded-xl hover:bg-surface-2 flex items-center gap-2">
                 <Calendar className="w-4 h-4" aria-hidden="true" /> Sự kiện
               </Link>

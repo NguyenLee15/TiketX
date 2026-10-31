@@ -56,7 +56,7 @@ public sealed class ReservationOperations : IReservationOperations
                 return Fail("RESERVATION_LIMIT_REACHED", $"Mỗi khách chỉ được giữ tối đa {_options.MaximumPendingSeatsPerEvent} ghế cho một sự kiện.");
 
             var seatKey = $"seat:lock:{seatId:N}";
-            var seatLease = await TryAcquireAsync(seatKey, TimeSpan.FromMinutes(_options.HoldMinutes), cancellationToken);
+            var seatLease = await TryAcquireAsync(seatKey, TimeSpan.FromSeconds(30), cancellationToken);
             if (seatLease is null)
                 return Fail("RESERVATION_LOCK_UNAVAILABLE", "Ghế đang được xử lý hoặc dịch vụ khóa tạm thời chưa sẵn sàng.");
 

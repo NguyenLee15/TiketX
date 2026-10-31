@@ -90,10 +90,8 @@ public class SeatsController : ControllerBase
         {
             var statusCode = lockResult.Code switch
             {
-                "SEAT_VERSION_CONFLICT" or "SEAT_UNAVAILABLE" or "RESERVATION_LIMIT_REACHED" or "EVENT_NOT_ON_SALE"
+                "SEAT_VERSION_CONFLICT" or "SEAT_UNAVAILABLE" or "RESERVATION_LIMIT_REACHED" or "EVENT_NOT_ON_SALE" or "RESERVATION_LOCK_UNAVAILABLE"
                     => StatusCodes.Status409Conflict,
-                "RESERVATION_LOCK_UNAVAILABLE"
-                    => StatusCodes.Status503ServiceUnavailable,
                 _ => StatusCodes.Status400BadRequest
             };
             return StatusCode(statusCode, new 

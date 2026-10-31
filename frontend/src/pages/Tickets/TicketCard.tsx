@@ -254,8 +254,8 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
       {/* Right: Live QR Code & Download Box */}
       <div className="p-5 sm:p-6 flex flex-col items-center justify-center md:w-72 bg-surface-2 relative z-10 space-y-3 shrink-0">
         {canShowQr ? (
-          <div className="bg-white p-3 rounded-xl shadow-xl relative group-hover:scale-105 transition-transform">
-            <QRCodeSVG id={`qr-svg-${ticket.id}`} value={ticket.qrCodeSignature} size={135} level="H" />
+          <div className="bg-white p-3 rounded-xl shadow-xl relative group-hover:scale-105 transition-transform" role="img" aria-label={`Mã QR vé điện tử ${ticket.eventTitle}`}>
+            <QRCodeSVG id={`qr-svg-${ticket.id}`} value={ticket.qrCodeSignature} size={135} level="H" aria-hidden="true" />
           </div>
         ) : (
           <div className="flex h-[159px] w-[159px] items-center justify-center rounded-xl border border-border-subtle bg-surface-3 p-4 text-center text-xs text-text-tertiary">

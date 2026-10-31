@@ -3,16 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { z } from 'zod';
 import api from '../../services/api';
+import { adminRefundsPagedResponseSchema } from '../../schemas/adminSchemas';
 
-const refundPageSchema = z.object({
-  items: z.array(z.object({
-    id: z.string(), eventId: z.string(), ticketId: z.string(), amount: z.number(), status: z.string(),
-    attempts: z.number(), providerStatus: z.string().nullable(), providerReference: z.string().nullable(),
-    lastError: z.string().nullable(), createdAt: z.string(), nextAttemptAt: z.string().nullable()
-  }).passthrough()), page: z.number(), pageSize: z.number(), totalCount: z.number()
-}).passthrough();
+// Uses centralized adminRefundsPagedResponseSchema from adminSchemas.ts
 
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 
@@ -45,7 +39,7 @@ export default function AdminRefundsPage() {
     queryKey: ['admin', 'refunds', page],
     queryFn: async ({ signal }) => {
       const response = await api.get('/api/admin/refunds', { params: { page, pageSize: 25 }, signal });
-      return refundPageSchema.parse(response.data.data);
+      return adminRefundsPagedResponseSchema.parse(response.data.data);
     }
   });
 

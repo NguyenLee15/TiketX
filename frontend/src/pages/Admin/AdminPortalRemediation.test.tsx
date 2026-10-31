@@ -10,6 +10,7 @@ import AdminUsersPage from './AdminUsersPage';
 import AdminEventsPage from './AdminEventsPage';
 import AdminScanTicketPage from './AdminScanTicketPage';
 import AdminLayout from '../../components/Layout/AdminLayout';
+import { ResilientImage } from '../../components/ResilientImage';
 import { ProfileInfoForm } from '../Profile/ProfileInfoForm';
 import { ChangePasswordForm } from '../Profile/ChangePasswordForm';
 import { RefundBankAccountForm } from '../Profile/RefundBankAccountForm';
@@ -2579,6 +2580,119 @@ describe('Admin Portal Remediation Verification', () => {
 
       const createLink = screen.getByRole('link', { name: /Tạo sự kiện/i });
       expect(createLink).toHaveAttribute('href', '/admin/events');
+    });
+  });
+
+  describe('360-Degree Deep Audit & Remediation (Round 29)', () => {
+    it('AdminLayout renders skip-link and focusable main content landmark', () => {
+      const queryClient = new QueryClient();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/admin']}>
+            <AdminLayout />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      const skipLink = screen.getByRole('link', { name: /Bỏ qua đến nội dung chính/i });
+      expect(skipLink).toHaveAttribute('href', '#admin-main-content');
+      const main = screen.getByRole('main');
+      expect(main).toHaveAttribute('id', 'admin-main-content');
+      expect(main).toHaveAttribute('tabindex', '-1');
+    });
+
+    it('ResilientImage renders aria-hidden fallback when alt is empty', () => {
+      const { container } = render(
+        <ResilientImage src="" alt="" className="w-10 h-10" />
+      );
+
+      const fallback = container.querySelector('[aria-hidden="true"]');
+      expect(fallback).toBeInTheDocument();
+      expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    });
+
+    it('DashboardRevenueChart renders scrollable revenue table as focusable region landmark', () => {
+      render(
+        <DashboardRevenueChart
+          dailyStats={[
+            { date: '2026-10-31', revenue: 1000000, ticketsSold: 5 }
+          ]}
+        />
+      );
+
+      const details = screen.getByText(/Xem dữ liệu chi tiết/i);
+      fireEvent.click(details);
+
+      const region = screen.getByRole('region', { name: /Bảng dữ liệu chi tiết doanh thu 7 ngày/i });
+      expect(region).toHaveAttribute('tabindex', '0');
+      const table = screen.getByRole('table', { name: /Chi tiết doanh thu 7 ngày gần nhất/i });
+      expect(table).toBeInTheDocument();
+    });
+
+    it('MockPayOSPage renders payment methods heading as level 3', () => {
+      render(
+        <MemoryRouter initialEntries={['/mock-payos?orderCode=123456&amount=500000']}>
+          <MockPayOSPage />
+        </MemoryRouter>
+      );
+
+      const paymentHeading = screen.getByRole('heading', { level: 3, name: /Hình thức thanh toán/i });
+      expect(paymentHeading).toBeInTheDocument();
+    });
+
+    it('DiscoveryHero and TicketFilterTabs render scrollable groups as keyboard-focusable landmarks', () => {
+      render(
+        <DiscoveryHero
+          search=""
+          sortBy="date_asc"
+          selectedCategory="All"
+          onSearchChange={vi.fn()}
+          onSortChange={vi.fn()}
+          onCategoryChange={vi.fn()}
+          onSubmit={vi.fn()}
+        />
+      );
+
+      const categoryGroup = screen.getByRole('group', { name: /Lọc theo danh mục/i });
+      expect(categoryGroup).toHaveAttribute('tabindex', '0');
+
+      render(
+        <TicketFilterTabs
+          currentTab="All"
+          onTabChange={vi.fn()}
+        />
+      );
+
+      const tabsGroup = screen.getByRole('group', { name: /Bộ lọc trạng thái vé/i });
+      expect(tabsGroup).toHaveAttribute('tabindex', '0');
+    });
+
+    it('TicketCard renders accessible QR code container with descriptive role and label', () => {
+      const mockTicket = {
+        id: 'ticket-qr-round29',
+        orderCode: 1001,
+        eventTitle: 'Sự Kiện Đêm Nhạc EDM',
+        date: '2026-11-15T19:00:00Z',
+        location: 'Hà Nội',
+        seatRow: 'A',
+        seatNumber: 1,
+        tierName: 'VIP',
+        price: 500000,
+        status: 'paid',
+        qrCodeSignature: 'SIG-ROUND-29',
+        checkedInAt: null,
+        bannerUrl: null,
+        imageUrl: null,
+      };
+
+      render(
+        <MemoryRouter>
+          <TicketCard ticket={mockTicket as any} refundingId={null} onInitiateRefund={vi.fn()} />
+        </MemoryRouter>
+      );
+
+      const qrImg = screen.getByRole('img', { name: /Mã QR vé điện tử Sự Kiện Đêm Nhạc EDM/i });
+      expect(qrImg).toBeInTheDocument();
     });
   });
 
