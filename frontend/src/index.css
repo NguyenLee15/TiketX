@@ -3,10 +3,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
 @theme {
-  --color-brand-primary: #D3613C;
+  --color-brand-primary: #BA4F2D;
   --color-brand-secondary: #D9A26C;
   --color-brand-accent: #F1E7D8;
-  --color-brand-glow: rgba(211, 97, 60, 0.18);
+  --color-brand-glow: rgba(186, 79, 45, 0.18);
   
   --color-surface-glass: rgba(255, 255, 255, 0.03);
   --color-surface-glass-hover: rgba(255, 255, 255, 0.06);
@@ -16,7 +16,7 @@
   --color-surface-3: #343029;
   
   --color-border-subtle: rgba(241, 231, 216, 0.14);
-  --color-border-focus: rgba(211, 97, 60, 0.7);
+  --color-border-focus: rgba(186, 79, 45, 0.7);
   
   --color-text-primary: #F6F0E8;
   --color-text-secondary: #C8BFB2;

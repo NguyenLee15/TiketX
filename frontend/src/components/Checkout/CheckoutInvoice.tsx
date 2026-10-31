@@ -60,12 +60,20 @@ export const CheckoutInvoice: React.FC<CheckoutInvoiceProps> = React.memo(({
         </div>
         <span
           role="timer"
-          aria-live={timeLeft <= 60 ? 'polite' : undefined}
           aria-atomic="true"
+          aria-live="polite"
+          aria-label={`Thời gian giữ chỗ còn lại: ${status === 'error' ? 'Hết hạn' : formatTime(timeLeft)}`}
           className={`font-mono font-bold text-sm ${timeLeft < 60 ? 'text-danger animate-pulse' : 'text-warning'}`}
         >
           {status === 'error' ? 'Hết hạn' : formatTime(timeLeft)}
         </span>
+        <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {timeLeft === 300 && "Thời gian giữ chỗ còn 5 phút."}
+          {timeLeft === 120 && "Thời gian giữ chỗ còn 2 phút."}
+          {timeLeft === 60 && "Cảnh báo: Thời gian thanh toán chỉ còn 1 phút."}
+          {timeLeft === 30 && "Thời gian thanh toán còn 30 giây."}
+          {timeLeft === 0 && "Thời gian thanh toán đã hết hạn."}
+        </div>
       </div>
 
       {/* Seat & Price Breakdown Card */}

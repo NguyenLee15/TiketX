@@ -80,7 +80,7 @@ export const SeatMap: React.FC<SeatMapProps> = React.memo(({ seats, selectedSeat
       </div>
 
       {/* Seat Matrix Grid */}
-      <div role="region" aria-label="Sơ đồ ghế ngồi" tabIndex={0} className="flex flex-col gap-3 sm:gap-3.5 items-center flex-1 justify-center relative z-10 overflow-x-auto pb-3 hide-scrollbar focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-primary">
+      <div role="region" aria-label="Sơ đồ ghế ngồi" tabIndex={0} className="flex flex-col gap-3 sm:gap-3.5 items-center flex-1 justify-center relative z-10 overflow-x-auto pb-3 max-md:hide-scrollbar focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-primary">
         {sortedRowKeys.map(rowName => {
           const rowSeats = rows[rowName] || [];
           const isVipRow = rowSeats.some(s => s.tier === 1);

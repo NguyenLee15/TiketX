@@ -27,6 +27,8 @@ import { ScanResultDisplay } from './Scan/ScanResultDisplay';
 import { SeatMap } from '../EventDetail/SeatMap';
 import { SeatLegend } from '../EventDetail/SeatLegend';
 import RegisterPage from '../Auth/RegisterPage';
+import LoginPage from '../Auth/LoginPage';
+import { TicketPagination } from '../Tickets/TicketPagination';
 import MockPayOSPage from '../MockPayOSPage';
 import { TicketFilterTabs } from '../Tickets/TicketFilterTabs';
 import { DiscoveryHero } from '../../components/Discovery/DiscoveryHero';
@@ -2693,6 +2695,81 @@ describe('Admin Portal Remediation Verification', () => {
 
       const qrImg = screen.getByRole('img', { name: /Mã QR vé điện tử Sự Kiện Đêm Nhạc EDM/i });
       expect(qrImg).toBeInTheDocument();
+    });
+  });
+
+  describe('Customer Portal Deep Audit & Remediation (Round 30)', () => {
+    it('LoginPage and RegisterPage render accessible main content landmarks', () => {
+      const { rerender } = render(
+        <MemoryRouter initialEntries={['/login']}>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      const loginMain = screen.getByRole('main');
+      expect(loginMain).toHaveAttribute('id', 'main-content');
+      expect(loginMain).toHaveAttribute('tabindex', '-1');
+
+      rerender(
+        <MemoryRouter initialEntries={['/register']}>
+          <RegisterPage />
+        </MemoryRouter>
+      );
+
+      const registerMain = screen.getByRole('main');
+      expect(registerMain).toHaveAttribute('id', 'main-content');
+      expect(registerMain).toHaveAttribute('tabindex', '-1');
+    });
+
+    it('NotFoundPage renders semantic section landmark without intrusive role alert', () => {
+      render(
+        <MemoryRouter>
+          <NotFoundPage />
+        </MemoryRouter>
+      );
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      const heading = screen.getByRole('heading', { level: 1, name: /Không Tìm Thấy Trang/i });
+      expect(heading).toHaveAttribute('id', 'not-found-title');
+    });
+
+    it('CheckoutVietQrView renders QRCodeSVG when receiving raw EMVCo payload string', () => {
+      render(
+        <CheckoutVietQrView
+          loadingPayment={false}
+          paymentInitError={null}
+          paymentData={{
+            orderCode: 9999,
+            amount: 500000,
+            qrCode: '00020101021238540010A0000007270124000697041501',
+          }}
+          onRetryPayment={vi.fn()}
+          onProceedPayOS={vi.fn()}
+          copyToClipboard={vi.fn()}
+        />
+      );
+
+      const qrContainer = screen.getByRole('img', { name: /Mã VietQR thanh toán/i });
+      expect(qrContainer).toBeInTheDocument();
+      expect(qrContainer.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('TicketPagination renders accessible buttons with min-h-11 touch targets', () => {
+      render(
+        <TicketPagination
+          currentPage={2}
+          hasPrevPage={true}
+          hasNextPage={true}
+          onPrevious={vi.fn()}
+          onNext={vi.fn()}
+          isLoading={false}
+        />
+      );
+
+      const prevBtn = screen.getByRole('button', { name: /Trang trước/i });
+      const nextBtn = screen.getByRole('button', { name: /Trang sau/i });
+      expect(prevBtn).toHaveClass('min-h-11');
+      expect(nextBtn).toHaveClass('min-h-11');
     });
   });
 

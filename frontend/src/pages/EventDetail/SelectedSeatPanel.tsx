@@ -59,9 +59,16 @@ export const SelectedSeatPanel: React.FC<SelectedSeatPanelProps> = ({
                   <p className="text-[11px] text-warning font-bold">Đang khóa độc quyền</p>
                 </div>
               </div>
-              <span role="timer" aria-live={lockTimeLeft <= 60 ? 'polite' : undefined} aria-atomic="true" className="text-xl font-mono font-black text-warning bg-warning/10 px-2.5 py-0.5 rounded-lg border border-warning/20">
+              <span role="timer" aria-label={`Thời gian giữ chỗ còn ${formatTimer(lockTimeLeft)}`} className="text-xl font-mono font-black text-warning bg-warning/10 px-2.5 py-0.5 rounded-lg border border-warning/20">
                 {formatTimer(lockTimeLeft)}
               </span>
+              <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+                {lockTimeLeft === 300 && "Thời gian giữ chỗ còn 5 phút."}
+                {lockTimeLeft === 120 && "Thời gian giữ chỗ còn 2 phút."}
+                {lockTimeLeft === 60 && "Cảnh báo: Thời gian giữ chỗ chỉ còn 1 phút."}
+                {lockTimeLeft === 30 && "Thời gian giữ chỗ còn 30 giây."}
+                {lockTimeLeft === 0 && "Thời gian giữ chỗ đã hết hạn."}
+              </div>
             </div>
           )}
 

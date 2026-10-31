@@ -83,7 +83,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-surface-1 flex items-center justify-center p-4 relative overflow-hidden text-text-primary py-12">
+    <main id="main-content" tabIndex={-1} className="min-h-dvh bg-surface-1 flex items-center justify-center p-4 relative overflow-hidden text-text-primary py-12 focus:outline-none">
       {/* Decorative Grid */}
       <div className="w-full max-w-md relative z-10 animate-scale-in">
         {/* Sleek Floating Panel */}
@@ -234,6 +234,6 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

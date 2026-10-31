@@ -32,7 +32,7 @@ export const TicketPagination: React.FC<TicketPaginationProps> = React.memo(({
         onClick={onPrevious}
         disabled={!hasPrevPage || isLoading}
         aria-label="Trang trước"
-        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
+        className={`inline-flex min-h-11 items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
           hasPrevPage && !isLoading
             ? 'bg-surface-2 hover:bg-surface-3 text-white border-border-subtle hover:border-border-default cursor-pointer'
             : 'bg-surface-1/50 text-text-tertiary border-border-subtle/50 cursor-not-allowed opacity-50'
@@ -54,7 +54,7 @@ export const TicketPagination: React.FC<TicketPaginationProps> = React.memo(({
         onClick={onNext}
         disabled={!hasNextPage || isLoading}
         aria-label="Trang sau"
-        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
+        className={`inline-flex min-h-11 items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
           hasNextPage && !isLoading
             ? 'bg-surface-2 hover:bg-surface-3 text-white border-border-subtle hover:border-border-default cursor-pointer'
             : 'bg-surface-1/50 text-text-tertiary border-border-subtle/50 cursor-not-allowed opacity-50'

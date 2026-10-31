@@ -59,6 +59,7 @@ export default function DashboardPage() {
 
   const showFeatured = shouldShowFeaturedHero(catalogState, events.length);
   const featuredEvent = showFeatured ? events[0] : null;
+  const gridEvents = showFeatured ? events.slice(1) : events;
 
   return (
     <div className="space-y-10 pb-16 text-text-primary">
@@ -110,7 +111,7 @@ export default function DashboardPage() {
           />
         ) : (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {events.map((event) => (
+            {gridEvents.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
@@ -123,7 +124,7 @@ export default function DashboardPage() {
               aria-label="Trang trước"
               onClick={() => updateFilters({ page: Math.max(1, page - 1) })}
               disabled={page === 1}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border-subtle bg-surface-2 disabled:opacity-40 cursor-pointer"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border-subtle bg-surface-2 disabled:opacity-40 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             >
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -135,7 +136,7 @@ export default function DashboardPage() {
               aria-label="Trang sau"
               onClick={() => updateFilters({ page: Math.min(totalPages, page + 1) })}
               disabled={page === totalPages}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border-subtle bg-surface-2 disabled:opacity-40 cursor-pointer"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border-subtle bg-surface-2 disabled:opacity-40 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             >
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </button>

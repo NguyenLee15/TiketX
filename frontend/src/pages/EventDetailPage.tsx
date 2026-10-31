@@ -38,6 +38,8 @@ export default function EventDetailPage() {
   const navigate = useNavigate();
   const bookingIdempotencyKeyRef = useRef<string | null>(null);
   const lockingSeatRef = useRef<Seat | null>(null);
+  const isCheckoutOpenRef = useRef(isCheckoutOpen);
+  isCheckoutOpenRef.current = isCheckoutOpen;
 
   // Reset seat selection & checkout states when switching between event routes
   useEffect(() => {
@@ -54,13 +56,14 @@ export default function EventDetailPage() {
   const handleLockExpire = useCallback(() => {
     toast.error('Hạn giữ chỗ 5 phút đã hết. Ghế đã được tự động mở khóa!', { duration: 5000 });
     lockingSeatRef.current = null;
-    setSelectedSeat(null);
-    setIsCheckoutOpen(false);
     bookingIdempotencyKeyRef.current = null;
     const cleared = clearCheckoutState();
     setTicketId(cleared.ticketId);
     setLockExpiresAt(cleared.lockExpiresAt);
-    void refetchEvent();
+    if (!isCheckoutOpenRef.current) {
+      setSelectedSeat(null);
+      void refetchEvent();
+    }
   }, [refetchEvent]);
 
   // Lock timer synchronized with server expiresAt

@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 
 export interface TicketPdfData {
   id: string;
-  orderCode: number;
+  orderCode: number | string;
   eventTitle: string;
   eventDate: string;
   location: string;
@@ -102,9 +102,20 @@ export async function generateTicketPdf(ticket: TicketPdfData): Promise<void> {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(209, 213, 219);
     const dateObj = new Date(ticket.eventDate);
-    const safeDateStr = Number.isNaN(dateObj.getTime())
-      ? toPdfSafeText(ticket.eventDate)
-      : `${dateObj.getUTCHours().toString().padStart(2, '0')}:${dateObj.getUTCMinutes().toString().padStart(2, '0')} - ${dateObj.getUTCDate().toString().padStart(2, '0')}/${(dateObj.getUTCMonth() + 1).toString().padStart(2, '0')}/${dateObj.getUTCFullYear()}`;
+    let safeDateStr = toPdfSafeText(ticket.eventDate);
+    if (!Number.isNaN(dateObj.getTime())) {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour12: false,
+      }).formatToParts(dateObj);
+      const findPart = (type: string) => parts.find(p => p.type === type)?.value || '';
+      safeDateStr = `${findPart('hour')}:${findPart('minute')} - ${findPart('day')}/${findPart('month')}/${findPart('year')}`;
+    }
     doc.text(`Thoi gian: ${safeDateStr}`, 15, 35);
 
     const rawLocation = ticket.venueName || ticket.location;

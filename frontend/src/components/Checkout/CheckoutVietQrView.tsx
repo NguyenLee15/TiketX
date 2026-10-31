@@ -1,4 +1,5 @@
 import React from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Loader2, Copy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 
 export interface PaymentInfo {
@@ -74,7 +75,13 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
       <div className="p-5 rounded-2xl bg-surface-2/40 border border-border-subtle flex flex-col md:flex-row items-center gap-5">
         <div className="w-36 h-36 bg-white p-2 rounded-2xl shadow-xl shrink-0 flex items-center justify-center border-4 border-surface-3">
           {qrUrl ? (
-            <img src={qrUrl} alt="Mã VietQR thanh toán" width="128" height="128" className="w-full h-full object-contain" />
+            qrUrl.startsWith('http') || qrUrl.startsWith('data:image') ? (
+              <img src={qrUrl} alt="Mã VietQR thanh toán" width="128" height="128" className="w-full h-full object-contain" />
+            ) : (
+              <div role="img" aria-label="Mã VietQR thanh toán">
+                <QRCodeSVG value={qrUrl} size={128} level="M" aria-hidden="true" />
+              </div>
+            )
           ) : (
             <span className="text-xs text-slate-500 text-center">Thanh toán qua PayOS</span>
           )}
@@ -95,7 +102,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
                   <button
                     type="button"
                     onClick={() => paymentData?.accountNumber && copyToClipboard(paymentData.accountNumber, 'Số tài khoản')}
-                    className="p-1 hover:text-brand-primary text-text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary rounded cursor-pointer"
+                    className="min-h-11 min-w-11 p-2 flex items-center justify-center hover:text-brand-primary text-text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary rounded-lg cursor-pointer"
                     title="Sao chép số tài khoản"
                     aria-label="Sao chép số tài khoản"
                   >
@@ -119,7 +126,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
                 <button
                   type="button"
                   onClick={() => copyToClipboard(transferContent, 'Nội dung chuyển khoản')}
-                  className="p-1 hover:text-white text-brand-primary transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary rounded cursor-pointer"
+                  className="min-h-11 min-w-11 p-2 flex items-center justify-center hover:text-white text-brand-primary transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary rounded-lg cursor-pointer"
                   title="Sao chép nội dung chuyển khoản"
                   aria-label="Sao chép nội dung chuyển khoản"
                 >
