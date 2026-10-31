@@ -60,7 +60,7 @@ export default function StandardLayout() {
               <span className="text-xl font-display font-bold text-white tracking-tight">TickeX</span>
             </Link>
             
-            <nav className="hidden md:flex items-center gap-8">
+            <nav aria-label="Điều hướng chính" className="hidden md:flex items-center gap-8">
               <Link to="/" className={`text-sm font-medium transition-colors relative flex items-center gap-1.5 group ${pathname === '/' ? 'text-white font-bold' : 'text-text-secondary hover:text-white'}`}>
                 <Calendar className="w-4 h-4" aria-hidden="true" />
                 Sự kiện
@@ -184,11 +184,11 @@ export default function StandardLayout() {
             <span className="text-xs text-text-tertiary ml-2">Nền tảng đặt vé & giữ chỗ sự kiện thời gian thực</span>
           </div>
           <p className="text-sm text-text-tertiary">© 2026 TickeX Inc. Bảo lưu mọi quyền.</p>
-          <div className="flex gap-6">
+          <nav aria-label="Liên kết pháp lý và hỗ trợ" className="flex gap-6">
             <Link to="/privacy" className="text-text-tertiary hover:text-white transition-colors text-sm">Chính sách bảo mật</Link>
             <Link to="/terms" className="text-text-tertiary hover:text-white transition-colors text-sm">Điều khoản sử dụng</Link>
-            <a href="mailto:support@tickex.vn" className="text-text-tertiary hover:text-white transition-colors text-sm">Hỗ trợ khách hàng</a>
-          </div>
+            <a href="mailto:support@tickex.vn" aria-label="Gửi email hỗ trợ khách hàng tới support@tickex.vn" className="text-text-tertiary hover:text-white transition-colors text-sm">Hỗ trợ khách hàng</a>
+          </nav>
         </div>
       </footer>
     </div>

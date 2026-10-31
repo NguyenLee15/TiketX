@@ -87,6 +87,7 @@ export default function AdminLayout() {
             </span>
           </div>
           <button 
+            type="button"
             onClick={() => setIsMobileMenuOpen(false)}
             aria-label="Đóng menu"
             className="min-h-11 min-w-11 p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-surface-2"
@@ -95,7 +96,7 @@ export default function AdminLayout() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto py-5 px-3 space-y-1">
+        <nav aria-label="Điều hướng quản trị" className="flex-1 overflow-y-auto py-5 px-3 space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
             return (
@@ -114,7 +115,7 @@ export default function AdminLayout() {
               </Link>
             );
           })}
-        </div>
+        </nav>
 
         <div className="p-4 border-t border-border-subtle bg-surface-1/90 space-y-3">
           <Link 
@@ -171,7 +172,7 @@ export default function AdminLayout() {
         </div>
         
         {/* Navigation */}
-        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+        <nav aria-label="Điều hướng quản trị" className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
             return (
@@ -189,7 +190,7 @@ export default function AdminLayout() {
               </Link>
             );
           })}
-        </div>
+        </nav>
         
         {/* Quick Links & Profile */}
         <div className="p-4 border-t border-border-subtle bg-surface-1">

@@ -55,6 +55,10 @@ import { isValidUuidV4 } from '../../utils/idempotency';
 import { CheckoutStatusView } from '../../components/Checkout/CheckoutStatusView';
 import { TicketRefundModal } from '../Tickets/TicketRefundModal';
 import { EventImagePreviewSection } from '../../components/Admin/EventModal/EventImagePreviewSection';
+import AdminRoute from '../../components/Layout/AdminRoute';
+import PrivateRoute from '../../components/Layout/PrivateRoute';
+import NotFoundPage from '../NotFoundPage';
+import LegalPage from '../LegalPage';
 
 const mockScannerStart = vi.fn().mockResolvedValue(undefined);
 const mockScannerStop = vi.fn().mockResolvedValue(undefined);
@@ -2135,6 +2139,126 @@ describe('Admin Portal Remediation Verification', () => {
       );
 
       expect(screen.getByRole('button', { name: /Đóng hộp thoại hủy sự kiện/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('Full-Project Deep Audit Remediation (Round 26)', () => {
+    it('AdminRoute and PrivateRoute render accessible loading status when hydrating', () => {
+      useAuthStore.setState({ isHydrating: true } as any);
+
+      const { rerender } = render(
+        <MemoryRouter>
+          <AdminRoute><div>Admin Content</div></AdminRoute>
+        </MemoryRouter>
+      );
+
+      const adminStatus = screen.getByRole('status');
+      expect(adminStatus).toHaveAttribute('aria-busy', 'true');
+      expect(adminStatus).toHaveTextContent(/Đang xác thực thông tin tài khoản/i);
+      expect(adminStatus.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+
+      rerender(
+        <MemoryRouter>
+          <PrivateRoute><div>Private Content</div></PrivateRoute>
+        </MemoryRouter>
+      );
+
+      const privateStatus = screen.getByRole('status');
+      expect(privateStatus).toHaveAttribute('aria-busy', 'true');
+      expect(privateStatus).toHaveTextContent(/Đang xác thực thông tin tài khoản/i);
+      expect(privateStatus.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+
+      useAuthStore.setState({ isHydrating: false } as any);
+    });
+
+    it('AdminLayout renders desktop sidebar and mobile drawer with semantic nav landmarks', () => {
+      useAuthStore.setState({
+        user: { id: 'admin-1', name: 'Admin User', email: 'admin@tickex.com', role: 'Admin' } as any,
+        token: 'token',
+        isHydrating: false,
+      });
+
+      const queryClient = new QueryClient();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/admin']}>
+            <AdminLayout />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      const adminNavs = screen.getAllByRole('navigation', { name: /Điều hướng quản trị/i });
+      expect(adminNavs.length).toBeGreaterThanOrEqual(1);
+
+      const openDrawerBtn = screen.getByRole('button', { name: /Mở menu/i });
+      fireEvent.click(openDrawerBtn);
+
+      const closeDrawerBtns = screen.getAllByRole('button', { name: 'Đóng menu' });
+      expect(closeDrawerBtns.length).toBeGreaterThanOrEqual(1);
+      closeDrawerBtns.forEach(btn => {
+        expect(btn).toHaveAttribute('type', 'button');
+        expect(btn.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      });
+    });
+
+    it('StandardLayout desktop navigation and footer links use accessible nav landmarks', () => {
+      const queryClient = new QueryClient();
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <StandardLayout />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      const mainNav = screen.getByRole('navigation', { name: /Điều hướng chính/i });
+      expect(mainNav).toBeInTheDocument();
+
+      const footerNav = screen.getByRole('navigation', { name: /Liên kết pháp lý và hỗ trợ/i });
+      expect(footerNav).toBeInTheDocument();
+
+      const supportLink = screen.getByRole('link', { name: /Gửi email hỗ trợ khách hàng tới support@tickex.vn/i });
+      expect(supportLink).toHaveAttribute('href', 'mailto:support@tickex.vn');
+    });
+
+    it('NotFoundPage and LegalPage provide accessible navigation and contact link labels', () => {
+      const { rerender } = render(
+        <MemoryRouter>
+          <NotFoundPage />
+        </MemoryRouter>
+      );
+
+      const homeLink404 = screen.getByRole('link', { name: /Xem danh sách sự kiện và trở về trang chủ/i });
+      expect(homeLink404).toHaveAttribute('href', '/');
+
+      rerender(
+        <MemoryRouter initialEntries={['/terms']}>
+          <LegalPage />
+        </MemoryRouter>
+      );
+
+      const legalHomeLink = screen.getByRole('link', { name: /Về trang chủ TickeX/i });
+      expect(legalHomeLink).toHaveAttribute('href', '/');
+
+      const legalContactLink = screen.getByRole('link', { name: /Gửi email hỗ trợ khách hàng tới support@tickex.vn/i });
+      expect(legalContactLink).toHaveAttribute('href', 'mailto:support@tickex.vn');
+    });
+
+    it('MockPayOSPage renders decorative icons with aria-hidden and button controls with type="button"', () => {
+      render(
+        <MemoryRouter initialEntries={['/mock-payos?orderCode=123456']}>
+          <MockPayOSPage />
+        </MemoryRouter>
+      );
+
+      const successBtn = screen.getByRole('button', { name: /Mô phỏng: Thanh toán Thành công/i });
+      const cancelBtn = screen.getByRole('button', { name: /Mô phỏng: Hủy Thanh toán/i });
+      expect(successBtn).toHaveAttribute('type', 'button');
+      expect(cancelBtn).toHaveAttribute('type', 'button');
+
+      const headerBadge = screen.getByText(/Môi Trường Thử Nghiệm Sandbox/i);
+      const shieldIcon = headerBadge.querySelector('svg');
+      expect(shieldIcon).toHaveAttribute('aria-hidden', 'true');
     });
   });
 

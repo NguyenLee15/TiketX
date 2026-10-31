@@ -9,8 +9,13 @@ export default function PrivateRoute({ children }: { children: React.ReactNode }
 
   if (isHydrating) {
     return (
-      <div className="min-h-screen bg-surface-base flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-brand-primary animate-spin" />
+      <div
+        role="status"
+        aria-busy="true"
+        className="min-h-screen bg-surface-base flex items-center justify-center"
+      >
+        <Loader2 className="h-8 w-8 text-brand-primary animate-spin" aria-hidden="true" />
+        <span className="sr-only">Đang xác thực thông tin tài khoản...</span>
       </div>
     );
   }

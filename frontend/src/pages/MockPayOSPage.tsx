@@ -72,7 +72,7 @@ export default function MockPayOSPage() {
           <span className="font-bold text-xl text-blue-900">Cổng Thử Nghiệm PayOS</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
-          <ShieldCheck className="w-4 h-4 text-green-500" />
+          <ShieldCheck className="w-4 h-4 text-green-500" aria-hidden="true" />
           Môi Trường Thử Nghiệm Sandbox
         </div>
       </header>
@@ -103,12 +103,14 @@ export default function MockPayOSPage() {
 
                 <div className="w-full space-y-3">
                   <button 
+                    type="button"
                     onClick={() => handleSimulatePayment(true)}
                     className="w-full py-3.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl transition-colors shadow-md shadow-green-500/20"
                   >
                     Mô phỏng: Thanh toán Thành công
                   </button>
                   <button 
+                    type="button"
                     onClick={() => handleSimulatePayment(false)}
                     className="w-full py-3.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-colors border border-red-200"
                   >
@@ -117,10 +119,10 @@ export default function MockPayOSPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[400px]">
+              <div role="status" aria-live="polite" className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[400px]">
                 {status === 'processing' && (
                   <>
-                    <Loader2 className="w-16 h-16 text-blue-500 animate-spin mb-4" />
+                    <Loader2 className="w-16 h-16 text-blue-500 animate-spin mb-4" aria-hidden="true" />
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Đang xử lý giao dịch...</h3>
                     <p className="text-gray-500">Hệ thống đang xác nhận thanh toán của bạn.</p>
                   </>
