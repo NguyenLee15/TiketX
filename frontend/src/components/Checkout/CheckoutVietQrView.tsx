@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Loader2, Copy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 
@@ -32,6 +32,7 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
   onProceedPayOS,
   copyToClipboard,
 }) => {
+  const [redirecting, setRedirecting] = useState(false);
   const orderCode = paymentData?.orderCode;
   const transferContent = paymentData?.description || (orderCode ? `TICKEX ${orderCode}` : '');
   const qrUrl = paymentData?.qrCodeUrl || paymentData?.qrCode;
@@ -142,8 +143,14 @@ export const CheckoutVietQrView: React.FC<CheckoutVietQrViewProps> = React.memo(
       {paymentData?.checkoutUrl && (paymentData.checkoutUrl.startsWith('http') || paymentData.checkoutUrl.startsWith('/mock-payos')) && (
         <button 
           type="button"
-          onClick={onProceedPayOS}
-          className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-2 group text-sm active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer shadow-lg shadow-brand-glow"
+          onClick={() => {
+            if (redirecting) return;
+            setRedirecting(true);
+            onProceedPayOS();
+          }}
+          disabled={redirecting}
+          aria-busy={redirecting}
+          className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary/90 disabled:opacity-50 text-white font-bold rounded-lg transition-[background-color,transform] flex items-center justify-center gap-2 group text-sm active:scale-98 focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-brand-glow"
         >
           <span>Chuyển Đến Cổng Thanh Toán PayOS</span>
           <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />

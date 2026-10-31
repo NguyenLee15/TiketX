@@ -43,6 +43,7 @@ public class User : BaseEntity
     {
         Role = role;
         UpdateSecurityStamp();
+        UpdatedAt = DateTime.UtcNow;
         Version = Guid.NewGuid().ToByteArray();
     }
 
@@ -50,6 +51,7 @@ public class User : BaseEntity
     {
         IsBlocked = true;
         UpdateSecurityStamp();
+        UpdatedAt = DateTime.UtcNow;
         Version = Guid.NewGuid().ToByteArray();
     }
 
@@ -57,6 +59,7 @@ public class User : BaseEntity
     {
         IsBlocked = false;
         UpdateSecurityStamp();
+        UpdatedAt = DateTime.UtcNow;
         Version = Guid.NewGuid().ToByteArray();
     }
 
@@ -73,6 +76,8 @@ public class User : BaseEntity
     {
         PasswordHash = newHash;
         UpdateSecurityStamp();
+        UpdatedAt = DateTime.UtcNow;
+        Version = Guid.NewGuid().ToByteArray();
     }
 
     public bool IsLockedOut()

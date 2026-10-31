@@ -146,16 +146,18 @@ public sealed class ReservationOperations : IReservationOperations
 
     private async Task<ReservationResult> ReleaseCoreAsync(Guid ticketId, Guid userId, bool requireOwner, string reason, CancellationToken cancellationToken)
     {
-        var ticket = await _context.Tickets.Include(t => t.Seat)
-            .FirstOrDefaultAsync(t => t.Id == ticketId, cancellationToken);
-        if (ticket == null)
+        var ticketInfo = await _context.Tickets.AsNoTracking()
+            .Where(t => t.Id == ticketId)
+            .Select(t => new { t.Id, t.SeatId, t.UserId, t.Status })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (ticketInfo == null)
             return Fail("RESERVATION_NOT_FOUND", "Không tìm thấy lượt giữ ghế.");
-        if (requireOwner && ticket.UserId != userId)
+        if (requireOwner && ticketInfo.UserId != userId)
             return Fail("RESERVATION_FORBIDDEN", "Bạn không có quyền hủy lượt giữ ghế này.");
-        if (ticket.Status != TicketStatus.Pending)
+        if (ticketInfo.Status != TicketStatus.Pending)
             return Fail("RESERVATION_NOT_PENDING", "Lượt giữ ghế không còn ở trạng thái chờ.");
 
-        var lockKey = $"seat:lock:{ticket.SeatId:N}";
+        var lockKey = $"seat:lock:{ticketInfo.SeatId:N}";
         var lease = await TryAcquireAsync(lockKey, TimeSpan.FromSeconds(30), cancellationToken);
         if (lease is null)
             return Fail("RESERVATION_LOCK_UNAVAILABLE", "Không thể khóa thao tác hủy giữ ghế lúc này.");

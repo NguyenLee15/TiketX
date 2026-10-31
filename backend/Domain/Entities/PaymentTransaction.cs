@@ -12,6 +12,7 @@ public class PaymentTransaction : BaseEntity
     public string WebhookPayloadHash { get; private set; } = string.Empty;
     public string CheckoutUrl { get; private set; } = string.Empty;
     public DateTime ProcessedAt { get; private set; } = DateTime.UtcNow;
+    public byte[] Version { get; private set; } = Guid.NewGuid().ToByteArray();
 
     private PaymentTransaction() { } // For EF Core
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../utils/formatters';
 import { Loader2, ShieldCheck, CreditCard, Building2, Smartphone } from 'lucide-react';
@@ -9,6 +9,13 @@ export default function MockPayOSPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [amount, setAmount] = useState(0);
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+    };
+  }, []);
 
   const orderCode = searchParams.get('orderCode');
 
@@ -40,7 +47,7 @@ export default function MockPayOSPage() {
       setStatus(isSuccess ? 'success' : 'error');
 
       // 3. Redirect user back
-      setTimeout(() => {
+      redirectTimerRef.current = setTimeout(() => {
         window.location.href = `/payment/result?orderCode=${encodeURIComponent(orderCode || '')}`;
       }, 1500);
 

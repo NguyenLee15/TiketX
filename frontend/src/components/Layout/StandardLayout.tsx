@@ -96,7 +96,7 @@ export default function StandardLayout() {
                     type="button"
                     onClick={handleLogout}
                     aria-label="Đăng xuất"
-                    className="text-text-tertiary hover:text-danger transition-colors p-2 rounded-full hover:bg-danger/10 focus-visible:ring-2 focus-visible:ring-brand-primary"
+                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-text-tertiary hover:text-danger transition-colors p-2 rounded-full hover:bg-danger/10 focus-visible:ring-2 focus-visible:ring-brand-primary"
                     title="Đăng xuất"
                   >
                     <LogOut className="w-4 h-4" aria-hidden="true" />

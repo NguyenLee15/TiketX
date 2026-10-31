@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { ShieldCheck, Volume2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { scanTicketDataSchema } from '../../schemas/adminSchemas';
 import { ScanCameraPanel } from './Scan/ScanCameraPanel';
@@ -13,6 +14,7 @@ export default function AdminScanTicketPage() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [recentScans, setRecentScans] = useState<ScanResult[]>([]);
   const isProcessingRef = useRef(false);
+  const queryClient = useQueryClient();
 
   const handleVerifyTicket = useCallback(async (rawToken: string) => {
     
@@ -57,6 +59,8 @@ export default function AdminScanTicketPage() {
           setScanResult(result);
           setRecentScans(prev => [result, ...prev.slice(0, 9)]);
           toast.success(`Check-in thành công: ${data.attendeeName} - Ghế ${data.row}${data.number}`);
+          void queryClient.invalidateQueries({ queryKey: ['tickets'] });
+          void queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
         } else {
           playAudioFeedback('failure');
           const result: ScanResult = {

@@ -41,9 +41,9 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="w-16 h-16 mx-auto rounded-full bg-danger/10 border border-danger/30 flex items-center justify-center text-danger mb-4">
               <AlertOctagon className="w-8 h-8" aria-hidden="true" />
             </div>
-            <h2 className="text-2xl font-display font-bold text-white mb-2">
+            <h1 className="text-2xl font-display font-bold text-white mb-2">
               {this.props.fallbackTitle || 'Đã có lỗi xảy ra'}
-            </h2>
+            </h1>
             <p className="text-sm text-text-secondary mb-6 leading-relaxed">
               {this.props.fallbackMessage || 'Giao diện gặp sự cố ngoài dự kiến. Vui lòng tải lại trang hoặc quay lại trang chủ.'}
             </p>
@@ -72,3 +72,4 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
+export default ErrorBoundary;

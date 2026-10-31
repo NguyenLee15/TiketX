@@ -2,12 +2,14 @@ import axios from 'axios';
 
 import { useAuthStore } from '../stores/useAuthStore';
 import { readCsrfToken } from '../utils/csrf';
+import { createIdempotencyKey } from '../utils/idempotency';
 import { authRefreshResponseSchema } from '../schemas/customerSchemas';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -30,14 +32,7 @@ api.interceptors.request.use((config) => {
       (typeof config.headers.get === 'function' ? config.headers.get('Idempotency-Key') : undefined);
 
     if (!existingKey) {
-      config.headers['Idempotency-Key'] =
-        typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-              const r = (Math.random() * 16) | 0;
-              const v = c === 'x' ? r : (r & 0x3) | 0x8;
-              return v.toString(16);
-            });
+      config.headers['Idempotency-Key'] = createIdempotencyKey();
     }
   }
   return config;
@@ -145,5 +140,24 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export function extractApiErrorMessage(err: unknown, fallback: string): string {
+  if (!err || typeof err !== 'object') return fallback;
+  const res = (err as { response?: { data?: Record<string, unknown> } }).response?.data;
+  if (!res) return (err as { message?: string }).message || fallback;
+  if (typeof res.detail === 'string' && res.detail.trim()) return res.detail.trim();
+  if (typeof res.message === 'string' && res.message.trim()) return res.message.trim();
+  if (res.errors && typeof res.errors === 'object') {
+    const keys = Object.keys(res.errors);
+    if (keys.length > 0) {
+      const errList = (res.errors as Record<string, string[]>)[keys[0]];
+      if (Array.isArray(errList) && errList.length > 0 && typeof errList[0] === 'string' && errList[0].trim()) {
+        return errList[0].trim();
+      }
+    }
+  }
+  if (typeof res.title === 'string' && res.title.trim()) return res.title.trim();
+  return fallback;
+}
 
 export default api;

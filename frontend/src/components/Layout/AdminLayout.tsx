@@ -224,7 +224,7 @@ export default function AdminLayout() {
               type="button"
               onClick={() => void handleLogout()}
               aria-label="Đăng xuất"
-              className="text-text-tertiary hover:text-danger transition-colors p-1.5 rounded hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+              className="min-h-11 min-w-11 inline-flex items-center justify-center text-text-tertiary hover:text-danger transition-colors p-1.5 rounded-lg hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
               title="Đăng xuất"
             >
               <LogOut className="w-3.5 h-3.5" aria-hidden="true" />

@@ -85,7 +85,7 @@ public sealed class CustomerCheckoutOperations : ICustomerCheckoutOperations
         if (_locks is not null)
         {
             paymentLinkLease = await _locks.AcquireLockAsync(
-                $"payment-link:{ticket.OrderCode}", TimeSpan.FromSeconds(30), cancellationToken);
+                $"payment:lock:{ticket.OrderCode}", TimeSpan.FromSeconds(30), cancellationToken);
             if (paymentLinkLease is null)
                 return Fail("PAYMENT_LINK_IN_PROGRESS", "Yêu cầu thanh toán đang được xử lý. Vui lòng chờ giây lát.");
         }

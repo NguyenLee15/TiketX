@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Event } from '../../types';
 import api from '../../services/api';
 import { EventFormValues } from '../../components/Admin/EventModal';
@@ -15,6 +16,7 @@ import { AdminEventModalState, AdminEventsModals } from './Events/AdminEventsMod
 
 export default function AdminEventsPage() {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -137,6 +139,7 @@ export default function AdminEventsPage() {
         const response = await api.put(`/api/events/${modalState.form.event.id}`, payload);
         if (response.data.success) {
           toast.success('Cập nhật sự kiện thành công');
+          void queryClient.invalidateQueries({ queryKey: ['events'] });
           await fetchEvents();
           setModalState(current => ({ ...current, form: { ...current.form, open: false } }));
         } else {
@@ -165,6 +168,7 @@ export default function AdminEventsPage() {
         const response = await api.post('/api/events', payload);
         if (response.data.success) {
           toast.success('Tạo sự kiện và khởi tạo ma trận ghế thành công!');
+          void queryClient.invalidateQueries({ queryKey: ['events'] });
           await fetchEvents();
           setModalState(current => ({ ...current, form: { ...current.form, open: false } }));
         } else {
@@ -195,6 +199,7 @@ export default function AdminEventsPage() {
       if (res.data.success) {
         toast.success(`Đã xóa sự kiện "${modalState.deleteTarget.title}"`);
         setModalState(current => ({ ...current, deleteTarget: null }));
+        void queryClient.invalidateQueries({ queryKey: ['events'] });
         await fetchEvents();
       } else {
         toast.error(res.data.message || 'Không thể xóa sự kiện.');
@@ -224,6 +229,7 @@ export default function AdminEventsPage() {
       if (res.data.success) {
         toast.success(`Đã hủy sự kiện "${modalState.cancelTarget.title}". Các vé đã bán đang chờ xử lý hoàn tiền.`);
         setModalState(current => ({ ...current, cancelTarget: null }));
+        void queryClient.invalidateQueries({ queryKey: ['events'] });
         await fetchEvents();
       } else {
         toast.error(res.data.message || 'Không thể hủy sự kiện.');

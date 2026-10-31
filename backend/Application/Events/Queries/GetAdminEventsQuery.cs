@@ -94,18 +94,25 @@ public class GetAdminEventsQueryHandler : IRequestHandler<GetAdminEventsQuery, P
 
         var eventIds = rawEvents.Select(e => e.Id).ToArray();
         var lockExpiry = _time.UtcNow.Subtract(_holdDuration);
-        var availableSeats = await _context.Seats
+        var seatsQuery = (request.IncludeDeleted || request.DeletedOnly)
+            ? _context.Seats.IgnoreQueryFilters().AsNoTracking()
+            : _context.Seats.AsNoTracking();
+        var ticketsQuery = (request.IncludeDeleted || request.DeletedOnly)
+            ? _context.Tickets.IgnoreQueryFilters().AsNoTracking()
+            : _context.Tickets.AsNoTracking();
+
+        var availableSeats = await seatsQuery
             .Where(s => eventIds.Contains(s.EventId)
                 && (s.Status == SeatStatus.Available || (s.Status == SeatStatus.Locked && s.LockedAt <= lockExpiry)))
             .GroupBy(s => s.EventId)
             .Select(g => new { EventId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.EventId, x => x.Count, cancellationToken);
-        var seatPrices = await _context.Seats
+        var seatPrices = await seatsQuery
             .Where(s => eventIds.Contains(s.EventId))
             .GroupBy(s => s.EventId)
             .Select(g => new { EventId = g.Key, MinPrice = g.Min(s => (double)s.Price), MaxPrice = g.Max(s => (double)s.Price) })
             .ToDictionaryAsync(x => x.EventId, x => (MinPrice: (decimal)x.MinPrice, MaxPrice: (decimal)x.MaxPrice), cancellationToken);
-        var ticketHistoryIds = await _context.Tickets
+        var ticketHistoryIds = await ticketsQuery
             .Where(t => eventIds.Contains(t.EventId))
             .Select(t => t.EventId)
             .Distinct()

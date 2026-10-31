@@ -44,7 +44,10 @@ import { EventInfoCard } from '../EventDetail/EventInfoCard';
 import { SelectedSeatPanel } from '../EventDetail/SelectedSeatPanel';
 import ConfirmModal from '../../components/Admin/ConfirmModal';
 import CheckoutModal from '../../components/CheckoutModal';
-import api from '../../services/api';
+import api, { extractApiErrorMessage } from '../../services/api';
+import { CheckoutReleaseDialog } from '../../components/Checkout/CheckoutReleaseDialog';
+import { CheckoutModalHeader } from '../../components/Checkout/CheckoutModalHeader';
+import ErrorBoundary from '../../components/ErrorBoundary';
 import type { Event as EventModel } from '../../types';
 import CancelEventModal from '../../components/Admin/CancelEventModal';
 import { AdminEventsSkeleton } from './Events/AdminEventsSkeleton';
@@ -80,15 +83,19 @@ vi.mock('html5-qrcode', () => {
   };
 });
 
-vi.mock('../../services/api', () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
-  API_BASE_URL: 'http://localhost:5000',
-}));
+vi.mock('../../services/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../services/api')>();
+  return {
+    ...actual,
+    default: {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+    },
+    API_BASE_URL: 'http://localhost:5000',
+  };
+});
 
 const mockEvent: EventModel = {
   id: 'event-1',
@@ -377,9 +384,11 @@ describe('Admin Portal Remediation Verification', () => {
       });
 
       render(
-        <MemoryRouter>
-          <AdminEventsPage />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <AdminEventsPage />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       await screen.findAllByText('Sự Kiện Xóa Thử');
@@ -1606,9 +1615,11 @@ describe('Admin Portal Remediation Verification', () => {
       });
 
       render(
-        <MemoryRouter>
-          <AdminScanTicketPage />
-        </MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <AdminScanTicketPage />
+          </MemoryRouter>
+        </QueryClientProvider>
       );
 
       const input = screen.getByPlaceholderText(/Dán chuỗi token chữ ký số/i);
@@ -2870,6 +2881,96 @@ describe('Admin Portal Remediation Verification', () => {
       expect(deleteBtn).toHaveClass('focus-visible:ring-2');
       expect(deleteBtn).toHaveClass('disabled:opacity-40');
       expect(deleteBtn).toBeDisabled();
+    });
+  });
+
+  describe('Full-Project 360° Deep Audit & Remediation (Round 32)', () => {
+    it('extractApiErrorMessage extracts detail, message, validation error list and fallback', () => {
+      const errWithDetail = { response: { data: { detail: 'Vé đã hết hạn hủy trước 24 giờ.' } } };
+      expect(extractApiErrorMessage(errWithDetail, 'Lỗi mặc định')).toBe('Vé đã hết hạn hủy trước 24 giờ.');
+
+      const errWithMessage = { response: { data: { message: 'Mã giảm giá không hợp lệ.' } } };
+      expect(extractApiErrorMessage(errWithMessage, 'Lỗi mặc định')).toBe('Mã giảm giá không hợp lệ.');
+
+      const errWithValidation = {
+        response: {
+          data: {
+            title: 'One or more validation errors occurred.',
+            errors: {
+              Category: ['Thể loại sự kiện không được để trống.'],
+            },
+          },
+        },
+      };
+      expect(extractApiErrorMessage(errWithValidation, 'Lỗi mặc định')).toBe('Thể loại sự kiện không được để trống.');
+
+      expect(extractApiErrorMessage(null, 'Lỗi mặc định')).toBe('Lỗi mặc định');
+      expect(extractApiErrorMessage({}, 'Lỗi mặc định')).toBe('Lỗi mặc định');
+    });
+
+    it('CheckoutReleaseDialog renders alertdialog landmark with level 2 heading and min-h-11 buttons', () => {
+      render(
+        <CheckoutReleaseDialog
+          isOpen={true}
+          releasing={false}
+          releaseError=""
+          onCancel={vi.fn()}
+          onConfirm={vi.fn()}
+        />
+      );
+
+      const dialog = screen.getByRole('alertdialog');
+      expect(dialog).toBeInTheDocument();
+      const heading = screen.getByRole('heading', { level: 2, name: /Rời phiên thanh toán\?/i });
+      expect(heading).toHaveAttribute('id', 'release-confirm-title');
+
+      const continueBtn = screen.getByRole('button', { name: /Tiếp tục thanh toán/i });
+      const releaseBtn = screen.getByRole('button', { name: /Trả ghế & đóng/i });
+      expect(continueBtn).toHaveClass('min-h-11');
+      expect(releaseBtn).toHaveClass('min-h-11');
+    });
+
+    it('CheckoutModalHeader and AdminLayout logout button provide accessible >= 44x44px touch targets', () => {
+      const { rerender } = render(
+        <CheckoutModalHeader onRequestClose={vi.fn()} />
+      );
+
+      const closeBtn = screen.getByRole('button', { name: /Đóng thanh toán/i });
+      expect(closeBtn).toHaveClass('min-h-11');
+      expect(closeBtn).toHaveClass('min-w-11');
+
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <AdminLayout />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      const logoutBtns = screen.getAllByRole('button', { name: /Đăng xuất/i });
+      const desktopLogout = logoutBtns.find(btn => btn.classList.contains('min-h-11'));
+      expect(desktopLogout).toBeDefined();
+      expect(desktopLogout).toHaveClass('min-h-11');
+      expect(desktopLogout).toHaveClass('min-w-11');
+    });
+
+    it('ErrorBoundary renders level 1 heading when an unhandled exception is caught', () => {
+      const ThrowError = () => {
+        throw new Error('Test crash');
+      };
+
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      render(
+        <ErrorBoundary fallbackTitle="Trang Gặp Sự Cố">
+          <ThrowError />
+        </ErrorBoundary>
+      );
+
+      const heading = screen.getByRole('heading', { level: 1, name: /Trang Gặp Sự Cố/i });
+      expect(heading).toBeInTheDocument();
+
+      spy.mockRestore();
     });
   });
 
