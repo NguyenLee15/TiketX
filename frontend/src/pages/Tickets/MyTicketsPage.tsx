@@ -272,6 +272,7 @@ export default function MyTicketsPage() {
             <button
               type="button"
               onClick={handleResetToFirstPage}
+              aria-label="Quay lại trang 1 danh sách vé"
               className="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-brand-primary text-xs font-bold text-white hover:bg-brand-primary/90 transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer"
             >
               Quay lại trang 1

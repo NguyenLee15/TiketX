@@ -59,6 +59,8 @@ import AdminRoute from '../../components/Layout/AdminRoute';
 import PrivateRoute from '../../components/Layout/PrivateRoute';
 import NotFoundPage from '../NotFoundPage';
 import LegalPage from '../LegalPage';
+import EventDetailPage from '../EventDetailPage';
+import MyTicketsPage from '../Tickets/MyTicketsPage';
 
 const mockScannerStart = vi.fn().mockResolvedValue(undefined);
 const mockScannerStop = vi.fn().mockResolvedValue(undefined);
@@ -82,6 +84,7 @@ vi.mock('../../services/api', () => ({
     put: vi.fn(),
     delete: vi.fn(),
   },
+  API_BASE_URL: 'http://localhost:5000',
 }));
 
 const mockEvent: EventModel = {
@@ -2259,6 +2262,178 @@ describe('Admin Portal Remediation Verification', () => {
       const headerBadge = screen.getByText(/Môi Trường Thử Nghiệm Sandbox/i);
       const shieldIcon = headerBadge.querySelector('svg');
       expect(shieldIcon).toHaveAttribute('aria-hidden', 'true');
+    });
+  });
+
+  describe('Customer Portal Deep Audit Remediation (Round 27)', () => {
+    it('PaymentResultCard associates section landmark with heading via aria-labelledby', () => {
+      render(
+        <MemoryRouter>
+          <PaymentResultCard
+            orderCode="123456"
+            phase={{ state: 'success', status: 'Paid' }}
+            isChecking={false}
+            isPending={false}
+            isSuccess={true}
+            isUnknown={false}
+            pollAttempt={1}
+            pollLimit={6}
+            onRetry={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const heading = screen.getByRole('heading', { level: 1, name: /Đặt Vé Thành Công!/i });
+      expect(heading).toHaveAttribute('id', 'payment-result-heading');
+
+      const section = heading.closest('section');
+      expect(section).toHaveAttribute('aria-labelledby', 'payment-result-heading');
+    });
+
+    it('TicketCard provides contextual accessible label for refund bank check link', () => {
+      const mockTicket = {
+        id: 'ticket-round27',
+        eventId: 'event-1',
+        eventTitle: 'Lễ Hội Mùa Thu 2026',
+        eventDate: '2026-11-20T19:00:00Z',
+        location: 'Hà Nội',
+        row: 'A',
+        number: 1,
+        tier: 1,
+        price: 500000,
+        status: 'RefundPending',
+        qrCodeSignature: 'sig',
+        refundCutoffHours: 48,
+        canRefund: false,
+      };
+
+      render(
+        <MemoryRouter>
+          <TicketCard
+            ticket={mockTicket as any}
+            refundingId={null}
+            onInitiateRefund={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      const checkBankLink = screen.getByRole('link', {
+        name: /Kiểm tra tài khoản nhận tiền hoàn vé cho sự kiện Lễ Hội Mùa Thu 2026/i
+      });
+      expect(checkBankLink).toHaveAttribute('href', '/profile?refundBankAccount=1');
+    });
+
+    it('EventInfoCard and EventCard render descriptive alt text without bare heading duplicate', () => {
+      const testEvent = {
+        id: 'event-alt-1',
+        title: 'Rock Storm 2026',
+        description: 'Đại nhạc hội',
+        date: '2026-12-15T20:00:00Z',
+        location: 'Sân vận động Quân khu 7',
+        category: 'Music',
+        imageUrl: 'https://example.com/rock.jpg',
+        bannerUrl: 'https://example.com/banner.jpg',
+        totalSeats: 1000,
+        availableSeatsCount: 200,
+        basePrice: 400000,
+        status: 1,
+        version: '1',
+      };
+
+      const { rerender } = render(
+        <MemoryRouter>
+          <EventInfoCard event={testEvent as any} />
+        </MemoryRouter>
+      );
+
+      const infoImg = screen.getByRole('img', { name: /Hình ảnh sự kiện Rock Storm 2026/i });
+      expect(infoImg).toBeInTheDocument();
+
+      rerender(
+        <MemoryRouter>
+          <EventCard event={testEvent as any} featured={true} />
+        </MemoryRouter>
+      );
+      const featuredImg = screen.getByRole('img', { name: /Hình ảnh sự kiện Rock Storm 2026/i });
+      expect(featuredImg).toBeInTheDocument();
+
+      rerender(
+        <MemoryRouter>
+          <EventCard event={testEvent as any} featured={false} />
+        </MemoryRouter>
+      );
+      const standardImg = screen.getByRole('img', { name: /Hình ảnh sự kiện Rock Storm 2026/i });
+      expect(standardImg).toBeInTheDocument();
+    });
+
+    it('EventDetailPage renders accessible back link to event list', async () => {
+      const testEvent = {
+        id: 'event-detail-test',
+        title: 'Đêm Nhạc Jazz',
+        description: 'Jazz night',
+        date: '2026-11-25T20:00:00Z',
+        location: 'Hà Nội',
+        category: 'Music',
+        imageUrl: 'https://example.com/jazz.jpg',
+        totalSeats: 100,
+        availableSeatsCount: 50,
+        basePrice: 300000,
+        status: 1,
+        version: '1',
+        seats: [
+          { id: 'seat-1', eventId: 'event-detail-test', row: 'A', number: 1, price: 300000, status: 0, tier: 0, version: '1' }
+        ]
+      };
+
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { success: true, data: testEvent }
+      });
+
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } }
+      });
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/events/event-detail-test']}>
+            <Routes>
+              <Route path="/events/:id" element={<EventDetailPage />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Đêm Nhạc Jazz')).toBeInTheDocument();
+      });
+
+      const backLink = screen.getByRole('link', { name: /Quay lại danh sách sự kiện/i });
+      expect(backLink).toHaveAttribute('href', '/');
+    });
+
+    it('MyTicketsPage renders accessible reset button when tickets list on page > 1 is empty', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { success: true, data: [] }
+      });
+
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } }
+      });
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/my-tickets?page=2']}>
+            <MyTicketsPage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Không có vé nào trên trang 2/i)).toBeInTheDocument();
+      });
+
+      const resetBtn = screen.getByRole('button', { name: /Quay lại trang 1 danh sách vé/i });
+      expect(resetBtn).toHaveAttribute('type', 'button');
     });
   });
 

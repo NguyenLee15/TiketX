@@ -59,7 +59,7 @@ export default function PaymentResultCard({
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4 text-text-primary">
-      <section className="surface-panel max-w-lg w-full p-8 md:p-12 text-center shadow-2xl" aria-live="polite" aria-busy={isChecking}>
+      <section aria-labelledby="payment-result-heading" className="surface-panel max-w-lg w-full p-8 md:p-12 text-center shadow-2xl" aria-live="polite" aria-busy={isChecking}>
         <div
           className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center border ${
             isSuccess
@@ -82,7 +82,7 @@ export default function PaymentResultCard({
           )}
         </div>
 
-        <h1 className="mt-6 text-3xl font-display font-black text-white text-balance">{title}</h1>
+        <h1 id="payment-result-heading" className="mt-6 text-3xl font-display font-black text-white text-balance">{title}</h1>
         <p className="mt-3 text-text-secondary text-sm leading-relaxed">{description}</p>
         {orderCode && (
           <p className="mt-3 text-xs text-text-tertiary">

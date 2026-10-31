@@ -92,7 +92,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-warning/15 text-warning border border-warning/30 uppercase tracking-wider whitespace-nowrap shrink-0">
           <Clock className="w-3.5 h-3.5" aria-hidden="true" /> Đang Hoàn Tiền
         </span>
-        <Link to="/profile?refundBankAccount=1" className="ml-2 text-xs font-semibold text-brand-primary underline underline-offset-4">Kiểm tra tài khoản nhận tiền</Link>
+        <Link to="/profile?refundBankAccount=1" aria-label={`Kiểm tra tài khoản nhận tiền hoàn vé cho sự kiện ${ticket.eventTitle}`} className="ml-2 text-xs font-semibold text-brand-primary underline underline-offset-4">Kiểm tra tài khoản nhận tiền</Link>
         </>
       );
     }
